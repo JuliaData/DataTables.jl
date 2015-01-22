@@ -26,6 +26,7 @@ using Docile
 export @~,
 
        AbstractDataFrame,
+       AbstractContrast,
        DataFrame,
        DataFrameRow,
        Formula,
@@ -34,6 +35,9 @@ export @~,
        ModelFrame,
        ModelMatrix,
        SubDataFrame,
+       SumContrast,
+       TreatmentContrast,
+       HelmertContrast,
 
        aggregate,
        by,
@@ -42,6 +46,7 @@ export @~,
        combine,
        complete_cases,
        complete_cases!,
+       contrast_matrix,
        deleterows!,
        describe,
        eachcol,
@@ -102,6 +107,7 @@ for (dir, filename) in [
         ("abstractdataframe", "sort.jl"),
         ("dataframe", "sort.jl"),
 
+        ("statsmodels", "contrasts.jl"),
         ("statsmodels", "formula.jl"),
         ("statsmodels", "statsmodel.jl"),
 
