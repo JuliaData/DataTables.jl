@@ -368,10 +368,6 @@ upgrade_vector(v::NominalArray) = NullableNominalArray(v)
 upgrade_vector(v::OrdinalArray) = NullableOrdinalArray(v)
 upgrade_vector(v::AbstractArray) = NullableArray(v)
 
-function upgrade_scalar(df::DataFrame, v::AbstractArray)
-    msg = "setindex!(::DataFrame, ...) only broadcasts scalars, not arrays"
-    throw(ArgumentError(msg))
-end
 function upgrade_scalar(df::DataFrame, v::Any)
     n = (ncol(df) == 0) ? 1 : nrow(df)
     NullableArray(fill(v, n))
@@ -634,16 +630,6 @@ Base.setindex!(df::DataFrame, x::Void, col_ind::Int) = delete!(df, col_ind)
 Base.empty!(df::DataFrame) = (empty!(df.columns); empty!(index(df)); df)
 
 function Base.insert!(df::DataFrame, col_ind::Int, item::AbstractVector, name::Symbol)
-    0 < col_ind <= ncol(df) + 1 || throw(BoundsError())
-    size(df, 1) == length(item) || size(df, 1) == 0 || error("number of rows does not match")
-
-    insert!(index(df), col_ind, name)
-    insert!(df.columns, col_ind, item)
-    df
-end
-
-# FIXME: why is this needed for test/dataframe.jl to pass?
-function Base.insert!(df::DataFrame, col_ind::Int, item::NullableArray, name::Symbol)
     0 < col_ind <= ncol(df) + 1 || throw(BoundsError())
     size(df, 1) == length(item) || size(df, 1) == 0 || error("number of rows does not match")
 
