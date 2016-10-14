@@ -28,36 +28,25 @@ import Base: ==, |>
 ##
 ##############################################################################
 
-export @~,
-       @csv_str,
+export @csv_str,
        @csv2_str,
        @tsv_str,
        @wsv_str,
 
        AbstractDataFrame,
-       AbstractContrasts,
        DataFrame,
        DataFrameRow,
-       Formula,
        GroupApplied,
        GroupedDataFrame,
-       ModelFrame,
-       ModelMatrix,
        SubDataFrame,
-       EffectsCoding,
-       DummyCoding,
-       HelmertCoding,
-       ContrastsCoding,
 
        aggregate,
        by,
        categorical!,
-       coefnames,
        colwise,
        combine,
        complete_cases,
        complete_cases!,
-       setcontrasts!,
        deleterows!,
        describe,
        eachcol,
@@ -126,10 +115,6 @@ for (dir, filename) in [
 
         ("abstractdataframe", "sort.jl"),
         ("dataframe", "sort.jl"),
-
-        ("statsmodels", "contrasts.jl"),
-        ("statsmodels", "formula.jl"),
-        ("statsmodels", "statsmodel.jl"),
 
         ("", "deprecated.jl")
     ]
