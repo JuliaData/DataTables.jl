@@ -156,11 +156,11 @@ function groupby(d::AbstractDataTable, cols::Vector)
     end
     GroupedDataTable(d, cols, idx, starts, stops)
 end
-groupby(d::AbstractDataTable, cols) = groupby(d, [cols])
+groupby(d::AbstractDataTable, cols::Union{Int, Symbol}) = groupby(d, [cols])
 
 # add a function curry
-groupby{T}(cols::Vector{T}) = x -> groupby(x, cols)
-groupby(cols) = x -> groupby(x, cols)
+groupby(cols::Vector) = x -> groupby(x, cols)
+groupby(cols::Union{Int, Symbol}) = x -> groupby(x, [cols])
 
 Base.start(gd::GroupedDataTable) = 1
 Base.next(gd::GroupedDataTable, state::Int) =
