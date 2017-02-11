@@ -117,43 +117,44 @@ df |> groupby([:a, :b]) |> [sum, length]
 ```
 
 """
-function groupby{T}(d::AbstractDataTable, cols::Vector{T})
-    ## a subset of Wes McKinney's algorithm here:
-    ##     http://wesmckinney.com/blog/?p=489
+function groupby(d::AbstractDataTable, cols::Vector)
+    intersect = d[cols]
+    complement_cols = filter!(x -> !in(x, cols), names(d))
+    mappings = Dict{DataTableRow, Vector{Int}}()
+    for i = 1:nrow(intersect)
+        row = DataTableRow(intersect, i)
+        if !haskey(mappings, row)
+            mappings[row] = [i]
+        elseif haskey(mappings, row)
+            push!(mappings[row], i)
+        end
+    end
+    _keys = collect(keys(mappings))
+    for key in _keys
+        ungrouped_data = d[mappings[key], complement_cols]
+        ungrouped_data[:row_id] = collect(1:nrow(ungrouped_data))
+        sort!(ungrouped_data, cols=complement_cols)
+        mappings[key] = mappings[key][ungrouped_data[:row_id]]
+    end
+    groups = d[map(k -> k.row, _keys), cols]
+    groups[:row_id] = collect(1:nrow(groups))
+    sort!(groups, cols=cols)
+    _keys = _keys[groups[:row_id]]
 
-    ncols = length(cols)
-    # use CategoricalArray to get a set of integer references for each unique item
-    nv = NullableCategoricalArray(d[cols[ncols]])
-    # if there are NULLs, add 1 to the refs to avoid underflows in x later
-    anynulls = (findfirst(nv.refs, 0) > 0 ? 1 : 0)
-    # use UInt32 instead of the original array's integer size since the number of levels can be high
-    x = similar(nv.refs, UInt32)
-    for i = 1:nrow(d)
-        if nv.refs[i] == 0
-            x[i] = 1
-        else
-            x[i] = CategoricalArrays.order(nv.pool)[nv.refs[i]] + anynulls
-        end
+    idx = Vector{Int}(nrow(d))
+    starts = fill(1, nrow(groups))
+    stops = Vector{Int}(nrow(groups))
+
+    rows = mappings[_keys[1]]
+    idx[1:length(rows)] = rows
+    stops[1] = length(rows)
+    for i = 2:nrow(groups)
+        rows = mappings[_keys[i]]
+        starts[i] = stops[i-1] + 1
+        stops[i] = stops[i-1] + length(rows)
+        idx[starts[i]:stops[i]] = rows
     end
-    # also compute the number of groups, which is the product of the set lengths
-    ngroups = length(levels(nv)) + anynulls
-    # if there's more than 1 column, do roughly the same thing repeatedly
-    for j = (ncols - 1):-1:1
-        nv = NullableCategoricalArray(d[cols[j]])
-        anynulls = (findfirst(nv.refs, 0) > 0 ? 1 : 0)
-        for i = 1:nrow(d)
-            if nv.refs[i] != 0
-                x[i] += (CategoricalArrays.order(nv.pool)[nv.refs[i]] + anynulls - 1) * ngroups
-            end
-        end
-        ngroups = ngroups * (length(levels(nv)) + anynulls)
-        # TODO if ngroups is really big, shrink it
-    end
-    (idx, starts) = groupsort_indexer(x, ngroups)
-    # Remove zero-length groupings
-    starts = _uniqueofsorted(starts)
-    ends = starts[2:end] - 1
-    GroupedDataTable(d, cols, idx, starts[1:end-1], ends)
+    GroupedDataTable(d, cols, idx, starts, stops)
 end
 groupby(d::AbstractDataTable, cols) = groupby(d, [cols])
 
