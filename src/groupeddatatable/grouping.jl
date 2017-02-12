@@ -130,6 +130,7 @@ function groupby(d::AbstractDataTable, cols::Vector; sort=false)
         end
     end
     _keys = collect(keys(mappings))
+    ngroups = length(_keys)
     if sort && !any(et -> et <: CategoricalValue ||
                     eltype(et) <: CategoricalValue, eltypes(d))
         for key in _keys
@@ -139,19 +140,19 @@ function groupby(d::AbstractDataTable, cols::Vector; sort=false)
             mappings[key] = mappings[key][ungrouped_data[:row_id]]
         end
         groups = d[map(k -> k.row, _keys), cols]
-        groups[:row_id] = collect(1:nrow(groups))
+        groups[:row_id] = collect(1:ngroups)
         sort!(groups, cols=cols)
         _keys = _keys[groups[:row_id]]
     end
 
     idx = Vector{Int}(nrow(d))
-    starts = fill(1, length(_keys))
-    stops = Vector{Int}(length(_keys))
+    starts = fill(1, ngroups)
+    stops = Vector{Int}(ngroups)
 
     rows = mappings[_keys[1]]
     idx[1:length(rows)] = rows
     stops[1] = length(rows)
-    for i = 2:length(_keys)
+    for i = 2:ngroups
         rows = mappings[_keys[i]]
         starts[i] = stops[i-1] + 1
         stops[i] = stops[i-1] + length(rows)
