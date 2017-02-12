@@ -117,10 +117,15 @@ df |> groupby([:a, :b]) |> [sum, length]
 ```
 
 """
-function groupby(d::AbstractDataTable, cols::Vector)
+function groupby(d::AbstractDataTable, cols::Vector; sort=true)
+    categoricals = any(et -> et <: CategoricalValue ||
+                       eltype(et) <: CategoricalValue, eltypes(d))
+    if categoricals
+        sort=false
+    end
     intersect = d[cols]
     complement_cols = filter!(x -> !in(x, cols), names(d))
-    mappings = Dict{DataTableRow, Vector{Int}}()
+    mappings = OrderedDict{DataTableRow, Vector{Int}}()
     for i = 1:nrow(intersect)
         row = DataTableRow(intersect, i)
         if !haskey(mappings, row)
@@ -130,16 +135,20 @@ function groupby(d::AbstractDataTable, cols::Vector)
         end
     end
     _keys = collect(keys(mappings))
-    for key in _keys
-        ungrouped_data = d[mappings[key], complement_cols]
-        ungrouped_data[:row_id] = collect(1:nrow(ungrouped_data))
-        sort!(ungrouped_data, cols=complement_cols)
-        mappings[key] = mappings[key][ungrouped_data[:row_id]]
+    if sort
+        for key in _keys
+            ungrouped_data = d[mappings[key], complement_cols]
+            ungrouped_data[:row_id] = collect(1:nrow(ungrouped_data))
+            sort!(ungrouped_data, cols=complement_cols)
+            mappings[key] = mappings[key][ungrouped_data[:row_id]]
+        end
     end
     groups = d[map(k -> k.row, _keys), cols]
-    groups[:row_id] = collect(1:nrow(groups))
-    sort!(groups, cols=cols)
-    _keys = _keys[groups[:row_id]]
+    if sort
+        groups[:row_id] = collect(1:nrow(groups))
+        sort!(groups, cols=cols)
+        _keys = _keys[groups[:row_id]]
+    end
 
     idx = Vector{Int}(nrow(d))
     starts = fill(1, nrow(groups))

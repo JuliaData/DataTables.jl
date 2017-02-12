@@ -16,6 +16,7 @@ using Reexport
 @reexport using CategoricalArrays
 using GZip
 using SortingAlgorithms
+using DataStructures
 
 using FileIO  # remove after read_rda deprecation period
 
