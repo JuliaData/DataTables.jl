@@ -117,9 +117,8 @@ df |> groupby([:a, :b]) |> [sum, length]
 ```
 
 """
-function groupby(d::AbstractDataTable, cols::Vector; sort=false)
+function groupby(d::AbstractDataTable, cols::Vector)
     intersect = d[cols]
-    complement_cols = filter!(x -> !in(x, cols), names(d))
     mappings = OrderedDict{DataTableRow, Vector{Int}}()
     for i = 1:nrow(intersect)
         row = DataTableRow(intersect, i)
@@ -129,31 +128,16 @@ function groupby(d::AbstractDataTable, cols::Vector; sort=false)
             push!(mappings[row], i)
         end
     end
-    _keys = collect(keys(mappings))
-    ngroups = length(_keys)
-    if sort && !any(et -> et <: CategoricalValue ||
-                    eltype(et) <: CategoricalValue, eltypes(d))
-        for key in _keys
-            ungrouped_data = d[mappings[key], complement_cols]
-            ungrouped_data[:row_id] = collect(1:nrow(ungrouped_data))
-            sort!(ungrouped_data, cols=complement_cols)
-            mappings[key] = mappings[key][ungrouped_data[:row_id]]
-        end
-        groups = d[map(k -> k.row, _keys), cols]
-        groups[:row_id] = collect(1:ngroups)
-        sort!(groups, cols=cols)
-        _keys = _keys[groups[:row_id]]
-    end
-
+    ngroups = length(mappings.keys)
     idx = Vector{Int}(nrow(d))
     starts = fill(1, ngroups)
     stops = Vector{Int}(ngroups)
 
-    rows = mappings[_keys[1]]
+    rows = mappings.vals[1]
     idx[1:length(rows)] = rows
     stops[1] = length(rows)
     for i = 2:ngroups
-        rows = mappings[_keys[i]]
+        rows = mappings.vals[i]
         starts[i] = stops[i-1] + 1
         stops[i] = stops[i-1] + length(rows)
         idx[starts[i]:stops[i]] = rows
