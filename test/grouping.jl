@@ -37,8 +37,6 @@ module TestGrouping
     @test groupby(df2, [:v1, :v2]).starts == collect(1:1000)
     @test groupby(df2, [:v2, :v1]).starts == collect(1:1000)
 
-    # grouping empty frame
-    # @test groupby(DataTable(A=Int[]), :A).starts == Int[]
     # grouping single row
     @test groupby(DataTable(A=Int[1]), :A).starts == Int[1]
 
@@ -46,10 +44,6 @@ module TestGrouping
     x = CategoricalArray(collect(1:20))
     df = DataTable(v1=x, v2=x)
     groupby(df, [:v1, :v2])
-
-    # df2 = by(e->1, DataTable(x=Int64[]), :x)
-    # @test size(df2) == (0,1)
-    # @test isequal(sum(df2[:x]), Nullable(0))
 
     # Check that reordering levels does not confuse groupby
     df = DataTable(Key1 = CategoricalArray(["A", "A", "B", "B"]),
