@@ -25,7 +25,7 @@ The following are normally implemented for AbstractDataTables:
 * [`tail`](@ref) : last `n` rows
 * `convert` : convert to an array
 * `NullableArray` : convert to a NullableArray
-* [`completecases`](@ref) : indexes of complete cases (rows with no null values)
+* [`completecases`](@ref) : boolean vector of complete cases (null-free rows)
 * [`dropnull`](@ref) : remove rows with null values
 * [`dropnull!`](@ref) : remove rows with null values in-place
 * [`nonunique`](@ref) : indexes of duplicate rows
@@ -355,7 +355,7 @@ describe(io, df::AbstractDataTable)
 **Details**
 
 If the column's base type derives from Number, compute the minimum, first
-quantile, median, mean, third quantile, and maximum. nulls are filtered and
+quantile, median, mean, third quantile, and maximum. Nulls are filtered and
 reported separately.
 
 For boolean columns, report trues, falses, and nulls.
@@ -467,6 +467,7 @@ function completecases(df::AbstractDataTable)
     end
     res
 end
+
 """
 Remove rows with null values.
 
@@ -494,7 +495,7 @@ dropnull(df)
 ```
 
 """
-dropnull(df::AbstractDataTable) = deleterows!(copy(df), find(!completecases(df)))
+dropnull(df::AbstractDataTable) = deleterows!(copy(df), find(!, completecases(df)))
 
 """
 Remove rows with null values in-place.
@@ -523,7 +524,7 @@ dropnull!(df)
 ```
 
 """
-dropnull!(df::AbstractDataTable) = deleterows!(df, find(!completecases(df)))
+dropnull!(df::AbstractDataTable) = deleterows!(df, find(!, completecases(df)))
 
 function Base.convert(::Type{Array}, df::AbstractDataTable)
     convert(Matrix, df)
