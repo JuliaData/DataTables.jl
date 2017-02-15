@@ -12,6 +12,7 @@ using Compat
 import Compat.String
 using Reexport
 @reexport using StatsBase
+import NullableArrays: dropnull, dropnull!
 @reexport using NullableArrays
 @reexport using CategoricalArrays
 using GZip
@@ -21,7 +22,6 @@ using FileIO  # remove after read_rda deprecation period
 
 using Base: Sort, Order
 import Base: ==, |>
-import NullableArrays: dropnull, dropnull!
 
 ##############################################################################
 ##

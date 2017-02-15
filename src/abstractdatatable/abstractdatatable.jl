@@ -482,7 +482,7 @@ dropnull(df::AbstractDataTable)
 
 * `::AbstractDataTable` : the updated copy
 
-See also [`dropnull!`](@ref) and [`completecases`](@ref).
+See also [`completecases`](@ref) and [`dropnull!`](@ref).
 
 **Examples**
 
