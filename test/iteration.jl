@@ -32,15 +32,15 @@ module TestIteration
 
     dt = DataTable(A = 1:4, B = ["M", "F", "F", "M"])
 
-    s1 = sub(dt, 1:3)
+    s1 = view(dt, 1:3)
     s1[2,:A] = 4
     @test isequal(dt[2, :A], Nullable(4))
-    @test isequal(sub(s1, 1:2), sub(dt, 1:2))
+    @test isequal(view(s1, 1:2), view(dt, 1:2))
 
-    s2 = sub(dt, 1:2:3)
+    s2 = view(dt, 1:2:3)
     s2[2, :B] = "M"
     @test isequal(dt[3, :B], Nullable("M"))
-    @test isequal(sub(s2, 1:1:2), sub(dt, [1,3]))
+    @test isequal(view(s2, 1:1:2), view(dt, [1,3]))
 
     # @test_fail for x in dt; end # Raises an error
 end

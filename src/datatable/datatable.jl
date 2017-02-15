@@ -209,17 +209,17 @@ ncol(dt::DataTable) = length(index(dt))
 # Cases:
 #
 # dt[SingleColumnIndex] => AbstractDataVector
-# dt[MultiColumnIndex] => (Sub)?DataTable
+# dt[MultiColumnIndex] => DataTable
 # dt[SingleRowIndex, SingleColumnIndex] => Scalar
-# dt[SingleRowIndex, MultiColumnIndex] => (Sub)?DataTable
-# dt[MultiRowIndex, SingleColumnIndex] => (Sub)?AbstractDataVector
-# dt[MultiRowIndex, MultiColumnIndex] => (Sub)?DataTable
+# dt[SingleRowIndex, MultiColumnIndex] => DataTable
+# dt[MultiRowIndex, SingleColumnIndex] => AbstractVector
+# dt[MultiRowIndex, MultiColumnIndex] => DataTable
 #
 # General Strategy:
 #
 # Let getindex(index(dt), col_inds) from Index() handle the resolution
 #  of column indices
-# Let getindex(dt.columns[j], row_inds) from AbstractDataVector() handle
+# Let getindex(dt.columns[j], row_inds) from AbstractVector() handle
 #  the resolution of row indices
 
 typealias ColumnIndex @compat(Union{Real, Symbol})
@@ -230,7 +230,7 @@ function Base.getindex(dt::DataTable, col_ind::ColumnIndex)
     return dt.columns[selected_column]
 end
 
-# dt[MultiColumnIndex] => (Sub)?DataTable
+# dt[MultiColumnIndex] => DataTable
 function Base.getindex{T <: ColumnIndex}(dt::DataTable,
                                          col_inds::Union{AbstractVector{T},
                                                          AbstractVector{Nullable{T}}})
@@ -239,7 +239,7 @@ function Base.getindex{T <: ColumnIndex}(dt::DataTable,
     return DataTable(new_columns, Index(_names(dt)[selected_columns]))
 end
 
-# dt[:] => (Sub)?DataTable
+# dt[:] => DataTable
 Base.getindex(dt::DataTable, col_inds::Colon) = copy(dt)
 
 # dt[SingleRowIndex, SingleColumnIndex] => Scalar
@@ -248,7 +248,7 @@ function Base.getindex(dt::DataTable, row_ind::Real, col_ind::ColumnIndex)
     return dt.columns[selected_column][row_ind]
 end
 
-# dt[SingleRowIndex, MultiColumnIndex] => (Sub)?DataTable
+# dt[SingleRowIndex, MultiColumnIndex] => DataTable
 function Base.getindex{T <: ColumnIndex}(dt::DataTable,
                                          row_ind::Real,
                                          col_inds::Union{AbstractVector{T},
@@ -258,7 +258,7 @@ function Base.getindex{T <: ColumnIndex}(dt::DataTable,
     return DataTable(new_columns, Index(_names(dt)[selected_columns]))
 end
 
-# dt[MultiRowIndex, SingleColumnIndex] => (Sub)?AbstractDataVector
+# dt[MultiRowIndex, SingleColumnIndex] => AbstractVector
 function Base.getindex{T <: Real}(dt::DataTable,
                                   row_inds::Union{AbstractVector{T}, AbstractVector{Nullable{T}}},
                                   col_ind::ColumnIndex)
@@ -266,7 +266,7 @@ function Base.getindex{T <: Real}(dt::DataTable,
     return dt.columns[selected_column][row_inds]
 end
 
-# dt[MultiRowIndex, MultiColumnIndex] => (Sub)?DataTable
+# dt[MultiRowIndex, MultiColumnIndex] => DataTable
 function Base.getindex{R <: Real, T <: ColumnIndex}(dt::DataTable,
                                                     row_inds::Union{AbstractVector{R},
                                                                     AbstractVector{Nullable{R}}},
@@ -277,18 +277,18 @@ function Base.getindex{R <: Real, T <: ColumnIndex}(dt::DataTable,
     return DataTable(new_columns, Index(_names(dt)[selected_columns]))
 end
 
-# dt[:, SingleColumnIndex] => (Sub)?AbstractVector
-# dt[:, MultiColumnIndex] => (Sub)?DataTable
+# dt[:, SingleColumnIndex] => AbstractVector
+# dt[:, MultiColumnIndex] => DataTable
 Base.getindex{T<:ColumnIndex}(dt::DataTable,
                               row_inds::Colon,
                               col_inds::Union{T, AbstractVector{T},
                                               AbstractVector{Nullable{T}}}) =
     dt[col_inds]
 
-# dt[SingleRowIndex, :] => (Sub)?DataTable
+# dt[SingleRowIndex, :] => DataTable
 Base.getindex(dt::DataTable, row_ind::Real, col_inds::Colon) = dt[[row_ind], col_inds]
 
-# dt[MultiRowIndex, :] => (Sub)?DataTable
+# dt[MultiRowIndex, :] => DataTable
 function Base.getindex{R<:Real}(dt::DataTable,
                                 row_inds::Union{AbstractVector{R},
                                                 AbstractVector{Nullable{R}}},

@@ -11,7 +11,7 @@ module TestShow
     showall(io, dt)
     showall(io, dt, true)
 
-    subdt = sub(dt, [2, 3]) # dt[dt[:A] .> 1.0, :]
+    subdt = view(dt, [2, 3]) # dt[dt[:A] .> 1.0, :]
     show(io, subdt)
     show(io, subdt, true)
     showall(io, subdt)

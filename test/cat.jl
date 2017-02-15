@@ -147,5 +147,5 @@ module TestCat
     @test isequal(vcat(dtda, dtd, dta), vcat(dtda, dtda))
 
     # vcat should be able to concatenate different implementations of AbstractDataTable (PR #944)
-    @test isequal(vcat(sub(DataTable(A=1:3),2),DataTable(A=4:5)), DataTable(A=[2,4,5]))
+    @test isequal(vcat(view(DataTable(A=1:3),2),DataTable(A=4:5)), DataTable(A=[2,4,5]))
 end
