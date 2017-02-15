@@ -461,7 +461,7 @@ completecases(df)
 
 """
 function completecases(df::AbstractDataTable)
-    res = fill(true, size(df, 1))
+    res = trues(size(df, 1))
     for i in 1:size(df, 2)
         _nonnull!(res, df[i])
     end
