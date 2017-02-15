@@ -296,7 +296,7 @@ tail(dt)
 """
 (head, tail)
 
-# get the structure of a DF
+# get the structure of a DT
 """
 Show the structure of an AbstractDataTable, in a tree-like format
 
@@ -333,7 +333,7 @@ function Base.dump(io::IO, dt::AbstractDataTable, n::Int, indent)
     end
 end
 
-# summarize the columns of a DF
+# summarize the columns of a DT
 # TODO: clever layout in rows
 """
 Summarize the columns of an AbstractDataTable
