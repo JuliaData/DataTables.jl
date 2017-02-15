@@ -56,11 +56,11 @@ module TestData
     #test_group("null handling")
     @test nrow(df5[completecases(df5), :]) == 3
     @test nrow(dropnull(df5)) == 3
-    returned_copy = dropnull(df4)
-    @test df4 == returned_copy && !(df4 === returned_copy)
+    returned = dropnull(df4)
+    @test df4 == returned && !(df4 === returned)
     @test nrow(dropnull!(df5)) == 3
-    returned_view = dropnull!(df4)
-    @test df4 == returned_view && df4 === returned_view
+    returned = dropnull!(df4)
+    @test df4 == returned && df4 === returned
 
     #test_context("SubDataTables")
 
