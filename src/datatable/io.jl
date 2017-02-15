@@ -41,28 +41,28 @@ macro read_peek_eof(io, nextchr)
     end
 end
 
-macro skip_within_eol(io, chr, nextchr, endf)
+macro skip_within_eol(io, chr, nextchr, endt)
     io = esc(io)
     chr = esc(chr)
     nextchr = esc(nextchr)
-    endf = esc(endf)
+    endt = esc(endt)
     quote
         if $chr == UInt32('\r') && $nextchr == UInt32('\n')
-            $chr, $nextchr, $endf = @read_peek_eof($io, $nextchr)
+            $chr, $nextchr, $endt = @read_peek_eof($io, $nextchr)
         end
     end
 end
 
-macro skip_to_eol(io, chr, nextchr, endf)
+macro skip_to_eol(io, chr, nextchr, endt)
     io = esc(io)
     chr = esc(chr)
     nextchr = esc(nextchr)
-    endf = esc(endf)
+    endt = esc(endt)
     quote
-        while !$endf && !@atnewline($chr, $nextchr)
-            $chr, $nextchr, $endf = @read_peek_eof($io, $nextchr)
+        while !$endt && !@atnewline($chr, $nextchr)
+            $chr, $nextchr, $endt = @read_peek_eof($io, $nextchr)
         end
-        @skip_within_eol($io, $chr, $nextchr, $endf)
+        @skip_within_eol($io, $chr, $nextchr, $endt)
     end
 end
 
@@ -215,7 +215,7 @@ for allowcomments in tf, skipblanks in tf, allowescapes in tf, wsv in tf
             $(if wsv quote skip_white = true end end)
             chr = 0xff
             nextchr = (firstchr == 0xff && !eof(io)) ? read(io, UInt8) : firstchr
-            endf = nextchr == 0xff
+            endt = nextchr == 0xff
 
             # 'in' does not work if passed UInt8 and Vector{Char}
             quotemarks = convert(Vector{UInt8}, o.quotemarks)
@@ -226,9 +226,9 @@ for allowcomments in tf, skipblanks in tf, allowescapes in tf, wsv in tf
             @push(n_lines, p.lines, 0, l_lines)
 
             # Loop over bytes from the input until we've read requested rows
-            while !endf && ((nrows == -1) || (n_lines < nrows + 1))
+            while !endt && ((nrows == -1) || (n_lines < nrows + 1))
 
-                chr, nextchr, endf = @read_peek_eof(io, nextchr)
+                chr, nextchr, endt = @read_peek_eof(io, nextchr)
 
                 # === Debugging ===
                 # if in_quotes
@@ -241,7 +241,7 @@ for allowcomments in tf, skipblanks in tf, allowescapes in tf, wsv in tf
                     quote
                         # Ignore text inside comments completely
                         if !in_quotes && chr == UInt32(o.commentmark)
-                            @skip_to_eol(io, chr, nextchr, endf)
+                            @skip_to_eol(io, chr, nextchr, endt)
 
                             # Skip the linebreak if the comment began at the start of a line
                             if at_start
@@ -255,9 +255,9 @@ for allowcomments in tf, skipblanks in tf, allowescapes in tf, wsv in tf
                     quote
                         # Skip blank lines
                         if !in_quotes
-                            while !endf && @atblankline(chr, nextchr)
-                                chr, nextchr, endf = @read_peek_eof(io, nextchr)
-                                @skip_within_eol(io, chr, nextchr, endf)
+                            while !endt && @atblankline(chr, nextchr)
+                                chr, nextchr, endt = @read_peek_eof(io, nextchr)
+                                @skip_within_eol(io, chr, nextchr, endt)
                             end
                         end
                     end
@@ -269,7 +269,7 @@ for allowcomments in tf, skipblanks in tf, allowescapes in tf, wsv in tf
                         if @atcescape(chr, nextchr) && !in_escape
                             chr = @mergechr(chr, nextchr)
                             nextchr = eof(io) ? 0xff : read(io, UInt8)
-                            endf = nextchr == 0xff
+                            endt = nextchr == 0xff
                             in_escape = true
                         end
                     end
@@ -309,7 +309,7 @@ for allowcomments in tf, skipblanks in tf, allowescapes in tf, wsv in tf
                         end)
                     # Finished reading a row
                     elseif @atnewline(chr, nextchr)
-                        @skip_within_eol(io, chr, nextchr, endf)
+                        @skip_within_eol(io, chr, nextchr, endt)
                         $(if allowcomments quote at_start = true end end)
                         @push(n_bounds, p.bounds, n_bytes, l_bounds)
                         @push(n_bytes, p.bytes, '\n', l_bytes)
@@ -340,7 +340,7 @@ for allowcomments in tf, skipblanks in tf, allowescapes in tf, wsv in tf
             end
 
             # Append a final EOL if it's missing in the raw input
-            if endf && !@atnewline(chr, nextchr)
+            if endt && !@atnewline(chr, nextchr)
                 @push(n_bounds, p.bounds, n_bytes, l_bounds)
                 @push(n_bytes, p.bytes, '\n', l_bytes)
                 @push(n_lines, p.lines, n_bytes, l_lines)
@@ -502,7 +502,7 @@ function bytestotype{N <: AbstractString,
     return String(bytes[left:right]), true, false
 end
 
-function builddf(rows::Integer,
+function builddt(rows::Integer,
                  cols::Integer,
                  bytes::Integer,
                  fields::Integer,
@@ -729,22 +729,22 @@ function readtable!(p::ParsedCSV,
     # Skip lines at the start
     if o.skipstart != 0
         while skipped_lines < o.skipstart
-            chr, nextchr, endf = @read_peek_eof(io, nextchr)
-            @skip_to_eol(io, chr, nextchr, endf)
+            chr, nextchr, endt = @read_peek_eof(io, nextchr)
+            @skip_to_eol(io, chr, nextchr, endt)
             skipped_lines += 1
         end
     else
-        chr, nextchr, endf = @read_peek_eof(io, nextchr)
+        chr, nextchr, endt = @read_peek_eof(io, nextchr)
     end
 
     if o.allowcomments || o.skipblanks
         while true
             if o.allowcomments && nextchr == UInt32(o.commentmark)
-                chr, nextchr, endf = @read_peek_eof(io, nextchr)
-                @skip_to_eol(io, chr, nextchr, endf)
+                chr, nextchr, endt = @read_peek_eof(io, nextchr)
+                @skip_to_eol(io, chr, nextchr, endt)
             elseif o.skipblanks && @atnewline(nextchr, nextchr)
-                chr, nextchr, endf = @read_peek_eof(io, nextchr)
-                @skip_within_eol(io, chr, nextchr, endf)
+                chr, nextchr, endt = @read_peek_eof(io, nextchr)
+                @skip_within_eol(io, chr, nextchr, endt)
             else
                 break
             end
@@ -789,10 +789,10 @@ function readtable!(p::ParsedCSV,
     end
 
     # Parse contents of a buffer into a DataTable
-    df = builddf(rows, cols, bytes, fields, p, o)
+    dt = builddt(rows, cols, bytes, fields, p, o)
 
     # Return the final DataTable
-    return df
+    return dt
 end
 
 function readtable(io::IO,
@@ -891,11 +891,11 @@ readtable(filename, [keyword options])
 ### Examples
 
 ```julia
-df = readtable("data.csv")
-df = readtable("data.tsv")
-df = readtable("data.wsv")
-df = readtable("data.txt", separator = '\t')
-df = readtable("data.txt", header = false)
+dt = readtable("data.csv")
+dt = readtable("data.tsv")
+dt = readtable("data.wsv")
+dt = readtable("data.txt", separator = '\t')
+dt = readtable("data.txt", header = false)
 ```
 """
 function readtable(pathname::AbstractString;
@@ -936,7 +936,7 @@ function readtable(pathname::AbstractString;
         nbytes = filesize(pathname)
     end
 
-    df = try
+    dt = try
         readtable(io,
                   nbytes,
                   header = header,
@@ -963,7 +963,7 @@ function readtable(pathname::AbstractString;
         close(io)
     end
 
-    return df
+    return dt
 end
 
 """
@@ -1010,7 +1010,7 @@ they are equivalent to supplying named arguments to `readtable` as follows:
 
 # Example
 ```jldoctest
-julia> df = csv\"""
+julia> dt = csv\"""
            name,  age, squidPerWeek
            Alice,  36,         3.14
            Bob,    24,         0
@@ -1044,7 +1044,7 @@ supplying named arguments to `readtable` as follows:
 
 # Example
 ```jldoctest
-julia> df = csv2\"""
+julia> dt = csv2\"""
            name;  age; squidPerWeek
            Alice;  36;         3,14
            Bob;    24;         0
@@ -1080,7 +1080,7 @@ follows:
 
 # Example
 ```jldoctest
-julia> df = wsv\"""
+julia> dt = wsv\"""
            name  age squidPerWeek
            Alice  36         3.14
            Bob    24         0
@@ -1113,7 +1113,7 @@ they are equivalent to supplying named arguments to `readtable` as follows:
 
 # Example
 ```jldoctest
-julia> df = tsv\"""
+julia> dt = tsv\"""
            name\tage\tsquidPerWeek
            Alice\t36\t3.14
            Bob\t24\t0
@@ -1131,24 +1131,24 @@ julia> df = tsv\"""
 """
 macro tsv_str(s, flags...) inlinetable(s, flags...; separator='\t') end
 
-function filldf!(df::DataTable,
+function filldt!(dt::DataTable,
                  rows::Integer,
                  cols::Integer,
                  bytes::Integer,
                  fields::Integer,
                  p::ParsedCSV,
                  o::ParseOptions)
-    etypes = eltypes(df)
+    etypes = eltypes(dt)
 
-    if rows != size(df, 1)
+    if rows != size(dt, 1)
         for j in 1:cols
-            resize!(df.columns[j].data, rows)
-            resize!(df.columns[j].na, rows)
+            resize!(dt.columns[j].data, rows)
+            resize!(dt.columns[j].na, rows)
         end
     end
 
     for j in 1:cols
-        c = df.columns[j]
+        c = dt.columns[j]
         T = etypes[j]
 
         i = 0

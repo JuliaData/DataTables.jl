@@ -3,19 +3,19 @@
 ##### Changes
 * New documentation based on Documenter ([#929])
 * Support new fit indicator functions for statistical models ([#921]).
-* Add string literals csv, csv2, wsv, and tsv ([#918]) 
-* Add a readtable argument for optional name normalization ([#896]) 
+* Add string literals csv, csv2, wsv, and tsv ([#918])
+* Add a readtable argument for optional name normalization ([#896])
 
 ## DataTables v0.6.6 Release Notes
 
 ##### Deprecations
-* Deprecates `array(df, ...)` in favor of `convert(Array, df, ...)` ([#806])
-* Deprecates `DataArray(df, T)` in favor of `convert(DataArray{T}, df)` ([#806])
+* Deprecates `array(dt, ...)` in favor of `convert(Array, dt, ...)` ([#806])
+* Deprecates `DataArray(dt, T)` in favor of `convert(DataArray{T}, dt)` ([#806])
 
 ## DataTables v0.6.3 Release Notes
 
 ##### Deprecations
-* Removes `save` and `loaddf`, since the format was not compatible
+* Removes `save` and `loaddt`, since the format was not compatible
   across Julia and DataTables versions ([#790]). Use `writetable` or
   [JLD](https://github.com/timholy/HDF5.jl) to save DataTables
 
@@ -33,23 +33,23 @@ Focus on performance improvements and rooting out bugs in corner cases.
 
 ##### New features
 * Constructor for empty DataTables allows specifying PDAs ([#725])
-* `stack(df)` and `melt(df)`, which take FloatingPoint vars as measure vars ([#734])
+* `stack(dt)` and `melt(dt)`, which take FloatingPoint vars as measure vars ([#734])
 * New convenience methods for `unstack` ([#734])
 * `convertdataframes` option added to `read_rda` ([#751])
 
 ##### Changes
-* `vcat(dfs)` handles container and eltype promotion ([#747])
+* `vcat(dts)` handles container and eltype promotion ([#747])
 * `join` finally handles DataTables with no non-key columns ([#749])
 * sorting methods throw an error when args meant for `cols` are passed to `by` ([#749])
 * `rename!` and `rename` throw when column to be renamed does not exist ([#749])
 * `names!`, `rename!`, and `rename` for DataTables now return DataTables ([#749])
 
 ##### Deprecations
-* Deprecates `by(df, cols, [symbol(s)])` in favor of `aggregate(df, cols, [function(s)])` ([#726])
+* Deprecates `by(dt, cols, [symbol(s)])` in favor of `aggregate(dt, cols, [function(s)])` ([#726])
 * Removes `pivottable` in favor of other reshaping methods ([#734])
 * Deprecates `nullable!(..., ::AbstractDataTable)` in favor of `nullable!(::DataTable, ...)` ([#752])
-* Deprecates `keys(df)`, `values(df)` ([#752])
-* Renames `insert!(df, df)` to `merge!(df, dfs...)` ([#752])
+* Deprecates `keys(dt)`, `values(dt)` ([#752])
+* Renames `insert!(dt, dt)` to `merge!(dt, dts...)` ([#752])
 
 ## DataTables v0.5.12 Release Notes
 
@@ -88,7 +88,7 @@ Track changes to JuliaLang/julia
 
 ##### New features
 
-* `deleterows!(df::DataTable, inds)` ([#635])
+* `deleterows!(dt::DataTable, inds)` ([#635])
 
 ##### Changes
 
@@ -147,9 +147,9 @@ Continues trend of stripping down features and improving core functionality.
 ##### Changes
 
 * Convert to using only symbols (no more strings) for column names ([#509])
-* Renames `stack_df`, `melt_df`, `pivot_table` to `stackdf`, `meltdf`, `pivottable` ([#538])
+* Renames `stack_dt`, `melt_dt`, `pivot_table` to `stackdt`, `meltdt`, `pivottable` ([#538])
 * Renames `duplicated`, `drop_duplicates!` to `nonunique`, `unique!` ([#538])
-* Renames `load_df` to `loaddf` ([#538])
+* Renames `load_dt` to `loaddt` ([#538])
 * Renames `types` to `eltypes` ([#539])
 * Renames `readtable` argument `colnames` to `names` ([#497])
 

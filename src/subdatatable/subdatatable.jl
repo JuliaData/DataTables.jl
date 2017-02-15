@@ -35,21 +35,21 @@ use column-based indexing with `sub`.
 ### Examples
 
 ```julia
-df = DataTable(a = repeat([1, 2, 3, 4], outer=[2]),
+dt = DataTable(a = repeat([1, 2, 3, 4], outer=[2]),
                b = repeat([2, 1], outer=[4]),
                c = randn(8))
-sdf1 = sub(df, 1:6)
-sdf2 = sub(df, df[:a] .> 1)
-sdf3 = sub(df[[1,3]], df[:a] .> 1)  # row and column subsetting
-sdf4 = groupby(df, :a)[1]  # indexing a GroupedDataTable returns a SubDataTable
-sdf5 = sub(sdf1, 1:3)
-sdf1[:,[:a,:b]]
+sdt1 = sub(dt, 1:6)
+sdt2 = sub(dt, dt[:a] .> 1)
+sdt3 = sub(dt[[1,3]], dt[:a] .> 1)  # row and column subsetting
+sdt4 = groupby(dt, :a)[1]  # indexing a GroupedDataTable returns a SubDataTable
+sdt5 = sub(sdt1, 1:3)
+sdt1[:,[:a,:b]]
 ```
 
 """
 immutable SubDataTable{T <: AbstractVector{Int}} <: AbstractDataTable
     parent::DataTable
-    rows::T # maps from subdf row indexes to parent row indexes
+    rows::T # maps from subdt row indexes to parent row indexes
 
     function SubDataTable(parent::DataTable, rows::T)
         if length(rows) > 0
@@ -75,32 +75,32 @@ function SubDataTable{S <: Integer}(parent::DataTable, rows::AbstractVector{S})
 end
 
 
-function Base.sub{S <: Real}(df::DataTable, rowinds::AbstractVector{S})
-    return SubDataTable(df, rowinds)
+function Base.sub{S <: Real}(dt::DataTable, rowinds::AbstractVector{S})
+    return SubDataTable(dt, rowinds)
 end
 
-function Base.sub{S <: Real}(sdf::SubDataTable, rowinds::AbstractVector{S})
-    return SubDataTable(sdf.parent, sdf.rows[rowinds])
+function Base.sub{S <: Real}(sdt::SubDataTable, rowinds::AbstractVector{S})
+    return SubDataTable(sdt.parent, sdt.rows[rowinds])
 end
 
-function Base.sub(df::DataTable, rowinds::AbstractVector{Bool})
-    return sub(df, getindex(SimpleIndex(size(df, 1)), rowinds))
+function Base.sub(dt::DataTable, rowinds::AbstractVector{Bool})
+    return sub(dt, getindex(SimpleIndex(size(dt, 1)), rowinds))
 end
 
-function Base.sub(sdf::SubDataTable, rowinds::AbstractVector{Bool})
-    return sub(sdf, getindex(SimpleIndex(size(sdf, 1)), rowinds))
+function Base.sub(sdt::SubDataTable, rowinds::AbstractVector{Bool})
+    return sub(sdt, getindex(SimpleIndex(size(sdt, 1)), rowinds))
 end
 
-function Base.sub(adf::AbstractDataTable, rowinds::Integer)
-    return SubDataTable(adf, Int[rowinds])
+function Base.sub(adt::AbstractDataTable, rowinds::Integer)
+    return SubDataTable(adt, Int[rowinds])
 end
 
-function Base.sub(adf::AbstractDataTable, rowinds::Any)
-    return sub(adf, getindex(SimpleIndex(size(adf, 1)), rowinds))
+function Base.sub(adt::AbstractDataTable, rowinds::Any)
+    return sub(adt, getindex(SimpleIndex(size(adt, 1)), rowinds))
 end
 
-function Base.sub(adf::AbstractDataTable, rowinds::Any, colinds::Any)
-    return sub(adf[[colinds]], rowinds)
+function Base.sub(adt::AbstractDataTable, rowinds::Any, colinds::Any)
+    return sub(adt[[colinds]], rowinds)
 end
 
 ##############################################################################
@@ -109,28 +109,28 @@ end
 ##
 ##############################################################################
 
-index(sdf::SubDataTable) = index(sdf.parent)
+index(sdt::SubDataTable) = index(sdt.parent)
 
 # TODO: Remove these
-nrow(sdf::SubDataTable) = ncol(sdf) > 0 ? length(sdf.rows)::Int : 0
-ncol(sdf::SubDataTable) = length(index(sdf))
+nrow(sdt::SubDataTable) = ncol(sdt) > 0 ? length(sdt.rows)::Int : 0
+ncol(sdt::SubDataTable) = length(index(sdt))
 
-function Base.getindex(sdf::SubDataTable, colinds::Any)
-    return sdf.parent[sdf.rows, colinds]
+function Base.getindex(sdt::SubDataTable, colinds::Any)
+    return sdt.parent[sdt.rows, colinds]
 end
 
-function Base.getindex(sdf::SubDataTable, rowinds::Any, colinds::Any)
-    return sdf.parent[sdf.rows[rowinds], colinds]
+function Base.getindex(sdt::SubDataTable, rowinds::Any, colinds::Any)
+    return sdt.parent[sdt.rows[rowinds], colinds]
 end
 
-function Base.setindex!(sdf::SubDataTable, val::Any, colinds::Any)
-    sdf.parent[sdf.rows, colinds] = val
-    return sdf
+function Base.setindex!(sdt::SubDataTable, val::Any, colinds::Any)
+    sdt.parent[sdt.rows, colinds] = val
+    return sdt
 end
 
-function Base.setindex!(sdf::SubDataTable, val::Any, rowinds::Any, colinds::Any)
-    sdf.parent[sdf.rows[rowinds], colinds] = val
-    return sdf
+function Base.setindex!(sdt::SubDataTable, val::Any, rowinds::Any, colinds::Any)
+    sdt.parent[sdt.rows[rowinds], colinds] = val
+    return sdt
 end
 
 ##############################################################################
@@ -139,12 +139,12 @@ end
 ##
 ##############################################################################
 
-Base.map(f::Function, sdf::SubDataTable) = f(sdf) # TODO: deprecate
+Base.map(f::Function, sdt::SubDataTable) = f(sdt) # TODO: deprecate
 
-function Base.delete!(sdf::SubDataTable, c::Any) # TODO: deprecate?
-    return SubDataTable(delete!(sdf.parent, c), sdf.rows)
+function Base.delete!(sdt::SubDataTable, c::Any) # TODO: deprecate?
+    return SubDataTable(delete!(sdt.parent, c), sdt.rows)
 end
 
-without(sdf::SubDataTable, c::Vector{Int}) = sub(without(sdf.parent, c), sdf.rows)
-without(sdf::SubDataTable, c::Int) = sub(without(sdf.parent, c), sdf.rows)
-without(sdf::SubDataTable, c::Any) = sub(without(sdf.parent, c), sdf.rows)
+without(sdt::SubDataTable, c::Vector{Int}) = sub(without(sdt.parent, c), sdt.rows)
+without(sdt::SubDataTable, c::Int) = sub(without(sdt.parent, c), sdt.rows)
+without(sdt::SubDataTable, c::Any) = sub(without(sdt.parent, c), sdt.rows)
