@@ -271,25 +271,25 @@ module TestData
     #               NullableArray(Nullable{String}["x", "x", "y", "y",
     #                                              "x", "x", "x", "x", "x", "y",
     #                                              Nullable(), "y"])
-
-    srand(1)
-    function spltdf(d)
-        d[:x1] = map(x -> get(x)[1], d[:a])
-        d[:x2] = map(x -> get(x)[2], d[:a])
-        d[:x3] = map(x -> get(x)[3], d[:a])
-        d
-    end
-    df1 = DataTable(
-        a = ["abc", "abx", "axz", "def", "dfr"],
-        v1 = randn(5)
-    )
-    df1 = spltdf(df1)
-    df2 = DataTable(
-        a = ["def", "abc","abx", "axz", "xyz"],
-        v2 = randn(5)
-    )
-    df2 = spltdf(df2)
-
+    # 
+    # srand(1)
+    # function spltdf(d)
+    #     d[:x1] = map(x -> x[1], d[:a])
+    #     d[:x2] = map(x -> x[2], d[:a])
+    #     d[:x3] = map(x -> x[3], d[:a])
+    #     d
+    # end
+    # df1 = DataTable(
+    #     a = ["abc", "abx", "axz", "def", "dfr"],
+    #     v1 = randn(5)
+    # )
+    # df1 = spltdf(df1)
+    # df2 = DataTable(
+    #     a = ["def", "abc","abx", "axz", "xyz"],
+    #     v2 = randn(5)
+    # )
+    # df2 = spltdf(df2)
+    #
     # m1 = join(df1, df2, on = :a)
     # m2 = join(df1, df2, on = [:x1, :x2, :x3])
     # @test isequal(sort(m1[:a]), sort(m2[:a]))
