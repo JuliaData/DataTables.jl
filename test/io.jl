@@ -151,7 +151,7 @@ module TestIO
             if eltype(col) <: AbstractString
                 df[name] = map(s -> replace(s, "\r\n", "\n"), col)
             elseif eltype(col) <: Nullable && eltype(eltype(col)) <: AbstractString
-                df[name] = map(s -> replace(get(s), "\r\n", "\n"), col)
+                df[name] = map(s -> replace(s, "\r\n", "\n"), col)
             end
         end
         df
