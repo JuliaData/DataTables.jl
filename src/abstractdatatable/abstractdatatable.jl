@@ -26,8 +26,8 @@ The following are normally implemented for AbstractDataTables:
 * `convert` : convert to an array
 * `NullableArray` : convert to a NullableArray
 * [`completecases`](@ref) : indexes of complete cases (rows with no NA's)
-* [`dropnull`](@ref) : remove rows with NA's
-* [`dropnull!`](@ref) : remove rows with NA's in-place
+* [`dropnull`](@ref) : remove rows with null values
+* [`dropnull!`](@ref) : remove rows with null values in-place
 * [`nonunique`](@ref) : indexes of duplicate rows
 * [`unique!`](@ref) : remove duplicate rows
 * `similar` : a DataTable with similar columns as `d`
