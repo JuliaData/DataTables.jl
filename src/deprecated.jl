@@ -14,3 +14,6 @@ import Base: keys, values, insert!
 
 @deprecate pool categorical
 @deprecate pool! categorical!
+
+@deprecate complete_cases! dropnull!
+@deprecate complete_cases completecases

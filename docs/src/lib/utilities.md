@@ -11,8 +11,8 @@ Pages = ["utilities.md"]
 ```@docs
 eltypes
 head
-complete_cases
-complete_cases!
+<!-- complete_cases -->
+<!-- complete_cases! -->
 describe
 dump
 names!

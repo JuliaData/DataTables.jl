@@ -21,6 +21,7 @@ using FileIO  # remove after read_rda deprecation period
 
 using Base: Sort, Order
 import Base: ==, |>
+import NullableArrays: dropnull, dropnull!
 
 ##############################################################################
 ##
@@ -55,11 +56,12 @@ export @~,
        coefnames,
        colwise,
        combine,
-       complete_cases,
-       complete_cases!,
+       completecases,
        setcontrasts!,
        deleterows!,
        describe,
+       dropnull,
+       dropnull!,
        eachcol,
        eachrow,
        eltypes,

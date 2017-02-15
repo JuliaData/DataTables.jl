@@ -25,8 +25,9 @@ The following are normally implemented for AbstractDataTables:
 * [`tail`](@ref) : last `n` rows
 * `convert` : convert to an array
 * `NullableArray` : convert to a NullableArray
-* [`complete_cases`](@ref) : indexes of complete cases (rows with no NA's)
-* [`complete_cases!`](@ref) : remove rows with NA's
+* [`completecases`](@ref) : indexes of complete cases (rows with no NA's)
+* [`dropnull`](@ref) : remove rows with NA's
+* [`dropnull!`](@ref) : remove rows with NA's in-place
 * [`nonunique`](@ref) : indexes of duplicate rows
 * [`unique!`](@ref) : remove duplicate rows
 * `similar` : a DataTable with similar columns as `d`
@@ -436,7 +437,7 @@ end
 Indexes of complete cases (rows without null values)
 
 ```julia
-complete_cases(df::AbstractDataTable)
+completecases(df::AbstractDataTable)
 ```
 
 **Arguments**
@@ -447,7 +448,7 @@ complete_cases(df::AbstractDataTable)
 
 * `::Vector{Bool}` : indexes of complete cases
 
-See also [`complete_cases!`](@ref).
+See also [`dropnull`](@ref) and [`dropnull!`](@ref).
 
 **Examples**
 
@@ -455,23 +456,51 @@ See also [`complete_cases!`](@ref).
 df = DataTable(i = 1:10, x = rand(10), y = rand(["a", "b", "c"], 10))
 df[[1,4,5], :x] = Nullable()
 df[[9,10], :y] = Nullable()
-complete_cases(df)
+completecases(df)
 ```
 
 """
-function complete_cases(df::AbstractDataTable)
+function completecases(df::AbstractDataTable)
     res = fill(true, size(df, 1))
     for i in 1:size(df, 2)
         _nonnull!(res, df[i])
     end
     res
 end
-
 """
-Delete rows with null values.
+Remove rows with null values.
 
 ```julia
-complete_cases!(df::AbstractDataTable)
+dropnull(df::AbstractDataTable)
+```
+
+**Arguments**
+
+* `df` : the AbstractDataTable
+
+**Result**
+
+* `::AbstractDataTable` : the updated copy
+
+See also [`dropnull!`](@ref) and [`completecases`](@ref).
+
+**Examples**
+
+```julia
+df = DataTable(i = 1:10, x = rand(10), y = rand(["a", "b", "c"], 10))
+df[[1,4,5], :x] = Nullable()
+df[[9,10], :y] = Nullable()
+dropnull(df)
+```
+
+"""
+dropnull(df::AbstractDataTable) = deleterows!(copy(df), find(!completecases(df)))
+
+"""
+Remove rows with null values in-place.
+
+```julia
+dropnull!(df::AbstractDataTable)
 ```
 
 **Arguments**
@@ -482,7 +511,7 @@ complete_cases!(df::AbstractDataTable)
 
 * `::AbstractDataTable` : the updated version
 
-See also [`complete_cases`](@ref).
+See also [`dropnull`](@ref) and [`completecases`](@ref).
 
 **Examples**
 
@@ -490,11 +519,11 @@ See also [`complete_cases`](@ref).
 df = DataTable(i = 1:10, x = rand(10), y = rand(["a", "b", "c"], 10))
 df[[1,4,5], :x] = Nullable()
 df[[9,10], :y] = Nullable()
-complete_cases!(df)
+dropnull!(df)
 ```
 
 """
-complete_cases!(df::AbstractDataTable) = deleterows!(df, find(!complete_cases(df)))
+dropnull!(df::AbstractDataTable) = deleterows!(df, find(!completecases(df)))
 
 function Base.convert(::Type{Array}, df::AbstractDataTable)
     convert(Matrix, df)
