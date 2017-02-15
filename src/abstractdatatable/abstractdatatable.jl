@@ -25,7 +25,7 @@ The following are normally implemented for AbstractDataTables:
 * [`tail`](@ref) : last `n` rows
 * `convert` : convert to an array
 * `NullableArray` : convert to a NullableArray
-* [`completecases`](@ref) : indexes of complete cases (rows with no NA's)
+* [`completecases`](@ref) : indexes of complete cases (rows with no null values)
 * [`dropnull`](@ref) : remove rows with null values
 * [`dropnull!`](@ref) : remove rows with null values in-place
 * [`nonunique`](@ref) : indexes of duplicate rows
@@ -355,12 +355,12 @@ describe(io, df::AbstractDataTable)
 **Details**
 
 If the column's base type derives from Number, compute the minimum, first
-quantile, median, mean, third quantile, and maximum. NA's are filtered and
+quantile, median, mean, third quantile, and maximum. nulls are filtered and
 reported separately.
 
-For boolean columns, report trues, falses, and NAs.
+For boolean columns, report trues, falses, and nulls.
 
-For other types, show column characteristics and number of NAs.
+For other types, show column characteristics and number of nulls.
 
 **Examples**
 
@@ -381,7 +381,7 @@ end
 StatsBase.describe(nv::AbstractArray) = describe(STDOUT, nv)
 function StatsBase.describe{T<:Number}(io, nv::AbstractArray{T})
     if all(_isnull, nv)
-        println(io, " * All NA * ")
+        println(io, " * All null * ")
         return
     end
     filtered = float(dropnull(nv))
@@ -399,7 +399,7 @@ end
 function StatsBase.describe{T}(io, nv::AbstractArray{T})
     ispooled = isa(nv, CategoricalVector) ? "Pooled " : ""
     nulls = countnull(nv)
-    # if nothing else, just give the length and element type and NA count
+    # if nothing else, just give the length and element type and null count
     println(io, "Length    $(length(nv))")
     println(io, "Type      $(ispooled)$(string(eltype(nv)))")
     println(io, "NULLs     $(nulls)")
