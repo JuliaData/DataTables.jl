@@ -125,7 +125,7 @@ function groupby{T}(d::AbstractDataTable, cols::Vector{T})
     # use CategoricalArray to get a set of integer references for each unique item
     nv = NullableCategoricalArray(d[cols[ncols]])
     # if there are NULLs, add 1 to the refs to avoid underflows in x later
-    anynulls = (findtirst(nv.refs, 0) > 0 ? 1 : 0)
+    anynulls = (findfirst(nv.refs, 0) > 0 ? 1 : 0)
     # use UInt32 instead of the original array's integer size since the number of levels can be high
     x = similar(nv.refs, UInt32)
     for i = 1:nrow(d)
