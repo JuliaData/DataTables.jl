@@ -62,13 +62,13 @@ end
 
 function fill_groups!(x::AbstractVector, v::AbstractVector, ngroups::Integer)
     nv = NullableCategoricalArray(v)
-    anynulls = (findfirst(nv.refs, 0) > 0 ? 1 : 0)
+    anynulls = findfirst(nv.refs, 0) > 0
+    order = CategoricalArrays.order(nv.pool)
+    anynulls && unshift!(0, order)
     @inbounds for i in eachindex(x, v)
-        if nv.refs[i] != 0
-            x[i] += (CategoricalArrays.order(nv.pool)[nv.refs[i]] + anynulls - 1) * ngroups
-        end
+        x[i] += (order[nv.refs[i]] + anynulls - 1) * ngroups
     end
-    length(levels(nv)) + anynulls
+    length(order)
 end
 
 """
