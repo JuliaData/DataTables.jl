@@ -60,6 +60,17 @@ function groupsort_indexer(x::AbstractVector, ngroups::Integer, null_last::Bool=
     result, where, counts
 end
 
+function fill_groups!(x::AbstractVector, v::AbstractVector, ngroups::Integer)
+    nv = NullableCategoricalArray(v)
+    anynulls = (findfirst(nv.refs, 0) > 0 ? 1 : 0)
+    @inbounds for i in eachindex(x, v)
+        if nv.refs[i] != 0
+            x[i] += (CategoricalArrays.order(nv.pool)[nv.refs[i]] + anynulls - 1) * ngroups
+        end
+    end
+    length(levels(nv)) + anynulls
+end
+
 """
 A view of an AbstractDataTable split into row groups
 
@@ -122,31 +133,12 @@ function groupby{T}(d::AbstractDataTable, cols::Vector{T})
     ##     http://wesmckinney.com/blog/?p=489
 
     ncols = length(cols)
-    # use CategoricalArray to get a set of integer references for each unique item
-    nv = NullableCategoricalArray(d[cols[ncols]])
-    # if there are NULLs, add 1 to the refs to avoid underflows in x later
-    anynulls = (findfirst(nv.refs, 0) > 0 ? 1 : 0)
-    # use UInt32 instead of the original array's integer size since the number of levels can be high
-    x = similar(nv.refs, UInt32)
-    for i = 1:nrow(d)
-        if nv.refs[i] == 0
-            x[i] = 1
-        else
-            x[i] = CategoricalArrays.order(nv.pool)[nv.refs[i]] + anynulls
-        end
-    end
-    # also compute the number of groups, which is the product of the set lengths
-    ngroups = length(levels(nv)) + anynulls
-    # if there's more than 1 column, do roughly the same thing repeatedly
-    for j = (ncols - 1):-1:1
-        nv = NullableCategoricalArray(d[cols[j]])
-        anynulls = (findfirst(nv.refs, 0) > 0 ? 1 : 0)
-        for i = 1:nrow(d)
-            if nv.refs[i] != 0
-                x[i] += (CategoricalArrays.order(nv.pool)[nv.refs[i]] + anynulls - 1) * ngroups
-            end
-        end
-        ngroups = ngroups * (length(levels(nv)) + anynulls)
+    x = ones(UInt32, nrow(d))
+    ngroups = 1
+    for j in ncols:-1:1
+        newgroups = fill_groups!(x, d[j], ngroups)
+        # compute the number of groups, which is the product of the set lengths
+        ngroups = ngroups * newgroups
         # TODO if ngroups is really big, shrink it
     end
     (idx, starts) = groupsort_indexer(x, ngroups)
