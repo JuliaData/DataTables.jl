@@ -60,13 +60,19 @@ function groupsort_indexer(x::AbstractVector, ngroups::Integer, null_last::Bool=
     result, where, counts
 end
 
-function fill_groups!(x::AbstractVector, v::AbstractVector, ngroups::Integer)
-    nv = NullableCategoricalArray(v)
-    anynulls = findfirst(nv.refs, 0) > 0
-    order = CategoricalArrays.order(nv.pool)
-    anynulls && unshift!(0, order)
+function fill_groups!{T}(x::AbstractVector, v::AbstractVector{T}, ngroups::Integer)
+    if T <: Nullable || Nullable <: T
+        cv = convert(NullableCategoricalVector, v)
+        anynulls = findfirst(cv.refs, 0) > 0
+        order = CategoricalArrays.order(cv.pool) .+ anynulls .- 1
+    else
+        cv = convert(CategoricalVector, v)
+        order = CategoricalArrays.order(cv.pool)
+    end
+
+    refs = cv.refs
     @inbounds for i in eachindex(x, v)
-        x[i] += (order[nv.refs[i]] + anynulls - 1) * ngroups
+        x[i] += order[refs[i]] * ngroups
     end
     length(order)
 end
