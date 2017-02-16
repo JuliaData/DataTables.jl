@@ -31,9 +31,8 @@ function groupsort_indexer(x::AbstractVector, ngroups::Integer, null_last::Bool=
 
     # count group sizes, location 0 for NULL
     n = length(x)
-    # counts = x.pool
     counts = fill(0, ngroups + 1)
-    for i = 1:n
+    @inbounds for i in 1:n
         counts[x[i] + 1] += 1
     end
 
@@ -52,7 +51,7 @@ function groupsort_indexer(x::AbstractVector, ngroups::Integer, null_last::Bool=
 
     # this is our indexer
     result = fill(0, n)
-    for i = 1:n
+    @inbounds for i in 1:n
         label = x[i] + 1
         result[where[label]] = i
         where[label] += 1
@@ -150,8 +149,10 @@ function groupby{T}(d::AbstractDataTable, cols::Vector{T})
     (idx, starts) = groupsort_indexer(x, ngroups)
     # Remove zero-length groupings
     starts = _uniqueofsorted(starts)
-    ends = starts[2:end] - 1
-    GroupedDataTable(d, cols, idx, starts[1:end-1], ends)
+    ends = starts[2:end]
+    ends .-= 1
+    pop!(starts)
+    GroupedDataTable(d, cols, idx, starts, ends)
 end
 groupby(d::AbstractDataTable, cols) = groupby(d, [cols])
 
