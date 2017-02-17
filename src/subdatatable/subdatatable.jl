@@ -75,7 +75,6 @@ function SubDataTable{S <: Integer}(parent::DataTable, rows::AbstractVector{S})
 end
 
 
-=======
 function Base.view{S <: Real}(dt::DataTable, rowinds::AbstractVector{S})
     return SubDataTable(dt, rowinds)
 end
@@ -102,7 +101,6 @@ end
 
 function Base.view(adt::AbstractDataTable, rowinds::Any, colinds::Any)
     return view(adt[[colinds]], rowinds)
->>>>>>> master
 end
 
 ##############################################################################
