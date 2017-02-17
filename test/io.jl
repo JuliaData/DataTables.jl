@@ -148,9 +148,8 @@ module TestIO
 
     function normalize_eol!(dt)
         for (name, col) in eachcol(dt)
-            if eltype(col) <: AbstractString
-                dt[name] = map(s -> replace(s, "\r\n", "\n"), col)
-            elseif eltype(col) <: Nullable && eltype(eltype(col)) <: AbstractString
+            if eltype(col) <: AbstractString ||
+               (isa(col, NullableArray) && eltype(eltype(col)) <: AbstractString)
                 dt[name] = map(s -> replace(s, "\r\n", "\n"), col)
             end
         end

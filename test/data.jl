@@ -277,25 +277,25 @@ module TestData
     #               NullableArray(Nullable{String}["x", "x", "y", "y",
     #                                              "x", "x", "x", "x", "x", "y",
     #                                              Nullable(), "y"])
-    #
-    # srand(1)
-    # function spltdt(d)
-    #     d[:x1] = map(x -> x[1], d[:a])
-    #     d[:x2] = map(x -> x[2], d[:a])
-    #     d[:x3] = map(x -> x[3], d[:a])
-    #     d
-    # end
-    # dt1 = DataTable(
-    #     a = ["abc", "abx", "axz", "def", "dtr"],
-    #     v1 = randn(5)
-    # )
-    # dt1 = spltdt(dt1)
-    # dt2 = DataTable(
-    #     a = ["def", "abc","abx", "axz", "xyz"],
-    #     v2 = randn(5)
-    # )
-    # dt2 = spltdt(dt2)
-    #
+
+    srand(1)
+    function spltdt(d)
+        d[:x1] = map(x -> x[1], d[:a])
+        d[:x2] = map(x -> x[2], d[:a])
+        d[:x3] = map(x -> x[3], d[:a])
+        d
+    end
+    dt1 = DataTable(
+        a = ["abc", "abx", "axz", "def", "dfr"],
+        v1 = randn(5)
+    )
+    dt1 = spltdt(dt1)
+    dt2 = DataTable(
+        a = ["def", "abc","abx", "axz", "xyz"],
+        v2 = randn(5)
+    )
+    dt2 = spltdt(dt2)
+
     # m1 = join(dt1, dt2, on = :a)
     # m2 = join(dt1, dt2, on = [:x1, :x2, :x3])
     # @test isequal(sort(m1[:a]), sort(m2[:a]))
