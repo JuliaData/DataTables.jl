@@ -460,7 +460,6 @@ completecases(dt)
 ```
 
 """
-<<<<<<< HEAD
 function completecases(dt::AbstractDataTable)
     res = trues(size(dt, 1))
     for i in 1:size(dt, 2)
