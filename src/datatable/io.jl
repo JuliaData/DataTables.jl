@@ -41,28 +41,28 @@ macro read_peek_eof(io, nextchr)
     end
 end
 
-macro skip_within_eol(io, chr, nextchr, endt)
+macro skip_within_eol(io, chr, nextchr, endf)
     io = esc(io)
     chr = esc(chr)
     nextchr = esc(nextchr)
-    endt = esc(endt)
+    endf = esc(endf)
     quote
         if $chr == UInt32('\r') && $nextchr == UInt32('\n')
-            $chr, $nextchr, $endt = @read_peek_eof($io, $nextchr)
+            $chr, $nextchr, $endf = @read_peek_eof($io, $nextchr)
         end
     end
 end
 
-macro skip_to_eol(io, chr, nextchr, endt)
+macro skip_to_eol(io, chr, nextchr, endf)
     io = esc(io)
     chr = esc(chr)
     nextchr = esc(nextchr)
-    endt = esc(endt)
+    endf = esc(endf)
     quote
-        while !$endt && !@atnewline($chr, $nextchr)
-            $chr, $nextchr, $endt = @read_peek_eof($io, $nextchr)
+        while !$endf && !@atnewline($chr, $nextchr)
+            $chr, $nextchr, $endf = @read_peek_eof($io, $nextchr)
         end
-        @skip_within_eol($io, $chr, $nextchr, $endt)
+        @skip_within_eol($io, $chr, $nextchr, $endf)
     end
 end
 
@@ -215,7 +215,7 @@ for allowcomments in tf, skipblanks in tf, allowescapes in tf, wsv in tf
             $(if wsv quote skip_white = true end end)
             chr = 0xff
             nextchr = (firstchr == 0xff && !eof(io)) ? read(io, UInt8) : firstchr
-            endt = nextchr == 0xff
+            endf = nextchr == 0xff
 
             # 'in' does not work if passed UInt8 and Vector{Char}
             quotemarks = convert(Vector{UInt8}, o.quotemarks)
@@ -226,9 +226,9 @@ for allowcomments in tf, skipblanks in tf, allowescapes in tf, wsv in tf
             @push(n_lines, p.lines, 0, l_lines)
 
             # Loop over bytes from the input until we've read requested rows
-            while !endt && ((nrows == -1) || (n_lines < nrows + 1))
+            while !endf && ((nrows == -1) || (n_lines < nrows + 1))
 
-                chr, nextchr, endt = @read_peek_eof(io, nextchr)
+                chr, nextchr, endf = @read_peek_eof(io, nextchr)
 
                 # === Debugging ===
                 # if in_quotes
@@ -241,7 +241,7 @@ for allowcomments in tf, skipblanks in tf, allowescapes in tf, wsv in tf
                     quote
                         # Ignore text inside comments completely
                         if !in_quotes && chr == UInt32(o.commentmark)
-                            @skip_to_eol(io, chr, nextchr, endt)
+                            @skip_to_eol(io, chr, nextchr, endf)
 
                             # Skip the linebreak if the comment began at the start of a line
                             if at_start
@@ -255,9 +255,9 @@ for allowcomments in tf, skipblanks in tf, allowescapes in tf, wsv in tf
                     quote
                         # Skip blank lines
                         if !in_quotes
-                            while !endt && @atblankline(chr, nextchr)
-                                chr, nextchr, endt = @read_peek_eof(io, nextchr)
-                                @skip_within_eol(io, chr, nextchr, endt)
+                            while !endf && @atblankline(chr, nextchr)
+                                chr, nextchr, endf = @read_peek_eof(io, nextchr)
+                                @skip_within_eol(io, chr, nextchr, endf)
                             end
                         end
                     end
@@ -269,7 +269,7 @@ for allowcomments in tf, skipblanks in tf, allowescapes in tf, wsv in tf
                         if @atcescape(chr, nextchr) && !in_escape
                             chr = @mergechr(chr, nextchr)
                             nextchr = eof(io) ? 0xff : read(io, UInt8)
-                            endt = nextchr == 0xff
+                            endf = nextchr == 0xff
                             in_escape = true
                         end
                     end
@@ -309,7 +309,7 @@ for allowcomments in tf, skipblanks in tf, allowescapes in tf, wsv in tf
                         end)
                     # Finished reading a row
                     elseif @atnewline(chr, nextchr)
-                        @skip_within_eol(io, chr, nextchr, endt)
+                        @skip_within_eol(io, chr, nextchr, endf)
                         $(if allowcomments quote at_start = true end end)
                         @push(n_bounds, p.bounds, n_bytes, l_bounds)
                         @push(n_bytes, p.bytes, '\n', l_bytes)
@@ -340,7 +340,7 @@ for allowcomments in tf, skipblanks in tf, allowescapes in tf, wsv in tf
             end
 
             # Append a final EOL if it's missing in the raw input
-            if endt && !@atnewline(chr, nextchr)
+            if endf && !@atnewline(chr, nextchr)
                 @push(n_bounds, p.bounds, n_bytes, l_bounds)
                 @push(n_bytes, p.bytes, '\n', l_bytes)
                 @push(n_lines, p.lines, n_bytes, l_lines)
@@ -729,22 +729,22 @@ function readtable!(p::ParsedCSV,
     # Skip lines at the start
     if o.skipstart != 0
         while skipped_lines < o.skipstart
-            chr, nextchr, endt = @read_peek_eof(io, nextchr)
-            @skip_to_eol(io, chr, nextchr, endt)
+            chr, nextchr, endf = @read_peek_eof(io, nextchr)
+            @skip_to_eol(io, chr, nextchr, endf)
             skipped_lines += 1
         end
     else
-        chr, nextchr, endt = @read_peek_eof(io, nextchr)
+        chr, nextchr, endf = @read_peek_eof(io, nextchr)
     end
 
     if o.allowcomments || o.skipblanks
         while true
             if o.allowcomments && nextchr == UInt32(o.commentmark)
-                chr, nextchr, endt = @read_peek_eof(io, nextchr)
-                @skip_to_eol(io, chr, nextchr, endt)
+                chr, nextchr, endf = @read_peek_eof(io, nextchr)
+                @skip_to_eol(io, chr, nextchr, endf)
             elseif o.skipblanks && @atnewline(nextchr, nextchr)
-                chr, nextchr, endt = @read_peek_eof(io, nextchr)
-                @skip_within_eol(io, chr, nextchr, endt)
+                chr, nextchr, endf = @read_peek_eof(io, nextchr)
+                @skip_within_eol(io, chr, nextchr, endf)
             else
                 break
             end
