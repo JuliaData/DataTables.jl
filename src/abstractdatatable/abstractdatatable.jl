@@ -25,7 +25,7 @@ The following are normally implemented for AbstractDataTables:
 * [`tail`](@ref) : last `n` rows
 * `convert` : convert to an array
 * `NullableArray` : convert to a NullableArray
-* [`completecases`](@ref) : indexes of complete cases (rows with no null values)
+* [`completecases`](@ref) : boolean vector of complete cases (null-free rows)
 * [`dropnull`](@ref) : remove rows with null values
 * [`dropnull!`](@ref) : remove rows with null values in-place
 * [`nonunique`](@ref) : indexes of duplicate rows
@@ -355,7 +355,7 @@ describe(io, dt::AbstractDataTable)
 **Details**
 
 If the column's base type derives from Number, compute the minimum, first
-quantile, median, mean, third quantile, and maximum. nulls are filtered and
+quantile, median, mean, third quantile, and maximum. Nulls are filtered and
 reported separately.
 
 For boolean columns, report trues, falses, and nulls.
@@ -460,13 +460,15 @@ completecases(dt)
 ```
 
 """
+<<<<<<< HEAD
 function completecases(dt::AbstractDataTable)
-    res = fill(true, size(dt, 1))
+    res = trues(size(dt, 1))
     for i in 1:size(dt, 2)
         _nonnull!(res, dt[i])
     end
     res
 end
+
 """
 Remove rows with null values.
 
@@ -494,7 +496,7 @@ dropnull(dt)
 ```
 
 """
-dropnull(dt::AbstractDataTable) = deleterows!(copy(dt), find(!completecases(dt)))
+dropnull(dt::AbstractDataTable) = deleterows!(copy(dt), find(!, completecases(dt)))
 
 """
 Remove rows with null values in-place.
@@ -523,7 +525,7 @@ dropnull!(dt)
 ```
 
 """
-dropnull!(dt::AbstractDataTable) = deleterows!(dt, find(!completecases(dt)))
+dropnull!(dt::AbstractDataTable) = deleterows!(dt, find(!, completecases(dt)))
 
 function Base.convert(::Type{Array}, dt::AbstractDataTable)
     convert(Matrix, dt)
