@@ -18,3 +18,6 @@ import Base: keys, values, insert!
 @deprecate complete_cases! dropnull!
 @deprecate complete_cases completecases
 @deprecate sub(dt::AbstractDataTable, rows) view(dt, rows)
+
+@deprecate stackdf stackdt
+@deprecate meltdf meltdt
