@@ -117,49 +117,23 @@ dt |> groupby([:a, :b]) |> [sum, length]
 ```
 
 """
-function groupby{T}(d::AbstractDataTable, cols::Vector{T})
-    ## a subset of Wes McKinney's algorithm here:
-    ##     http://wesmckinney.com/blog/?p=489
-
-    ncols = length(cols)
-    # use CategoricalArray to get a set of integer references for each unique item
-    nv = NullableCategoricalArray(d[cols[ncols]])
-    # if there are NULLs, add 1 to the refs to avoid underflows in x later
-    anynulls = (findfirst(nv.refs, 0) > 0 ? 1 : 0)
-    # use UInt32 instead of the original array's integer size since the number of levels can be high
-    x = similar(nv.refs, UInt32)
-    for i = 1:nrow(d)
-        if nv.refs[i] == 0
-            x[i] = 1
-        else
-            x[i] = CategoricalArrays.order(nv.pool)[nv.refs[i]] + anynulls
-        end
+function groupby{T}(dt::AbstractDataTable, cols::Vector{T}; sort::Bool = false)
+    sdt = dt[cols]
+    dt_groups = group_rows(sdt)
+    # sort the groups
+    if sort
+        group_perm = sortperm(sub(sdt, dt_groups.rperm[dt_groups.starts]))
+        permute!(dt_groups.starts, group_perm)
+        permute!(dt_groups.stops, group_perm)
     end
-    # also compute the number of groups, which is the product of the set lengths
-    ngroups = length(levels(nv)) + anynulls
-    # if there's more than 1 column, do roughly the same thing repeatedly
-    for j = (ncols - 1):-1:1
-        nv = NullableCategoricalArray(d[cols[j]])
-        anynulls = (findfirst(nv.refs, 0) > 0 ? 1 : 0)
-        for i = 1:nrow(d)
-            if nv.refs[i] != 0
-                x[i] += (CategoricalArrays.order(nv.pool)[nv.refs[i]] + anynulls - 1) * ngroups
-            end
-        end
-        ngroups = ngroups * (length(levels(nv)) + anynulls)
-        # TODO if ngroups is really big, shrink it
-    end
-    (idx, starts) = groupsort_indexer(x, ngroups)
-    # Remove zero-length groupings
-    starts = _uniqueofsorted(starts)
-    ends = starts[2:end] - 1
-    GroupedDataTable(d, cols, idx, starts[1:end-1], ends)
+    GroupedDataTable(dt, cols, dt_groups.rperm,
+                     dt_groups.starts, dt_groups.stops)
 end
-groupby(d::AbstractDataTable, cols) = groupby(d, [cols])
+groupby(d::AbstractDataTable, cols; sort::Bool = false) = groupby(d, [cols], sort = sort)
 
 # add a function curry
-groupby{T}(cols::Vector{T}) = x -> groupby(x, cols)
-groupby(cols) = x -> groupby(x, cols)
+groupby{T}(cols::Vector{T}; sort::Bool = false) = x -> groupby(x, cols, sort = sort)
+groupby(cols; sort::Bool = false) = x -> groupby(x, cols, sort = sort)
 
 Base.start(gd::GroupedDataTable) = 1
 Base.next(gd::GroupedDataTable, state::Int) =

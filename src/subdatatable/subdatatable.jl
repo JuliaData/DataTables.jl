@@ -9,7 +9,7 @@ if VERSION >= v"0.6.0-dev.2643"
     include_string("""
         immutable SubDataTable{T <: AbstractVector{Int}} <: AbstractDataTable
             parent::DataTable
-            rows::T # maps from subdf row indexes to parent row indexes
+            rows::T # maps from subdt row indexes to parent row indexes
 
             function SubDataTable{T}(parent::DataTable, rows::T) where {T <: AbstractVector{Int}}
                 if length(rows) > 0
@@ -26,7 +26,7 @@ else
     @eval begin
         immutable SubDataTable{T <: AbstractVector{Int}} <: AbstractDataTable
             parent::DataTable
-            rows::T # maps from subdf row indexes to parent row indexes
+            rows::T # maps from subdt row indexes to parent row indexes
 
             function SubDataTable(parent::DataTable, rows::T)
                 if length(rows) > 0

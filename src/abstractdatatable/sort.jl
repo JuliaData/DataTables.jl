@@ -36,7 +36,7 @@ function ordering(col_ord::UserColOrdering, lt::Function, by::Function, rev::Boo
         elseif k == :rev;   rev   = v
         elseif k == :order; order = v
         else
-            error("Unknown keyword argument: ", string(k))
+            throw(ArgumentError("Unknown order() keyword argument: ", string(k)))
         end
     end
 
@@ -55,69 +55,36 @@ ordering(col::ColumnIndex, lt::Function, by::Function, rev::Bool, order::Orderin
 #         the permutation induced by this ordering is used to
 #         sort the original (presumably larger) DataTable
 
-type DTPerm{O<:@compat(Union{Ordering, AbstractVector}), DT<:AbstractDataTable} <: Ordering
+immutable DTPerm{O<:Union{Ordering, AbstractVector}, DT<:AbstractDataTable} <: Ordering
     ord::O
     dt::DT
 end
 
-function DTPerm{O<:Ordering}(ords::AbstractVector{O}, dt::AbstractDataTable)
+function DTPerm{O<:Ordering, DT<:AbstractDataTable}(ords::AbstractVector{O}, dt::DT)
     if length(ords) != ncol(dt)
         error("DTPerm: number of column orderings does not equal the number of DataTable columns")
     end
-    DTPerm{AbstractVector{O}, typeof(dt)}(ords, dt)
+    DTPerm{typeof(ords), DT}(ords, dt)
 end
 
-DTPerm{O<:Ordering}(o::O, dt::AbstractDataTable) = DTPerm{O,typeof(dt)}(o,dt)
+DTPerm{O<:Ordering, DT<:AbstractDataTable}(o::O, dt::DT) = DTPerm{O,DT}(o,dt)
 
-# For sorting, a and b are row indices (first two lt definitions)
-# For issorted, the default row iterator returns DataTableRows instead,
-# so two more lt function is defined below
-function Sort.lt{V<:AbstractVector}(o::DTPerm{V}, a, b)
-    for i = 1:ncol(o.dt)
-        if lt(o.ord[i], o.dt[a,i], o.dt[b,i])
-            return true
-        end
-        if lt(o.ord[i], o.dt[b,i], o.dt[a,i])
-            return false
-        end
-    end
-    false
-end
+# get ordering function for the i-th column used for ordering
+col_ordering{O<:Ordering}(o::DTPerm{O}, i::Int) = o.ord
+col_ordering{V<:AbstractVector}(o::DTPerm{V}, i::Int) = o.ord[i]
 
-function Sort.lt{O<:Ordering}(o::DTPerm{O}, a, b)
-    for i = 1:ncol(o.dt)
-        if lt(o.ord, o.dt[a,i], o.dt[b,i])
-            return true
-        end
-        if lt(o.ord, o.dt[b,i], o.dt[a,i])
-            return false
-        end
-    end
-    false
-end
+Base.getindex(o::DTPerm, i::Int, j::Int) = o.dt[i, j]
+Base.getindex(o::DTPerm, a::DataTableRow, j::Int) = a[j]
 
-function Sort.lt{V<:AbstractVector}(o::DTPerm{V}, a::DataTableRow, b::DataTableRow)
-    for i = 1:ncol(o.dt)
-        if lt(o.ord[i], a[i], b[i])
-            return true
-        end
-        if lt(o.ord[i], b[i], a[i])
-            return false
-        end
+function Sort.lt(o::DTPerm, a, b)
+    @inbounds for i = 1:ncol(o.dt)
+        ord = col_ordering(o, i)
+        va = o[a, i]
+        vb = o[b, i]
+        lt(ord, va, vb) && return true
+        lt(ord, vb, va) && return false
     end
-    false
-end
-
-function Sort.lt{O<:Ordering}(o::DTPerm{O}, a::DataTableRow, b::DataTableRow)
-    for i = 1:ncol(o.dt)
-        if lt(o.ord, a[i], b[i])
-            return true
-        end
-        if lt(o.ord, b[i], a[i])
-            return false
-        end
-    end
-    false
+    false # a and b are equal
 end
 
 ###
@@ -306,5 +273,35 @@ for s in [:(Base.sort), :(Base.sortperm)]
 end
 
 Base.sort(dt::AbstractDataTable, a::Algorithm, o::Ordering) = dt[sortperm(dt, a, o),:]
-Base.sortperm(dt::AbstractDataTable, a::Algorithm, o::@compat(Union{Perm,DTPerm})) = sort!([1:size(dt, 1);], a, o)
+Base.sortperm(dt::AbstractDataTable, a::Algorithm, o::Union{Perm,DTPerm}) = sort!([1:size(dt, 1);], a, o)
 Base.sortperm(dt::AbstractDataTable, a::Algorithm, o::Ordering) = sortperm(dt, a, DTPerm(o,dt))
+
+# Extras to speed up sorting
+#Base.sortperm{V}(dt::AbstractDataTable, a::Algorithm, o::FastPerm{Sort.ForwardOrdering,V}) = sortperm(o.vec)
+#Base.sortperm{V}(dt::AbstractDataTable, a::Algorithm, o::FastPerm{Sort.ReverseOrdering,V}) = reverse(sortperm(o.vec))
+
+# permute rows
+function Base.permute!(dt::AbstractDataTable, p::AbstractVector)
+    pp = similar(p)
+    for (icol, col) in enumerate(columns(dt))
+        # Check if this column has been sorted already
+        any(j -> dt[j]===col, 1:icol-1) && continue
+
+        copy!(pp, p)
+        Base.permute!!(col, pp)
+    end
+    dt
+end
+
+# apply inverse of given rows permutation
+function Base.ipermute!(dt::AbstractDataTable, p::AbstractVector)
+    pp = similar(p)
+    for (icol, col) in enumerate(columns(dt))
+        # Check if this column has been sorted already
+        any(j -> dt[j]===col, 1:icol-1) && continue
+
+        copy!(pp, p)
+        Base.ipermute!!(col, pp)
+    end
+    dt
+end
