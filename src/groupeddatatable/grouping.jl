@@ -67,10 +67,10 @@ package for more operations on GroupedDataTables.
 ### Examples
 
 ```julia
-df = DataTable(a = repeat([1, 2, 3, 4], outer=[2]),
+dt = DataTable(a = repeat([1, 2, 3, 4], outer=[2]),
                b = repeat([2, 1], outer=[4]),
                c = randn(8))
-gd = groupby(df, :a)
+gd = groupby(dt, :a)
 gd[1]
 last(gd)
 vcat([g[:b] for g in gd]...)
@@ -79,8 +79,8 @@ for g in gd
 end
 map(d -> mean(dropnull(d[:c])), gd)   # returns a GroupApplied object
 combine(map(d -> mean(dropnull(d[:c])), gd))
-df |> groupby(:a) |> [sum, length]
-df |> groupby([:a, :b]) |> [sum, length]
+dt |> groupby(:a) |> [sum, length]
+dt |> groupby([:a, :b]) |> [sum, length]
 ```
 
 """
@@ -119,7 +119,7 @@ groupby(cols::Union{Int, Symbol}) = x -> groupby(x, [cols])
 
 Base.start(gd::GroupedDataTable) = 1
 Base.next(gd::GroupedDataTable, state::Int) =
-    (sub(gd.parent, gd.idx[gd.starts[state]:gd.ends[state]]),
+    (view(gd.parent, gd.idx[gd.starts[state]:gd.ends[state]]),
      state + 1)
 Base.done(gd::GroupedDataTable, state::Int) = state > length(gd.starts)
 Base.length(gd::GroupedDataTable) = length(gd.starts)
@@ -128,7 +128,7 @@ Base.first(gd::GroupedDataTable) = gd[1]
 Base.last(gd::GroupedDataTable) = gd[end]
 
 Base.getindex(gd::GroupedDataTable, idx::Int) =
-    sub(gd.parent, gd.idx[gd.starts[idx]:gd.ends[idx]])
+    view(gd.parent, gd.idx[gd.starts[idx]:gd.ends[idx]])
 Base.getindex(gd::GroupedDataTable, I::AbstractArray{Bool}) =
     GroupedDataTable(gd.parent, gd.cols, gd.idx, gd.starts[I], gd.ends[I])
 
@@ -176,13 +176,13 @@ end
 
 # map() sweeps along groups
 function Base.map(f::Function, gd::GroupedDataTable)
-    GroupApplied(gd, [wrap(f(df)) for df in gd])
+    GroupApplied(gd, [wrap(f(dt)) for dt in gd])
 end
 function Base.map(f::Function, ga::GroupApplied)
-    GroupApplied(ga.gd, [wrap(f(df)) for df in ga.vals])
+    GroupApplied(ga.gd, [wrap(f(dt)) for dt in ga.vals])
 end
 
-wrap(df::AbstractDataTable) = df
+wrap(dt::AbstractDataTable) = dt
 wrap(A::Matrix) = convert(DataTable, A)
 wrap(s::Any) = DataTable(x1 = s)
 
@@ -204,7 +204,7 @@ combine(ga::GroupApplied)
 ### Examples
 
 ```julia
-df = DataTable(a = repeat([1, 2, 3, 4], outer=[2]),
+dt = DataTable(a = repeat([1, 2, 3, 4], outer=[2]),
                b = repeat([2, 1], outer=[4]),
                c = randn(8))
 combine(map(d -> mean(dropnull(d[:c])), gd))
@@ -248,11 +248,11 @@ If `d` is not provided, a curried version of groupby is given.
 ### Examples
 
 ```julia
-df = DataTable(a = repeat([1, 2, 3, 4], outer=[2]),
+dt = DataTable(a = repeat([1, 2, 3, 4], outer=[2]),
                b = repeat([2, 1], outer=[4]),
                c = randn(8))
-colwise(sum, df)
-colwise(sum, groupby(df, :a))
+colwise(sum, dt)
+colwise(sum, groupby(dt, :a))
 ```
 
 """
@@ -302,14 +302,14 @@ notation can be used.
 ### Examples
 
 ```julia
-df = DataTable(a = repeat([1, 2, 3, 4], outer=[2]),
+dt = DataTable(a = repeat([1, 2, 3, 4], outer=[2]),
                b = repeat([2, 1], outer=[4]),
                c = randn(8))
-by(df, :a, d -> sum(d[:c]))
-by(df, :a, d -> 2 * dropnull(d[:c]))
-by(df, :a, d -> DataTable(c_sum = sum(d[:c]), c_mean = mean(dropnull(d[:c]))))
-by(df, :a, d -> DataTable(c = d[:c], c_mean = mean(dropnull(d[:c]))))
-by(df, [:a, :b]) do d
+by(dt, :a, d -> sum(d[:c]))
+by(dt, :a, d -> 2 * dropnull(d[:c]))
+by(dt, :a, d -> DataTable(c_sum = sum(d[:c]), c_mean = mean(dropnull(d[:c]))))
+by(dt, :a, d -> DataTable(c = d[:c], c_mean = mean(dropnull(d[:c]))))
+by(dt, [:a, :b]) do d
     DataTable(m = mean(dropnull(d[:c])), v = var(dropnull(d[:c])))
 end
 ```
@@ -350,13 +350,13 @@ same length.
 ### Examples
 
 ```julia
-df = DataTable(a = repeat([1, 2, 3, 4], outer=[2]),
+dt = DataTable(a = repeat([1, 2, 3, 4], outer=[2]),
                b = repeat([2, 1], outer=[4]),
                c = randn(8))
-aggregate(df, :a, sum)
-aggregate(df, :a, [sum, x->mean(dropnull(x))])
-aggregate(groupby(df, :a), [sum, x->mean(dropnull(x))])
-df |> groupby(:a) |> [sum, x->mean(dropnull(x))]   # equivalent
+aggregate(dt, :a, sum)
+aggregate(dt, :a, [sum, x->mean(dropnull(x))])
+aggregate(groupby(dt, :a), [sum, x->mean(dropnull(x))])
+dt |> groupby(:a) |> [sum, x->mean(dropnull(x))]   # equivalent
 ```
 
 """

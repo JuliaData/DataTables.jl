@@ -12,6 +12,7 @@ using Compat
 import Compat.String
 using Reexport
 @reexport using StatsBase
+import NullableArrays: dropnull, dropnull!
 @reexport using NullableArrays
 @reexport using CategoricalArrays
 using GZip
@@ -36,37 +37,28 @@ export @~,
        @wsv_str,
 
        AbstractDataTable,
-       AbstractContrasts,
        DataTable,
        DataTableRow,
-       Formula,
        GroupApplied,
        GroupedDataTable,
-       ModelFrame,
-       ModelMatrix,
        SubDataTable,
-       EffectsCoding,
-       DummyCoding,
-       HelmertCoding,
-       ContrastsCoding,
 
        aggregate,
        by,
        categorical!,
-       coefnames,
        colwise,
        combine,
-       complete_cases,
-       complete_cases!,
-       setcontrasts!,
+       completecases,
        deleterows!,
        describe,
+       dropnull,
+       dropnull!,
        eachcol,
        eachrow,
        eltypes,
        groupby,
        melt,
-       meltdf,
+       meltdt,
        names!,
        ncol,
        nonunique,
@@ -79,7 +71,7 @@ export @~,
        rename,
        showcols,
        stack,
-       stackdf,
+       stackdt,
        unique!,
        unstack,
        writetable,
@@ -127,10 +119,6 @@ for (dir, filename) in [
 
         ("abstractdatatable", "sort.jl"),
         ("datatable", "sort.jl"),
-
-        ("statsmodels", "contrasts.jl"),
-        ("statsmodels", "formula.jl"),
-        ("statsmodels", "statsmodel.jl"),
 
         ("", "deprecated.jl")
     ]

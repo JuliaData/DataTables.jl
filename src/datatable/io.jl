@@ -418,7 +418,7 @@ function bytestotype{N <: Integer,
     end
 end
 
-let out = Array(Float64, 1)
+let out = Vector{Float64}(1)
     global bytestotype
     function bytestotype{N <: AbstractFloat,
                          T <: String,
@@ -502,19 +502,19 @@ function bytestotype{N <: AbstractString,
     return String(bytes[left:right]), true, false
 end
 
-function builddf(rows::Integer,
+function builddt(rows::Integer,
                  cols::Integer,
                  bytes::Integer,
                  fields::Integer,
                  p::ParsedCSV,
                  o::ParseOptions)
-    columns = Array(Any, cols)
+    columns = Vector{Any}(cols)
 
     for j in 1:cols
         if isempty(o.eltypes)
-            values = Array(Int, rows)
+            values = Vector{Int}(rows)
         else
-            values = Array(o.eltypes[j], rows)
+            values = Vector{o.eltypes[j]}(rows)
         end
 
         missing = fill(false, rows)
@@ -600,7 +600,7 @@ function builddf(rows::Integer,
                     continue
                 else
                     is_float = false
-                    values = Array(Bool, rows)
+                    values = Vector{Bool}(rows)
                     i = 0
                     continue
                 end
@@ -621,7 +621,7 @@ function builddf(rows::Integer,
                     continue
                 else
                     is_bool = false
-                    values = Array(Compat.UTF8String, rows)
+                    values = Vector{Compat.UTF8String}(rows)
                     i = 0
                     continue
                 end
@@ -695,7 +695,7 @@ function findcorruption(rows::Integer,
                         fields::Integer,
                         p::ParsedCSV)
     n = length(p.bounds)
-    lengths = Array(Int, rows)
+    lengths = Vector{Int}(rows)
     t = 1
     for i in 1:rows
         bound = p.lines[i + 1]
@@ -789,10 +789,10 @@ function readtable!(p::ParsedCSV,
     end
 
     # Parse contents of a buffer into a DataTable
-    df = builddf(rows, cols, bytes, fields, p, o)
+    dt = builddt(rows, cols, bytes, fields, p, o)
 
     # Return the final DataTable
-    return df
+    return dt
 end
 
 function readtable(io::IO,
@@ -834,9 +834,9 @@ function readtable(io::IO,
     end
 
     # Allocate buffers for storing metadata
-    p = ParsedCSV(Array(UInt8, nbytes),
-                  Array(Int, 1),
-                  Array(Int, 1),
+    p = ParsedCSV(Vector{UInt8}(nbytes),
+                  Vector{Int}(1),
+                  Vector{Int}(1),
                   BitArray(1))
 
     # Set parsing options
@@ -891,11 +891,11 @@ readtable(filename, [keyword options])
 ### Examples
 
 ```julia
-df = readtable("data.csv")
-df = readtable("data.tsv")
-df = readtable("data.wsv")
-df = readtable("data.txt", separator = '\t')
-df = readtable("data.txt", header = false)
+dt = readtable("data.csv")
+dt = readtable("data.tsv")
+dt = readtable("data.wsv")
+dt = readtable("data.txt", separator = '\t')
+dt = readtable("data.txt", header = false)
 ```
 """
 function readtable(pathname::AbstractString;
@@ -936,7 +936,7 @@ function readtable(pathname::AbstractString;
         nbytes = filesize(pathname)
     end
 
-    df = try
+    dt = try
         readtable(io,
                   nbytes,
                   header = header,
@@ -963,7 +963,7 @@ function readtable(pathname::AbstractString;
         close(io)
     end
 
-    return df
+    return dt
 end
 
 """
@@ -1010,7 +1010,7 @@ they are equivalent to supplying named arguments to `readtable` as follows:
 
 # Example
 ```jldoctest
-julia> df = csv\"""
+julia> dt = csv\"""
            name,  age, squidPerWeek
            Alice,  36,         3.14
            Bob,    24,         0
@@ -1044,7 +1044,7 @@ supplying named arguments to `readtable` as follows:
 
 # Example
 ```jldoctest
-julia> df = csv2\"""
+julia> dt = csv2\"""
            name;  age; squidPerWeek
            Alice;  36;         3,14
            Bob;    24;         0
@@ -1080,7 +1080,7 @@ follows:
 
 # Example
 ```jldoctest
-julia> df = wsv\"""
+julia> dt = wsv\"""
            name  age squidPerWeek
            Alice  36         3.14
            Bob    24         0
@@ -1113,7 +1113,7 @@ they are equivalent to supplying named arguments to `readtable` as follows:
 
 # Example
 ```jldoctest
-julia> df = tsv\"""
+julia> dt = tsv\"""
            name\tage\tsquidPerWeek
            Alice\t36\t3.14
            Bob\t24\t0
@@ -1131,24 +1131,24 @@ julia> df = tsv\"""
 """
 macro tsv_str(s, flags...) inlinetable(s, flags...; separator='\t') end
 
-function filldf!(df::DataTable,
+function filldt!(dt::DataTable,
                  rows::Integer,
                  cols::Integer,
                  bytes::Integer,
                  fields::Integer,
                  p::ParsedCSV,
                  o::ParseOptions)
-    etypes = eltypes(df)
+    etypes = eltypes(dt)
 
-    if rows != size(df, 1)
+    if rows != size(dt, 1)
         for j in 1:cols
-            resize!(df.columns[j].data, rows)
-            resize!(df.columns[j].na, rows)
+            resize!(dt.columns[j].data, rows)
+            resize!(dt.columns[j].na, rows)
         end
     end
 
     for j in 1:cols
-        c = df.columns[j]
+        c = dt.columns[j]
         T = etypes[j]
 
         i = 0
