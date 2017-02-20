@@ -19,7 +19,7 @@ end
 Base.names(r::DataTableRow) = names(r.dt)
 _names(r::DataTableRow) = _names(r.dt)
 
-Base.sub(r::DataTableRow, c) = DataTableRow(r.dt[[c]], r.row)
+Base.view(r::DataTableRow, c) = DataTableRow(r.dt[[c]], r.row)
 
 index(r::DataTableRow) = index(r.dt)
 

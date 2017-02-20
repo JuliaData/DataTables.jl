@@ -36,7 +36,7 @@ function ordering(col_ord::UserColOrdering, lt::Function, by::Function, rev::Boo
         elseif k == :rev;   rev   = v
         elseif k == :order; order = v
         else
-            throw(ArgumentError("Unknown order() keyword argument: ", string(k)))
+            error("Unknown keyword argument: ", string(k))
         end
     end
 
