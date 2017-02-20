@@ -25,11 +25,11 @@ function hashrows_col!(h::Vector{UInt}, v::AbstractVector)
     h
 end
 
-function hashrows_col!{T}(h::Vector{UInt}, v::AbstractNullableVector{T})
+function hashrows_col!{T}(h::Vector{UInt}, v::AbstractVector{T})
     @inbounds for i in eachindex(h)
-        h[i] = isnull(v, i) ?
+        h[i] = isnull(v[i]) ?
                hash(NULL_MAGIC, h[i]) :
-               hash(NullableArrays.unsafe_getvalue_notnull(v, i), h[i])
+               hash(v[i], h[i])
     end
     h
 end

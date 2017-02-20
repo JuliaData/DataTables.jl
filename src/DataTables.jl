@@ -22,6 +22,7 @@ using FileIO  # remove after read_rda deprecation period
 
 using Base: Sort, Order
 import Base: ==, |>
+import Base: permute!, ipermute!
 
 ##############################################################################
 ##
@@ -104,6 +105,7 @@ for (dir, filename) in [
         ("subdatatable", "subdatatable.jl"),
         ("groupeddatatable", "grouping.jl"),
         ("datatablerow", "datatablerow.jl"),
+        ("datatablerow", "utils.jl"),
 
         ("abstractdatatable", "iteration.jl"),
         ("abstractdatatable", "join.jl"),

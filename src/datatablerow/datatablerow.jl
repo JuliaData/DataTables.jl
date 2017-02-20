@@ -19,49 +19,130 @@ end
 Base.names(r::DataTableRow) = names(r.dt)
 _names(r::DataTableRow) = _names(r.dt)
 
-Base.view(r::DataTableRow, c) = DataTableRow(r.dt[[c]], r.row)
+Base.sub(r::DataTableRow, c) = DataTableRow(r.dt[[c]], r.row)
 
 index(r::DataTableRow) = index(r.dt)
 
 Base.length(r::DataTableRow) = size(r.dt, 2)
-
 Base.endof(r::DataTableRow) = size(r.dt, 2)
-
-Base.collect(r::DataTableRow) = @compat Tuple{Symbol, Any}[x for x in r]
-
 Base.start(r::DataTableRow) = 1
-
 Base.next(r::DataTableRow, s) = ((_names(r)[s], r[s]), s + 1)
-
 Base.done(r::DataTableRow, s) = s > length(r)
 
 Base.convert(::Type{Array}, r::DataTableRow) = convert(Array, r.dt[r.row,:])
+Base.collect(r::DataTableRow) = Tuple{Symbol, Any}[x for x in r]
+
+# the equal elements of nullable and normal arrays would have the same hashes
+const NULL_MAGIC = 0xBADDEED # what to hash if the element is null
+
+# hash column element
+Base.@propagate_inbounds hash_colel(v::AbstractArray, i, h::UInt = zero(UInt)) = hash(v[i], h)
+Base.@propagate_inbounds hash_colel{T}(v::NullableArray{T}, i, h::UInt = zero(UInt)) =
+    isnull(v, i) ? hash(NULL_MAGIC, h) : hash(get(v[i]), h)
+Base.@propagate_inbounds hash_colel{T}(v::AbstractCategoricalArray{T}, i, h::UInt = zero(UInt)) =
+    hash(CategoricalArrays.index(v.pool)[v.refs[i]], h)
+Base.@propagate_inbounds function hash_colel{T}(v::AbstractCategoricalArray{T}, i, h::UInt = zero(UInt))
+    ref = v.refs[i]
+    ref == 0 ? hash(NULL_MAGIC, h) : hash(CategoricalArrays.index(v.pool)[ref], h)
+end
 
 # hash of DataTable rows based on its values
 # so that duplicate rows would have the same hash
-function Base.hash(r::DataTableRow, h::UInt)
-    for col in columns(r.dt)
-        if _isnull(col[r.row])
-            h = hash(false, h)
-        else
-            h = hash(true, hash(col[r.row], h))
-        end
+function rowhash(dt::DataTable, r::Int, h::UInt = zero(UInt))
+    @inbounds for col in columns(dt)
+        h = hash_colel(col, r, h)
     end
     return h
 end
 
-# comparison of DataTable rows
-# only the rows of the same DataTable could be compared
-# rows are equal if they have the same values (while the row indices could differ)
-@compat(Base.:(==))(r1::DataTableRow, r2::DataTableRow) = isequal(r1, r2)
+Base.hash(r::DataTableRow, h::UInt = zero(UInt)) = rowhash(r.dt, r.row, h)
 
-function Base.isequal(r1::DataTableRow, r2::DataTableRow)
-    r1.dt == r2.dt || throw(ArgumentError("Comparing rows from different frames not supported"))
-    r1.row == r2.row && return true
-    for col in columns(r1.dt)
-        if !isequal(col[r1.row], col[r2.row])
-            return false
+# comparison of DataTable rows
+# rows are equal if they have the same values (while the row indices could differ)
+# returns Nullable{Bool}
+# if all non-null values are equal, but there are nulls, returns null
+function @compat(Base.:(==))(r1::DataTableRow, r2::DataTableRow)
+    if r1.dt !== r2.dt
+        (ncol(r1.dt) != ncol(r2.dt)) &&
+            throw(ArgumentError("Comparing rows from different frames not supported"))
+        eq = Nullable(true)
+        @inbounds for (col1, col2) in zip(columns(r1.dt), columns(r2.dt))
+            eq_col = convert(Nullable{Bool}, col1[r1.row] == col2[r2.row])
+            # If true or null, need to compare remaining columns
+            get(eq_col, true) || return Nullable(false)
+            eq &= eq_col
         end
+        return eq
+    else
+    	r1.row == r2.row && return Nullable(true)
+        eq = Nullable(true)
+        @inbounds for col in columns(r1.dt)
+            eq_col = convert(Nullable{Bool}, col[r1.row] == col[r2.row])
+            # If true or null, need to compare remaining columns
+            get(eq_col, true) || return Nullable(false)
+            eq &= eq_col
+        end
+        return eq
+    end
+end
+
+# internal method for comparing the elements of the same data frame column
+isequal_colel(col::AbstractArray, r1::Int, r2::Int) =
+    (r1 == r2) || isequal(Base.unsafe_getindex(col, r1), Base.unsafe_getindex(col, r2))
+
+function isequal_colel{T}(col::Union{NullableArray{T},
+                                     AbstractNullableCategoricalArray{T}},
+                                     r1::Int, r2::Int)
+    (r1 == r2) && return true
+    isnull(col[r1]) && return isnull(col[r2])
+    return !isnull(col[r2]) && isequal(get(col[r1]), get(col[r2]))
+end
+
+isequal_colel(a::Any, b::Any) = isequal(a, b)
+isequal_colel(a::Nullable, b::Any) = !isnull(a) && isequal(get(a), b)
+isequal_colel(a::Any, b::Nullable) = isequal_colel(b, a)
+isequal_colel(a::Nullable, b::Nullable) = isnull(a)==isnull(b) && (isnull(a) || isequal(get(a), get(b)))
+
+# comparison of DataTable rows
+function isequal_row(dt::AbstractDataTable, r1::Int, r2::Int)
+    (r1 == r2) && return true # same raw
+    @inbounds for col in columns(dt)
+        isequal_colel(col, r1, r2) || return false
     end
     return true
+end
+
+function isequal_row(dt1::AbstractDataTable, r1::Int, dt2::AbstractDataTable, r2::Int)
+    (dt1 === dt2) && return isequal_row(dt1, r1, r2)
+    (ncol(dt1) == ncol(dt2)) ||
+        throw(ArgumentError("Rows of the data frames that have different number of columns cannot be compared ($(ncol(dt1)) and $(ncol(dt2)))"))
+    @inbounds for (col1, col2) in zip(columns(dt1), columns(dt2))
+        isequal_colel(col1[r1], col2[r2]) || return false
+    end
+    return true
+end
+
+# comparison of DataTable rows
+# rows are equal if they have the same values (while the row indices could differ)
+Base.isequal(r1::DataTableRow, r2::DataTableRow) =
+    isequal_row(r1.dt, r1.row, r2.dt, r2.row)
+
+# lexicographic ordering on DataTable rows, null > !null
+function Base.isless(r1::DataTableRow, r2::DataTableRow)
+    (ncol(r1.dt) == ncol(r2.dt)) ||
+        throw(ArgumentError("Rows of the data frames that have different number of columns cannot be compared ($(ncol(dt1)) and $(ncol(dt2)))"))
+    @inbounds for i in 1:ncol(r1.dt)
+        col1 = r1.dt[i]
+        col2 = r2.dt[i]
+        isnull1 = _isnull(col1, r1.row)
+        isnull2 = _isnull(col2, r2.row)
+        (isnull1 != isnull2) && return isnull2 # null > !null
+        if !isnull1
+            v1 = get(col1[r1.row])
+            v2 = get(col2[r2.row])
+            isless(v1, v2) && return true
+            !isequal(v1, v2) && return false
+        end
+    end
+    return false
 end

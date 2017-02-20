@@ -113,7 +113,8 @@ module TestData
     dt8 = aggregate(dt7, :d2, [sum, length])
     @test size(dt8, 1) == 3
     @test size(dt8, 2) == 5
-    @test isequal(dt8[2, :d1_length], Nullable(4))
+    @test isequal(dt8[1, :d1_length], Nullable(4))
+    @test isequal(dt8[2, :d1_length], Nullable(11))
     @test isequal(dt8, aggregate(groupby(dt7, :d2), [sum, length]))
 
     dt9 = dt7 |> groupby([:d2]) |> [sum, length]
