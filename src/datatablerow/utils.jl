@@ -160,8 +160,8 @@ function findrow(gd::RowGroupDict, dt::DataTable, row::Int)
     while true
         g_row = gd.gslots[slotix]
         if g_row == 0 || # not found
-           (rhash == gd.rhashes[g_row] &&
-           isequal_row(gd.dt, g_row, dt, row)) # found
+            (rhash == gd.rhashes[g_row] &&
+            isequal_row(gd.dt, g_row, dt, row)) # found
             return g_row
         end
         slotix = (slotix & szm1) + 1 # miss, try the next slot
