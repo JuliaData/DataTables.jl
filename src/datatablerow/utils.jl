@@ -25,11 +25,11 @@ function hashrows_col!(h::Vector{UInt}, v::AbstractVector)
     h
 end
 
-function hashrows_col!{T}(h::Vector{UInt}, v::AbstractVector{T})
+function hashrows_col!{T<:Nullable}(h::Vector{UInt}, v::AbstractVector{T})
     @inbounds for i in eachindex(h)
         h[i] = isnull(v[i]) ?
-               hash(NULL_MAGIC, h[i]) :
-               hash(v[i], h[i])
+               hash(Base.nullablehash_seed, h[i]) :
+               hash(unsafe_get(v[i]), h[i])
     end
     h
 end
@@ -48,7 +48,7 @@ function hashrows_col!{T}(h::Vector{UInt}, v::AbstractNullableCategoricalVector{
     # TODO is it possible to optimize by hashing the pool values once?
     @inbounds for (i, ref) in enumerate(v.refs)
         h[i] = ref == 0 ?
-               hash(NULL_MAGIC, h[i]) :
+               hash(Base.nullablehash_seed, h[i]) :
                hash(CategoricalArrays.index(v.pool)[ref], h[i])
     end
     h
@@ -72,7 +72,7 @@ end
 #    the indices of the first row in a group
 # Optional group vector is set to the group indices of each row
 function row_group_slots(dt::AbstractDataTable,
-                          groups::Union{Vector{Int}, Void} = nothing)
+                         groups::Union{Vector{Int}, Void} = nothing)
     @assert groups === nothing || length(groups) == nrow(dt)
     rhashes = hashrows(dt)
     sz = Base._tablesz(length(rhashes))
@@ -106,7 +106,7 @@ function row_group_slots(dt::AbstractDataTable,
             end
             slotix = slotix & szm1 + 1 # check the next slot
             probe += 1
-            probe < sz || error("Cannot find free row slot")
+            @assert probe < sz
         end
         if groups !== nothing
             groups[i] = gix
@@ -115,7 +115,7 @@ function row_group_slots(dt::AbstractDataTable,
     return ngroups, rhashes, gslots
 end
 
-# Builds RowGroupDict for a given dataframe.
+# Builds RowGroupDict for a given datatable.
 # Partly uses the code of Wes McKinney's groupsort_indexer in pandas (file: src/groupby.pyx).
 function group_rows(dt::AbstractDataTable)
     groups = Vector{Int}(nrow(dt))
@@ -123,7 +123,7 @@ function group_rows(dt::AbstractDataTable)
 
     # count elements in each group
     stops = zeros(Int, ngroups)
-    for g_ix in groups
+    @inbounds for g_ix in groups
         stops[g_ix] += 1
     end
 
@@ -170,20 +170,20 @@ function findrow(gd::RowGroupDict, dt::DataTable, row::Int)
     return 0 # not found
 end
 
-# Finds indices of rows in 'gd' that match given row by content.
-# returns empty set if no row matches
+# Find indices of rows in 'gd' that match given row by content.
+# return empty set if no row matches
 function Base.get(gd::RowGroupDict, dt::DataTable, row::Int)
     g_row = findrow(gd, dt, row)
-    (g_row == 0) && return Compat.view(gd.rperm, 0:-1)
+    (g_row == 0) && return view(gd.rperm, 0:-1)
     gix = gd.groups[g_row]
-    return Compat.view(gd.rperm, gd.starts[gix]:gd.stops[gix])
+    return view(gd.rperm, gd.starts[gix]:gd.stops[gix])
 end
 
 function Base.getindex(gd::RowGroupDict, dtr::DataTableRow)
     g_row = findrow(gd, dtr.dt, dtr.row)
     (g_row == 0) && throw(KeyError(dtr))
     gix = gd.groups[g_row]
-    return Compat.view(gd.rperm, gd.starts[gix]:gd.stops[gix])
+    return view(gd.rperm, gd.starts[gix]:gd.stops[gix])
 end
 
 # Check if there is matching row in gd

@@ -122,9 +122,9 @@ function groupby{T}(dt::AbstractDataTable, cols::Vector{T}; sort::Bool = false)
     dt_groups = group_rows(sdt)
     # sort the groups
     if sort
-        group_perm = sortperm(sub(sdt, dt_groups.rperm[dt_groups.starts]))
+        group_perm = sortperm(view(sdt, dt_groups.rperm[dt_groups.starts]))
         permute!(dt_groups.starts, group_perm)
-        permute!(dt_groups.stops, group_perm)
+        Base.permute!!(dt_groups.stops, group_perm)
     end
     GroupedDataTable(dt, cols, dt_groups.rperm,
                      dt_groups.starts, dt_groups.stops)

@@ -37,18 +37,17 @@ Base.convert(::Type{Array}, r::DataTableRow) = convert(Array, r.dt[r.row,:])
 
 Base.collect(r::DataTableRow) = Tuple{Symbol, Any}[x for x in r]
 
-# the equal elements of nullable and normal arrays would have the same hashes
-const NULL_MAGIC = 0xBADDEED # what to hash if the element is null
-
 # hash column element
 Base.@propagate_inbounds hash_colel(v::AbstractArray, i, h::UInt = zero(UInt)) = hash(v[i], h)
+Base.@propagate_inbounds hash_colel{T<:Nullable}(v::AbstractArray{T}, i, h::UInt = zero(UInt)) =
+    isnull(v[i]) ? hash(Base.nullablehash_seed, h) : hash(get(v[i]), h)
 Base.@propagate_inbounds hash_colel{T}(v::NullableArray{T}, i, h::UInt = zero(UInt)) =
-    isnull(v, i) ? hash(NULL_MAGIC, h) : hash(get(v[i]), h)
+    isnull(v, i) ? hash(Base.nullablehash_seed, h) : hash(v.values[i], h)
 Base.@propagate_inbounds hash_colel{T}(v::AbstractCategoricalArray{T}, i, h::UInt = zero(UInt)) =
     hash(CategoricalArrays.index(v.pool)[v.refs[i]], h)
-Base.@propagate_inbounds function hash_colel{T}(v::AbstractCategoricalArray{T}, i, h::UInt = zero(UInt))
+Base.@propagate_inbounds function hash_colel{T}(v::AbstractNullableCategoricalArray{T}, i, h::UInt = zero(UInt))
     ref = v.refs[i]
-    ref == 0 ? hash(NULL_MAGIC, h) : hash(CategoricalArrays.index(v.pool)[ref], h)
+    ref == 0 ? hash(Base.nullablehash_seed, h) : hash(CategoricalArrays.index(v.pool)[ref], h)
 end
 
 # hash of DataTable rows based on its values
@@ -79,7 +78,7 @@ function @compat(Base.:(==))(r1::DataTableRow, r2::DataTableRow)
         end
         return eq
     else
-    	r1.row == r2.row && return Nullable(true)
+        r1.row == r2.row && return Nullable(true)
         eq = Nullable(true)
         @inbounds for col in columns(r1.dt)
             eq_col = convert(Nullable{Bool}, col[r1.row] == col[r2.row])
@@ -104,13 +103,13 @@ function isequal_colel{T}(col::Union{NullableArray{T},
 end
 
 isequal_colel(a::Any, b::Any) = isequal(a, b)
-isequal_colel(a::Nullable, b::Any) = !isnull(a) && isequal(get(a), b)
+isequal_colel(a::Nullable, b::Any) = !isnull(a) & isequal(unsafe_get(a), b)
 isequal_colel(a::Any, b::Nullable) = isequal_colel(b, a)
-isequal_colel(a::Nullable, b::Nullable) = isnull(a)==isnull(b) && (isnull(a) || isequal(get(a), get(b)))
+isequal_colel(a::Nullable, b::Nullable) = isnull(a)==isnull(b) && (isnull(a) || isequal(a, b))
 
 # comparison of DataTable rows
 function isequal_row(dt::AbstractDataTable, r1::Int, r2::Int)
-    (r1 == r2) && return true # same raw
+    (r1 == r2) && return true # same row
     @inbounds for col in columns(dt)
         isequal_colel(col, r1, r2) || return false
     end
@@ -120,7 +119,7 @@ end
 function isequal_row(dt1::AbstractDataTable, r1::Int, dt2::AbstractDataTable, r2::Int)
     (dt1 === dt2) && return isequal_row(dt1, r1, r2)
     (ncol(dt1) == ncol(dt2)) ||
-        throw(ArgumentError("Rows of the data frames that have different number of columns cannot be compared ($(ncol(dt1)) and $(ncol(dt2)))"))
+        throw(ArgumentError("Rows of the data tables that have different number of columns cannot be compared ($(ncol(dt1)) and $(ncol(dt2)))"))
     @inbounds for (col1, col2) in zip(columns(dt1), columns(dt2))
         isequal_colel(col1[r1], col2[r2]) || return false
     end
