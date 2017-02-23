@@ -90,7 +90,7 @@ function @compat(Base.:(==))(r1::DataTableRow, r2::DataTableRow)
     end
 end
 
-# internal method for comparing the elements of the same data frame column
+# internal method for comparing the elements of the same data table column
 isequal_colel(col::AbstractArray, r1::Int, r2::Int) =
     (r1 == r2) || isequal(Base.unsafe_getindex(col, r1), Base.unsafe_getindex(col, r2))
 
@@ -134,7 +134,7 @@ Base.isequal(r1::DataTableRow, r2::DataTableRow) =
 # lexicographic ordering on DataTable rows, null > !null
 function Base.isless(r1::DataTableRow, r2::DataTableRow)
     (ncol(r1.dt) == ncol(r2.dt)) ||
-        throw(ArgumentError("Rows of the data frames that have different number of columns cannot be compared ($(ncol(dt1)) and $(ncol(dt2)))"))
+        throw(ArgumentError("Rows of the data tables that have different number of columns cannot be compared ($(ncol(dt1)) and $(ncol(dt2)))"))
     @inbounds for i in 1:ncol(r1.dt)
         col1 = r1.dt[i]
         col2 = r2.dt[i]

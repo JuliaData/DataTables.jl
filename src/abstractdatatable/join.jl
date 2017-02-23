@@ -161,15 +161,15 @@ end
 _DataTableJoiner{DT1<:AbstractDataTable, DT2<:AbstractDataTable}(dtl::DT1, dtr::DT2, on::Union{Symbol,Vector{Symbol}}) =
     _DataTableJoiner{DT1,DT2}(dtl, dtr, on)
 
-# helper map between the row indices in original and joined frame
+# helper map between the row indices in original and joined table
 immutable _RowIndexMap
-  orig::Vector{Int} # row indices in the original frame
-  join::Vector{Int} # row indices in the resulting joined frame
+  orig::Vector{Int} # row indices in the original table
+  join::Vector{Int} # row indices in the resulting joined table
 end
 
 Base.length(x::_RowIndexMap) = length(x.orig)
 
-# fix the result of the rightjoin by taking the nonnull values from the right frame
+# fix the result of the rightjoin by taking the nonnull values from the right table
 function fix_rightjoin_column!(res_col::AbstractArray, col_ix::Int, joiner::_DataTableJoiner,
                               all_orig_left_ixs::Vector{Int}, rightonly_ixs::_RowIndexMap)
     res_col[rightonly_ixs.join] = joiner.dtr_on[rightonly_ixs.orig, col_ix]
@@ -203,9 +203,9 @@ function fix_rightjoin_column!{T,N}(res_col::Union{AbstractCategoricalArray{T,N}
     NullableCategoricalArray{T,N,newreftype}(new_refs, CategoricalPool(newlevels, ordered))
 end
 
-# composes the joined data frame using the maps between the left and right
-# frame rows and the indices of rows in the result
-function compose_joined_frame(joiner::_DataTableJoiner,
+# composes the joined data table using the maps between the left and right
+# table rows and the indices of rows in the result
+function compose_joined_table(joiner::_DataTableJoiner,
                 left_ixs::_RowIndexMap, leftonly_ixs::_RowIndexMap,
                 right_ixs::_RowIndexMap, rightonly_ixs::_RowIndexMap)
     @assert length(left_ixs) == length(right_ixs)
@@ -213,7 +213,7 @@ function compose_joined_frame(joiner::_DataTableJoiner,
     # FIXME is it still relevant? complicated way to do vcat that avoids expensive setindex!() for PooledDataVector
     all_orig_left_ixs = [left_ixs.orig; leftonly_ixs.orig]
     if length(leftonly_ixs) > 0
-        # permute the indices to restore left frame rows order
+        # permute the indices to restore left table rows order
         all_orig_left_ixs[[left_ixs.join; leftonly_ixs.join]] = all_orig_left_ixs
     end
     left_dt = DataTable(Any[resize!(col[all_orig_left_ixs], length(all_orig_left_ixs)+length(rightonly_ixs))
@@ -236,7 +236,7 @@ function compose_joined_frame(joiner::_DataTableJoiner,
     right_dt = DataTable(Any[resize!(col[all_orig_right_ixs], length(all_orig_right_ixs)+length(leftonly_ixs))[right_perm]
                              for col in columns(dtr_noon)],
                          names(dtr_noon))
-    # merge left and right parts of the joined frame
+    # merge left and right parts of the joined table
     res = hcat!(left_dt, right_dt)
 
     if length(rightonly_ixs.join) > 0
@@ -249,10 +249,10 @@ function compose_joined_frame(joiner::_DataTableJoiner,
     return res
 end
 
-# map the indices of the left and right joined frames
-# to the indices of the rows in the resulting frame
+# map the indices of the left and right joined tables
+# to the indices of the rows in the resulting table
 # if `nothing` is given, the corresponding map is not built
-function update_row_maps!(left_frame::AbstractDataTable, right_frame::AbstractDataTable,
+function update_row_maps!(left_table::AbstractDataTable, right_table::AbstractDataTable,
                     right_dict::RowGroupDict,
                     left_ixs::Union{Void, _RowIndexMap},
                     leftonly_ixs::Union{Void, _RowIndexMap},
@@ -282,8 +282,8 @@ function update_row_maps!(left_frame::AbstractDataTable, right_frame::AbstractDa
 
     # iterate over left rows and compose the left<->right index map
     next_join_ix = 1
-    for l_ix in 1:nrow(left_frame)
-        r_ixs = get(right_dict, left_frame, l_ix)
+    for l_ix in 1:nrow(left_table)
+        r_ixs = get(right_dict, left_table, l_ix)
         if isempty(r_ixs)
             update!(leftonly_ixs, l_ix, next_join_ix)
             next_join_ix += 1
@@ -296,8 +296,8 @@ function update_row_maps!(left_frame::AbstractDataTable, right_frame::AbstractDa
     end
 end
 
-# map the row indices of the left and right joined frames
-# to the indices of rows in the resulting frame
+# map the row indices of the left and right joined tables
+# to the indices of rows in the resulting table
 # returns the 4-tuple of row indices maps for
 # - matching left rows
 # - non-matching left rows
@@ -306,7 +306,7 @@ end
 # if false is provided, the corresponding map is not built and the
 # tuple element is empty _RowIndexMap
 function update_row_maps!(
-    left_frame::AbstractDataTable, right_frame::AbstractDataTable,
+    left_table::AbstractDataTable, right_table::AbstractDataTable,
     right_dict::RowGroupDict,
     map_left::Bool, map_leftonly::Bool,
     map_right::Bool, map_rightonly::Bool)
@@ -318,11 +318,11 @@ function update_row_maps!(
     to_bimap(::Void) = _RowIndexMap(Vector{Int}(), Vector{Int}())
 
     # init maps as requested
-    left_ixs = init_map(left_frame, map_left)
-    leftonly_ixs = init_map(left_frame, map_leftonly)
-    right_ixs = init_map(right_frame, map_right)
-    rightonly_mask = map_rightonly ? fill(true, nrow(right_frame)) : nothing
-    update_row_maps!(left_frame, right_frame, right_dict,
+    left_ixs = init_map(left_table, map_left)
+    leftonly_ixs = init_map(left_table, map_leftonly)
+    right_ixs = init_map(right_table, map_right)
+    rightonly_mask = map_rightonly ? fill(true, nrow(right_table)) : nothing
+    update_row_maps!(left_table, right_table, right_dict,
                      left_ixs, leftonly_ixs, right_ixs, rightonly_mask)
     if map_rightonly
         rightonly_orig_ixs = (1:length(rightonly_mask))[rightonly_mask]
@@ -405,11 +405,11 @@ function Base.join(dt1::AbstractDataTable,
     joiner = _DataTableJoiner(dt1, dt2, on)
 
     if kind == :inner
-        compose_joined_frame(joiner, update_row_maps!(joiner.dtl_on, joiner.dtr_on,
+        compose_joined_table(joiner, update_row_maps!(joiner.dtl_on, joiner.dtr_on,
                              group_rows(joiner.dtr_on),
                              true, false, true, false)...)
     elseif kind == :left
-        compose_joined_frame(joiner, update_row_maps!(joiner.dtl_on, joiner.dtr_on,
+        compose_joined_table(joiner, update_row_maps!(joiner.dtl_on, joiner.dtr_on,
                              group_rows(joiner.dtr_on),
                              true, true, true, false)...)
     elseif kind == :right
@@ -417,9 +417,9 @@ function Base.join(dt1::AbstractDataTable,
             update_row_maps!(joiner.dtr_on, joiner.dtl_on,
                             group_rows(joiner.dtl_on),
                             true, true, true, false)
-        compose_joined_frame(joiner, left_ixs, leftonly_ixs, right_ixs, rightonly_ixs)
+        compose_joined_table(joiner, left_ixs, leftonly_ixs, right_ixs, rightonly_ixs)
     elseif kind == :outer
-        compose_joined_frame(joiner, update_row_maps!(joiner.dtl_on, joiner.dtr_on,
+        compose_joined_table(joiner, update_row_maps!(joiner.dtl_on, joiner.dtr_on,
                              group_rows(joiner.dtr_on),
                              true, true, true, true)...)
     elseif kind == :semi

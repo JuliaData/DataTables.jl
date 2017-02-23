@@ -71,7 +71,7 @@ groupby(cols)
 ### Arguments
 
 * `d` : an AbstractDataTable to split (optional, see [Returns](#returns))
-* `cols` : data frame columns to group by
+* `cols` : data table columns to group by
 
 ### Returns
 

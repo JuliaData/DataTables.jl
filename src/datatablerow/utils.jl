@@ -2,7 +2,7 @@
 # Maps row contents to the indices of all the equal rows.
 # Used by groupby(), join(), nonunique()
 immutable RowGroupDict{T<:AbstractDataTable}
-    dt::T                 # source data frame
+    dt::T                 # source data table
 
     ngroups::Int          # number of groups
 
@@ -66,7 +66,7 @@ end
 
 # Helper function for RowGroupDict.
 # Returns a tuple:
-# 1) the number of row groups in a data frame
+# 1) the number of row groups in a data table
 # 2) vector of row hashes
 # 3) slot array for a hash map, non-zero values are
 #    the indices of the first row in a group
@@ -127,7 +127,7 @@ function group_rows(dt::AbstractDataTable)
         stops[g_ix] += 1
     end
 
-    # group start positions in a sorted frame
+    # group start positions in a sorted table
     starts = Vector{Int}(ngroups)
     if !isempty(starts)
         starts[1] = 1
@@ -149,8 +149,8 @@ end
 
 # Find index of a row in gd that matches given row by content, 0 if not found
 function findrow(gd::RowGroupDict, dt::DataTable, row::Int)
-    (gd.dt === dt) && return row # same frame, return itself
-    # different frames, content matching required
+    (gd.dt === dt) && return row # same table, return itself
+    # different tables, content matching required
     rhash = rowhash(dt, row)
     szm1 = length(gd.gslots)-1
     slotix = ini_slotix = rhash & szm1 + 1

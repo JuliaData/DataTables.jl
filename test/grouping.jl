@@ -37,7 +37,7 @@ module TestGrouping
     @test groupby(dt2, [:v1, :v2]).starts == collect(1:1000)
     @test groupby(dt2, [:v2, :v1]).starts == collect(1:1000)
 
-    # grouping empty frame
+    # grouping empty table
     @test groupby(DataTable(A=Int[]), :A).starts == Int[]
     # grouping single row
     @test groupby(DataTable(A=Int[1]), :A).starts == Int[1]
