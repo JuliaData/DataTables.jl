@@ -105,7 +105,7 @@ end
 isequal_colel(a::Any, b::Any) = isequal(a, b)
 isequal_colel(a::Nullable, b::Any) = !isnull(a) & isequal(unsafe_get(a), b)
 isequal_colel(a::Any, b::Nullable) = isequal_colel(b, a)
-isequal_colel(a::Nullable, b::Nullable) = isnull(a)==isnull(b) && (isnull(a) || isequal(a, b))
+isequal_colel(a::Nullable, b::Nullable) = isequal(a, b)
 
 # comparison of DataTable rows
 function isequal_row(dt::AbstractDataTable, r1::Int, r2::Int)
