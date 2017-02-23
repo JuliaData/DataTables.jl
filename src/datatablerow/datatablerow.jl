@@ -98,8 +98,7 @@ function isequal_colel{T}(col::Union{NullableArray{T},
                                      AbstractNullableCategoricalArray{T}},
                                      r1::Int, r2::Int)
     (r1 == r2) && return true
-    isnull(col[r1]) && return isnull(col[r2])
-    return !isnull(col[r2]) && isequal(get(col[r1]), get(col[r2]))
+    isequal(col[r1], col[r2])
 end
 
 isequal_colel(a::Any, b::Any) = isequal(a, b)

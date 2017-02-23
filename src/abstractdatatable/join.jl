@@ -145,73 +145,45 @@ function sharepools(dt1::AbstractDataTable, dt2::AbstractDataTable)
 end
 
 # helper structure for DataTables joining
-immutable _DataTableJoiner{DT1<:AbstractDataTable, DT2<:AbstractDataTable}
+immutable DataTableJoiner{DT1<:AbstractDataTable, DT2<:AbstractDataTable}
     dtl::DT1
     dtr::DT2
     dtl_on::DT1
     dtr_on::DT2
     on_cols::Vector{Symbol}
 
-    function _DataTableJoiner(dtl::DT1, dtr::DT2, on::Union{Symbol,Vector{Symbol}})
-        on_cols = (isa(on, Symbol) ? fill(on::Symbol, 1) : on)::Vector{Symbol}
+    function DataTableJoiner(dtl::DT1, dtr::DT2, on::Union{Symbol,Vector{Symbol}})
+        on_cols = (isa(on, Symbol) ? fill(on, 1) : on)
         new(dtl, dtr, dtl[on_cols], dtr[on_cols], on_cols)
     end
 end
 
-_DataTableJoiner{DT1<:AbstractDataTable, DT2<:AbstractDataTable}(dtl::DT1, dtr::DT2, on::Union{Symbol,Vector{Symbol}}) =
-    _DataTableJoiner{DT1,DT2}(dtl, dtr, on)
+DataTableJoiner{DT1<:AbstractDataTable, DT2<:AbstractDataTable}(dtl::DT1, dtr::DT2, on::Union{Symbol,Vector{Symbol}}) =
+    DataTableJoiner{DT1,DT2}(dtl, dtr, on)
 
 # helper map between the row indices in original and joined table
 immutable _RowIndexMap
-  orig::Vector{Int} # row indices in the original table
-  join::Vector{Int} # row indices in the resulting joined table
+    orig::Vector{Int} # row indices in the original table
+    join::Vector{Int} # row indices in the resulting joined table
 end
 
 Base.length(x::_RowIndexMap) = length(x.orig)
 
 # fix the result of the rightjoin by taking the nonnull values from the right table
-function fix_rightjoin_column!(res_col::AbstractArray, col_ix::Int, joiner::_DataTableJoiner,
+function fix_rightjoin_column!(res_col::AbstractArray, col_ix::Int, joiner::DataTableJoiner,
                                all_orig_left_ixs::Vector{Int}, rightonly_ixs::_RowIndexMap)
     res_col[rightonly_ixs.join] = joiner.dtr_on[rightonly_ixs.orig, col_ix]
     res_col
 end
 
-# # since setindex!() for PoolDataArray is very slow,
-# # it requires special handling
-# function fix_rightjoin_column!{T,N}(res_col::Union{AbstractCategoricalArray{T,N}, AbstractNullableCategoricalArray{T,N}},
-#                                     col_ix::Int, joiner::_DataTableJoiner,
-#                                     all_orig_left_ixs::Vector{Int}, rightonly_ixs::_RowIndexMap)
-#     left_col = joiner.dtl_on[col_ix]
-#     right_col = joiner.dtr_on[col_ix]
-#     if levels(left_col) == levels(right_col)
-#         res_col.refs[rightonly_ixs.join] = right_col.refs[rightonly_ixs.orig]
-#         return res_col
-#     end
-#     # merge the pools
-#     # FIXME use sharedpools()?
-#     newlevels, ordered = CategoricalArrays.mergelevels(levels(left_col), levels(right_col))
-#     if length(newlevels) <= typemax(reftype(left_col))
-#         newreftype = reftype(left_col)
-#     elseif length(newlevels) <= typemax(reftype(right_col))
-#         newreftype = reftype(right_col)
-#     else
-#         newreftype = reftype(length(newlevels))
-#     end
-#     new_refs = newreftype[
-#             indexin(CategoricalArrays.index(left_col.pool), newlevels)[left_col.refs[all_orig_left_ixs]];
-#             indexin(CategoricalArrays.index(right_col.pool), newlevels)[right_col.refs[rightonly_ixs.orig]]]
-#     NullableCategoricalArray{T,N,newreftype}(new_refs, CategoricalPool(newlevels, ordered))
-# end
-
 # composes the joined data table using the maps between the left and right
 # table rows and the indices of rows in the result
-function compose_joined_table(joiner::_DataTableJoiner,
+function compose_joined_table(joiner::DataTableJoiner,
                 left_ixs::_RowIndexMap, leftonly_ixs::_RowIndexMap,
                 right_ixs::_RowIndexMap, rightonly_ixs::_RowIndexMap)
     @assert length(left_ixs) == length(right_ixs)
     # compose left half of the result taking all left columns
-    # FIXME is it still relevant? complicated way to do vcat that avoids expensive setindex!() for PooledDataVector
-    all_orig_left_ixs = [left_ixs.orig; leftonly_ixs.orig]
+    all_orig_left_ixs = vcat(left_ixs.orig, leftonly_ixs.orig)
     if length(leftonly_ixs) > 0
         # permute the indices to restore left table rows order
         all_orig_left_ixs[[left_ixs.join; leftonly_ixs.join]] = all_orig_left_ixs
@@ -222,12 +194,11 @@ function compose_joined_table(joiner::_DataTableJoiner,
 
     # compose right half of the result taking all right columns excluding on
     dtr_noon = without(joiner.dtr, joiner.on_cols)
-    # FIXME is it still relevant? complicated way to do vcat that avoids expensive setindex!() for PooledDataVector
     # permutation to swap rightonly and leftonly rows
-    right_perm = [1:length(right_ixs);
+    right_perm = vcat(1:length(right_ixs),
                   ((length(right_ixs)+length(rightonly_ixs)+1):
-                   (length(right_ixs)+length(rightonly_ixs)+length(leftonly_ixs)));
-                  ((length(right_ixs)+1):(length(right_ixs)+length(rightonly_ixs)))]
+                   (length(right_ixs)+length(rightonly_ixs)+length(leftonly_ixs))),
+                  ((length(right_ixs)+1):(length(right_ixs)+length(rightonly_ixs))))
     if length(leftonly_ixs) > 0
         # compose right_perm with the permutation that restores left rows order
         right_perm[[right_ixs.join; leftonly_ixs.join]] = right_perm[1:(length(right_ixs)+length(leftonly_ixs))]
@@ -402,7 +373,7 @@ function Base.join(dt1::AbstractDataTable,
         throw(ArgumentError("Missing join argument 'on'."))
     end
 
-    joiner = _DataTableJoiner(dt1, dt2, on)
+    joiner = DataTableJoiner(dt1, dt2, on)
 
     if kind == :inner
         compose_joined_table(joiner, update_row_maps!(joiner.dtl_on, joiner.dtr_on,

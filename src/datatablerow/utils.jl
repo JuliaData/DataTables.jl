@@ -2,18 +2,22 @@
 # Maps row contents to the indices of all the equal rows.
 # Used by groupby(), join(), nonunique()
 immutable RowGroupDict{T<:AbstractDataTable}
-    dt::T                 # source data table
-
-    ngroups::Int          # number of groups
-
-    rhashes::Vector{UInt} # row hashes
-    gslots::Vector{Int}   # hashindex -> index of group-representative row
-
-    groups::Vector{Int}   # group index for each row
-    rperm::Vector{Int}    # permutation of row indices that sorts them by groups
-
-    starts::Vector{Int}   # starts of ranges in rperm for each group
-    stops::Vector{Int}    # stops of ranges in rperm for each group
+    "source data table"
+    dt::T
+    "number of groups"
+    ngroups::Int
+    "row hashes"
+    rhashes::Vector{UInt}
+    "hashindex -> index of group-representative row"
+    gslots::Vector{Int}
+    "group index for each row"
+    groups::Vector{Int}
+    "permutation of row indices that sorts them by groups"
+    rperm::Vector{Int}
+    "starts of ranges in rperm for each group"
+    starts::Vector{Int}
+    "stops of ranges in rperm for each group"
+    stops::Vector{Int}
 end
 
 # "kernel" functions for hashrows()
