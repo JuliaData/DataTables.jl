@@ -147,9 +147,6 @@ function group_rows(dt::AbstractDataTable)
     return RowGroupDict(dt, ngroups, rhashes, gslots, groups, rperm, starts, stops)
 end
 
-# number of unique row groups
-ngroups(gd::RowGroupDict) = gd.ngroups
-
 # Find index of a row in gd that matches given row by content, 0 if not found
 function findrow(gd::RowGroupDict, dt::DataTable, row::Int)
     (gd.dt === dt) && return row # same frame, return itself
