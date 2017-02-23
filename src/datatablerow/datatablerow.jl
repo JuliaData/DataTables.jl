@@ -68,7 +68,7 @@ Base.hash(r::DataTableRow, h::UInt = zero(UInt)) = rowhash(r.dt, r.row, h)
 function @compat(Base.:(==))(r1::DataTableRow, r2::DataTableRow)
     if r1.dt !== r2.dt
         (ncol(r1.dt) != ncol(r2.dt)) &&
-            throw(ArgumentError("Comparing rows from different frames not supported"))
+            throw(ArgumentError("Cannot compare rows with different numbers of columns (got $(ncol(r1.dt)) and $(ncol(r2.dt)))"))
         eq = Nullable(true)
         @inbounds for (col1, col2) in zip(columns(r1.dt), columns(r2.dt))
             eq_col = convert(Nullable{Bool}, col1[r1.row] == col2[r2.row])
