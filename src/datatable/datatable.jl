@@ -769,10 +769,10 @@ Base.hcat(dt::DataTable, x) = hcat!(copy(dt), x)
 Base.hcat(dt1::DataTable, dt2::AbstractDataTable) = hcat!(copy(dt1), dt2)
 
 # hcat! for >2 arguments
-function Base.hcat(a::DataTable,
-          b::AbstractDataTable,
-          c::Union{AbstractDataTable, Vector{AbstractDataTable}}...)
-    hcat!(hcat!(copy(a), b), c...)
+function Base.hcat(df1::AbstractDataFrame,
+                   df2::AbstractDataFrame,
+                   dfn::AbstractDataFrame...)
+    hcat!(hcat(df1, df2), dfn...)
 end
 
 ##############################################################################
