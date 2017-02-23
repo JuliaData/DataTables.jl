@@ -138,8 +138,8 @@ function Base.isless(r1::DataTableRow, r2::DataTableRow)
     @inbounds for i in 1:ncol(r1.dt)
         col1 = r1.dt[i]
         col2 = r2.dt[i]
-        isnull1 = _isnull(col1, r1.row)
-        isnull2 = _isnull(col2, r2.row)
+        isnull1 = _isnull(col1[r1.row])
+        isnull2 = _isnull(col2[r2.row])
         (isnull1 != isnull2) && return isnull2 # null > !null
         if !isnull1
             v1 = get(col1[r1.row])

@@ -18,7 +18,7 @@ module TestJoin
                       Job = NullableArray(Nullable{String}["Lawyer", "Doctor", "Florist", Nullable(), "Farmer"]))
 
     # (Tests use current column ordering but don't promote it)
-    right = outer[Bool[!isnull(x) for x in outer[:Job]], [:Name, :ID, :Job]]
+    right = outer[Bool[!isnull(x) for x in outer[:Job]], [:ID, :Name, :Job]]
     left = outer[Bool[!isnull(x) for x in outer[:Name]], :]
     inner = left[Bool[!isnull(x) for x in left[:Job]], :]
     semi = unique(inner[:, [:ID, :Name]])
