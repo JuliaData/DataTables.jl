@@ -163,8 +163,10 @@ DataTableJoiner{DT1<:AbstractDataTable, DT2<:AbstractDataTable}(dtl::DT1, dtr::D
 
 # helper map between the row indices in original and joined table
 immutable RowIndexMap
-    orig::Vector{Int} # row indices in the original table
-    join::Vector{Int} # row indices in the resulting joined table
+    "row indices in the original table"
+    orig::Vector{Int}
+    "row indices in the resulting joined table"
+    join::Vector{Int}
 end
 
 Base.length(x::RowIndexMap) = length(x.orig)
@@ -201,7 +203,7 @@ function compose_joined_table(joiner::DataTableJoiner,
                       length(right_ixs)+1:length(right_ixs)+length(rightonly_ixs))
     if length(leftonly_ixs) > 0
         # compose right_perm with the permutation that restores left rows order
-        right_perm[vcat(right_ixs.join, leftonly_ixs.join)] = right_perm[1:(length(right_ixs)+length(leftonly_ixs))]
+        right_perm[vcat(right_ixs.join, leftonly_ixs.join)] = right_perm[1:length(right_ixs)+length(leftonly_ixs)]
     end
     all_orig_right_ixs = vcat(right_ixs.orig, rightonly_ixs.orig)
     right_dt = DataTable(Any[resize!(col[all_orig_right_ixs], length(all_orig_right_ixs)+length(leftonly_ixs))[right_perm]
@@ -223,7 +225,8 @@ end
 # map the indices of the left and right joined tables
 # to the indices of the rows in the resulting table
 # if `nothing` is given, the corresponding map is not built
-function update_row_maps!(left_table::AbstractDataTable, right_table::AbstractDataTable,
+function update_row_maps!(left_table::AbstractDataTable,
+                          right_table::AbstractDataTable,
                           right_dict::RowGroupDict,
                           left_ixs::Union{Void, RowIndexMap},
                           leftonly_ixs::Union{Void, RowIndexMap},
@@ -283,8 +286,7 @@ function update_row_maps!(left_table::AbstractDataTable,
                           map_right::Bool, map_rightonly::Bool)
     init_map(dt::AbstractDataTable, init::Bool) = init ?
         RowIndexMap(sizehint!(Vector{Int}(), nrow(dt)),
-                     sizehint!(Vector{Int}(), nrow(dt))) :
-         nothing
+                    sizehint!(Vector{Int}(), nrow(dt))) : nothing
     to_bimap(x::RowIndexMap) = x
     to_bimap(::Void) = RowIndexMap(Vector{Int}(), Vector{Int}())
 
@@ -293,20 +295,18 @@ function update_row_maps!(left_table::AbstractDataTable,
     leftonly_ixs = init_map(left_table, map_leftonly)
     right_ixs = init_map(right_table, map_right)
     rightonly_mask = map_rightonly ? fill(true, nrow(right_table)) : nothing
-    update_row_maps!(left_table, right_table, right_dict,
-                     left_ixs, leftonly_ixs, right_ixs, rightonly_mask)
+    update_row_maps!(left_table, right_table, right_dict, left_ixs, leftonly_ixs, right_ixs, rightonly_mask)
     if map_rightonly
         rightonly_orig_ixs = (1:length(rightonly_mask))[rightonly_mask]
         rightonly_ixs = RowIndexMap(rightonly_orig_ixs,
-                         collect(length(right_ixs.orig)+
-                                 (leftonly_ixs === nothing ? 0 : length(leftonly_ixs))+
-                                 (1:length(rightonly_orig_ixs))))
+                                    collect(length(right_ixs.orig)+
+                                            (leftonly_ixs === nothing ? 0 : length(leftonly_ixs))+
+                                            (1:length(rightonly_orig_ixs))))
     else
         rightonly_ixs = nothing
     end
 
-    return to_bimap(left_ixs), to_bimap(leftonly_ixs),
-           to_bimap(right_ixs), to_bimap(rightonly_ixs)
+    return to_bimap(left_ixs), to_bimap(leftonly_ixs), to_bimap(right_ixs), to_bimap(rightonly_ixs)
 end
 
 """
