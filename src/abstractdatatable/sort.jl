@@ -276,11 +276,11 @@ Base.sort(dt::AbstractDataTable, a::Algorithm, o::Ordering) = dt[sortperm(dt, a,
 Base.sortperm(dt::AbstractDataTable, a::Algorithm, o::Union{Perm,DTPerm}) = sort!([1:size(dt, 1);], a, o)
 Base.sortperm(dt::AbstractDataTable, a::Algorithm, o::Ordering) = sortperm(dt, a, DTPerm(o,dt))
 
-# Extras to speed up sorting
-#Base.sortperm{V}(dt::AbstractDataTable, a::Algorithm, o::FastPerm{Sort.ForwardOrdering,V}) = sortperm(o.vec)
-#Base.sortperm{V}(dt::AbstractDataTable, a::Algorithm, o::FastPerm{Sort.ReverseOrdering,V}) = reverse(sortperm(o.vec))
+"""
+    permute!(dt::AbstractDataTable, p::AbstractVector)
 
-# permute rows
+Permute the rows of `dt` in-place, according to permutation `p`
+"""
 function Base.permute!(dt::AbstractDataTable, p::AbstractVector)
     pp = similar(p)
     for (icol, col) in enumerate(columns(dt))
@@ -293,7 +293,11 @@ function Base.permute!(dt::AbstractDataTable, p::AbstractVector)
     dt
 end
 
-# apply inverse of given rows permutation
+"""
+    ipermute!(dt::AbstractDataTable, p::AbstractVector)
+
+Apply the inverse of the permutation `p` to the rows of `dt` in-place
+"""
 function Base.ipermute!(dt::AbstractDataTable, p::AbstractVector)
     pp = similar(p)
     for (icol, col) in enumerate(columns(dt))
