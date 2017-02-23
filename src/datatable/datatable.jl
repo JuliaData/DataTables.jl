@@ -763,10 +763,10 @@ hcat!(dt::DataTable, x) = hcat!(dt, DataTable(Any[NullableArray([x])]))
 # hcat! for 1-n arguments
 hcat!(dt::DataTable) = dt
 hcat!(a::DataTable, b, c...) = hcat!(hcat!(a, b), c...)
-Base.hcat(dt1::DataTable, dt2::AbstractDataTable) = hcat!(copy(dt1), dt2)
 
 # hcat
 Base.hcat(dt::DataTable, x) = hcat!(copy(dt), x)
+Base.hcat(dt1::DataTable, dt2::AbstractDataTable) = hcat!(copy(dt1), dt2)
 Base.hcat(dt1::DataTable, dt2::AbstractDataTable, dtn::AbstractDataTable...) = hcat!(hcat(dt1, dt2), dtn...)
 
 ##############################################################################
