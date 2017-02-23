@@ -12,20 +12,31 @@ module TestGrouping
 
     f(dt) = DataTable(cmax = maximum(dt[:c]))
 
-    sdt = sort(dt, cols=cols)
-    bdt = by(dt, cols, f)
+    sdt = unique(dt[cols])
 
-    @test isequal(bdt[cols], unique(sdt[cols]))
+    # by() without groups sorting
+    bdt = by(dt, cols, f)
+    @test bdt[cols] == sdt
+
+    # by() with groups sorting
+    sbdt = by(dt, cols, f, sort=true)
+    @test sbdt[cols] == sort(sdt)
 
     byf = by(dt, :a, dt -> DataTable(bsum = sum(dt[:b])))
 
     @test all(T -> T <: AbstractVector, map(typeof, colwise([sum], dt)))
     @test all(T -> T <: AbstractVector, map(typeof, colwise(sum, dt)))
 
+    # groupby() without groups sorting
     gd = groupby(dt, cols)
     ga = map(f, gd)
 
     @test isequal(bdt, combine(ga))
+
+    # groupby() with groups sorting
+    gd = groupby(dt, cols, sort=true)
+    ga = map(f, gd)
+    @test sbdt == combine(ga)
 
     g(dt) = DataTable(cmax1 = Vector(dt[:cmax]) + 1)
     h(dt) = g(f(dt))

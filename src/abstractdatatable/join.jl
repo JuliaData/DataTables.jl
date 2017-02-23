@@ -171,37 +171,37 @@ Base.length(x::_RowIndexMap) = length(x.orig)
 
 # fix the result of the rightjoin by taking the nonnull values from the right table
 function fix_rightjoin_column!(res_col::AbstractArray, col_ix::Int, joiner::_DataTableJoiner,
-                              all_orig_left_ixs::Vector{Int}, rightonly_ixs::_RowIndexMap)
+                               all_orig_left_ixs::Vector{Int}, rightonly_ixs::_RowIndexMap)
     res_col[rightonly_ixs.join] = joiner.dtr_on[rightonly_ixs.orig, col_ix]
     res_col
 end
 
-# since setindex!() for PoolDataArray is very slow,
-# it requires special handling
-function fix_rightjoin_column!{T,N}(res_col::Union{AbstractCategoricalArray{T,N}, AbstractNullableCategoricalArray{T,N}},
-                                    col_ix::Int, joiner::_DataTableJoiner,
-                                    all_orig_left_ixs::Vector{Int}, rightonly_ixs::_RowIndexMap)
-    left_col = joiner.dtl_on[col_ix]
-    right_col = joiner.dtr_on[col_ix]
-    if levels(left_col) == levels(right_col)
-        res_col.refs[rightonly_ixs.join] = right_col.refs[rightonly_ixs.orig]
-        return res_col
-    end
-    # merge the pools
-    # FIXME use sharedpools()?
-    newlevels, ordered = CategoricalArrays.mergelevels(levels(left_col), levels(right_col))
-    if length(newlevels) <= typemax(reftype(left_col))
-        newreftype = reftype(left_col)
-    elseif length(newlevels) <= typemax(reftype(right_col))
-        newreftype = reftype(right_col)
-    else
-        newreftype = reftype(length(newlevels))
-    end
-    new_refs = newreftype[
-            indexin(CategoricalArrays.index(left_col.pool), newlevels)[left_col.refs[all_orig_left_ixs]];
-            indexin(CategoricalArrays.index(right_col.pool), newlevels)[right_col.refs[rightonly_ixs.orig]]]
-    NullableCategoricalArray{T,N,newreftype}(new_refs, CategoricalPool(newlevels, ordered))
-end
+# # since setindex!() for PoolDataArray is very slow,
+# # it requires special handling
+# function fix_rightjoin_column!{T,N}(res_col::Union{AbstractCategoricalArray{T,N}, AbstractNullableCategoricalArray{T,N}},
+#                                     col_ix::Int, joiner::_DataTableJoiner,
+#                                     all_orig_left_ixs::Vector{Int}, rightonly_ixs::_RowIndexMap)
+#     left_col = joiner.dtl_on[col_ix]
+#     right_col = joiner.dtr_on[col_ix]
+#     if levels(left_col) == levels(right_col)
+#         res_col.refs[rightonly_ixs.join] = right_col.refs[rightonly_ixs.orig]
+#         return res_col
+#     end
+#     # merge the pools
+#     # FIXME use sharedpools()?
+#     newlevels, ordered = CategoricalArrays.mergelevels(levels(left_col), levels(right_col))
+#     if length(newlevels) <= typemax(reftype(left_col))
+#         newreftype = reftype(left_col)
+#     elseif length(newlevels) <= typemax(reftype(right_col))
+#         newreftype = reftype(right_col)
+#     else
+#         newreftype = reftype(length(newlevels))
+#     end
+#     new_refs = newreftype[
+#             indexin(CategoricalArrays.index(left_col.pool), newlevels)[left_col.refs[all_orig_left_ixs]];
+#             indexin(CategoricalArrays.index(right_col.pool), newlevels)[right_col.refs[rightonly_ixs.orig]]]
+#     NullableCategoricalArray{T,N,newreftype}(new_refs, CategoricalPool(newlevels, ordered))
+# end
 
 # composes the joined data table using the maps between the left and right
 # table rows and the indices of rows in the result
@@ -453,8 +453,8 @@ end
 
 function crossjoin(dt1::AbstractDataTable, dt2::AbstractDataTable)
     r1, r2 = size(dt1, 1), size(dt2, 1)
-    cols = Any[[Compat.repeat(c, inner=r2) for c in columns(dt1)];
-            [Compat.repeat(c, outer=r1) for c in columns(dt2)]]
+    cols = Any[[repeat(c, inner=r2) for c in columns(dt1)];
+               [repeat(c, outer=r1) for c in columns(dt2)]]
     colindex = merge(index(dt1), index(dt2))
     DataTable(cols, colindex)
 end

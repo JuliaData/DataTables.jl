@@ -291,8 +291,8 @@ Split-apply-combine in one step; apply `f` to each grouping in `d`
 based on columns `col`
 
 ```julia
-by(d::AbstractDataTable, cols, f::Function)
-by(f::Function, d::AbstractDataTable, cols)
+by(d::AbstractDataTable, cols, f::Function; sort::Bool = false)
+by(f::Function, d::AbstractDataTable, cols; sort::Bool = false)
 ```
 
 ### Arguments
@@ -301,6 +301,7 @@ by(f::Function, d::AbstractDataTable, cols)
 * `cols` : a column indicator (Symbol, Int, Vector{Symbol}, etc.)
 * `f` : a function to be applied to groups; expects each argument to
   be an AbstractDataTable
+* `sort`: sort row groups (no sorting by default)
 
 `f` can return a value, a vector, or a DataTable. For a value or
 vector, these are merged into a column along with the `cols` keys. For
@@ -333,8 +334,10 @@ end
 ```
 
 """
-by(d::AbstractDataTable, cols, f::Function) = combine(map(f, groupby(d, cols)))
-by(f::Function, d::AbstractDataTable, cols) = by(d, cols, f)
+by(d::AbstractDataTable, cols, f::Function; sort::Bool = false) =
+    combine(map(f, groupby(d, cols, sort = sort)))
+by(f::Function, d::AbstractDataTable, cols; sort::Bool = false) =
+    by(d, cols, f, sort = sort)
 
 #
 # Aggregate convenience functions
@@ -378,26 +381,30 @@ dt |> groupby(:a) |> [sum, x->mean(dropnull(x))]   # equivalent
 ```
 
 """
-aggregate(d::AbstractDataTable, fs::Function) = aggregate(d, [fs])
-function aggregate{T<:Function}(d::AbstractDataTable, fs::Vector{T})
+aggregate(d::AbstractDataTable, fs::Function; sort::Bool=false) = aggregate(d, [fs], sort=sort)
+function aggregate{T<:Function}(d::AbstractDataTable, fs::Vector{T}; sort::Bool=false)
     headers = _makeheaders(fs, _names(d))
-    _aggregate(d, fs, headers)
+    _aggregate(d, fs, headers, sort)
 end
 
 # Applies aggregate to non-key cols of each SubDataTable of a GroupedDataTable
-aggregate(gd::GroupedDataTable, f::Function) = aggregate(gd, [f])
-function aggregate{T<:Function}(gd::GroupedDataTable, fs::Vector{T})
+aggregate(gd::GroupedDataTable, f::Function; sort::Bool=false) = aggregate(gd, [f], sort=sort)
+function aggregate{T<:Function}(gd::GroupedDataTable, fs::Vector{T}; sort::Bool=false)
     headers = _makeheaders(fs, _setdiff(_names(gd), gd.cols))
-    combine(map(x -> _aggregate(without(x, gd.cols), fs, headers), gd))
+    res = combine(map(x -> _aggregate(without(x, gd.cols), fs, headers), gd))
+    sort && sort!(res, cols=headers)
+    res
 end
+
 (|>)(gd::GroupedDataTable, fs::Function) = aggregate(gd, fs)
 (|>){T<:Function}(gd::GroupedDataTable, fs::Vector{T}) = aggregate(gd, fs)
 
 # Groups DataTable by cols before applying aggregate
-function aggregate{S <: ColumnIndex, T <:Function}(d::AbstractDataTable,
-                                     cols::@compat(Union{S, AbstractVector{S}}),
-                                     fs::@compat(Union{T, Vector{T}}))
-    aggregate(groupby(d, cols), fs)
+function aggregate{S<:ColumnIndex, T <:Function}(d::AbstractDataTable,
+                                    cols::Union{S, AbstractVector{S}},
+                                    fs::Union{T, Vector{T}};
+                                    sort::Bool=false)
+    aggregate(groupby(d, cols, sort=sort), fs)
 end
 
 function _makeheaders{T<:Function}(fs::Vector{T}, cn::Vector{Symbol})
@@ -406,6 +413,8 @@ function _makeheaders{T<:Function}(fs::Vector{T}, cn::Vector{Symbol})
             length(fnames)*length(cn))
 end
 
-function _aggregate{T<:Function}(d::AbstractDataTable, fs::Vector{T}, headers::Vector{Symbol})
-    DataTable(colwise(fs, d), headers)
+function _aggregate{T<:Function}(d::AbstractDataTable, fs::Vector{T}, headers::Vector{Symbol}, sort::Bool=false)
+    res = DataTable(colwise(fs, d), headers)
+    sort && sort!(res, cols=headers)
+    res
 end

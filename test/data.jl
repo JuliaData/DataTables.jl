@@ -110,9 +110,14 @@ module TestData
     dt8 = aggregate(dt7[[1, 3]], sum)
     @test isequal(dt8[1, :d1_sum], sum(dt7[:d1]))
 
-    dt8 = aggregate(dt7, :d2, [sum, length])
+    dt8 = aggregate(dt7, :d2, [sum, length], sort=true)
+    @test dt8[1:2, :d2] == ["A", "B"]
     @test size(dt8, 1) == 3
     @test size(dt8, 2) == 5
+    @test sum(dt8[:d1_length]) == N
+    @test all(dt8[:d1_length] .> 0)
+    @test dt8[:d1_length] == [4, 5, 11]
+    @test isequal(dt8, aggregate(groupby(dt7, :d2, sort=true), [sum, length]))
     @test isequal(dt8[1, :d1_length], Nullable(4))
     @test isequal(dt8[2, :d1_length], Nullable(11))
     @test isequal(dt8, aggregate(groupby(dt7, :d2), [sum, length]))
@@ -208,8 +213,11 @@ module TestData
                     b2 = [:A,:B,:C][rand(1:3, 5)],
                     v2 = randn(5))
 
-    m1 = join(dt1, dt2, on = :a)
-    @test isequal(m1[:a], NullableArray([1, 2, 3, 4, 5]))
+    m1 = join(df1, df2, on = :a, kind=:inner)
+    @test isequal(m1[:a], df1[:a][df1[:a] .<= 5]) # preserves df1 order
+    m2 = join(df1, df2, on = :a, kind = :outer)
+    @test isequal(m2[:a], df1[:a]) # preserves df1 order
+    @test isequal(m2[:b], df1[:b]) # preserves df1 order
     # TODO: Re-enable
     m2 = join(dt1, dt2, on = :a, kind = :outer)
     # @test isequal(m2[:b2],
