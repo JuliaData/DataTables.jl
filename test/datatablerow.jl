@@ -38,9 +38,6 @@ module TestDataTableRow
     @test !isless(DataTableRow(dt4, 5), DataTableRow(dt4, 6))
     @test isless(DataTableRow(dt4, 7), DataTableRow(dt4, 8))
     @test !isless(DataTableRow(dt4, 8), DataTableRow(dt4, 7))
-    # @test !isless(DataTableRow(dt4, 1), DataTableRow(dt4, 8))
-    # @test isless(DataTableRow(dt4, 8), DataTableRow(dt4, 1))
-
 
     # hashing
     @test !isequal(hash(DataTableRow(dt, 1)), hash(DataTableRow(dt, 2)))
@@ -63,12 +60,10 @@ module TestDataTableRow
     dt5 = DataTable(Any[d1], [:d1])
     dt6 = DataTable(d1 = [2,3])
 
-    #test_group("groupby")
+    # test_group("groupby")
     gd = DataTables.group_rows(dt5)
     @test gd.ngroups == 2
-    #g_keys = sort!(collect(keys(gd)))
-    #@test !isempty(gd[g_keys[1]])
-    #@test length(gd[g_keys[1]]) + length(gd[g_keys[2]]) == N
+
     # getting groups for the rows of the other frames
     @test length(gd[DataTableRow(dt6, 1)]) > 0
     @test_throws KeyError gd[DataTableRow(dt6, 2)]

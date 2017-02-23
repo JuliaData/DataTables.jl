@@ -27,6 +27,8 @@ Base.length(r::DataTableRow) = size(r.dt, 2)
 
 Base.endof(r::DataTableRow) = size(r.dt, 2)
 
+Base.collect(r::DataTableRow) = Tuple{Symbol, Any}[x for x in r]
+
 Base.start(r::DataTableRow) = 1
 
 Base.next(r::DataTableRow, s) = ((_names(r)[s], r[s]), s + 1)
@@ -34,8 +36,6 @@ Base.next(r::DataTableRow, s) = ((_names(r)[s], r[s]), s + 1)
 Base.done(r::DataTableRow, s) = s > length(r)
 
 Base.convert(::Type{Array}, r::DataTableRow) = convert(Array, r.dt[r.row,:])
-
-Base.collect(r::DataTableRow) = Tuple{Symbol, Any}[x for x in r]
 
 # hash column element
 Base.@propagate_inbounds hash_colel(v::AbstractArray, i, h::UInt = zero(UInt)) = hash(v[i], h)
