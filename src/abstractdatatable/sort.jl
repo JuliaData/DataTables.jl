@@ -276,6 +276,11 @@ Base.sort(dt::AbstractDataTable, a::Algorithm, o::Ordering) = dt[sortperm(dt, a,
 Base.sortperm(dt::AbstractDataTable, a::Algorithm, o::Union{Perm,DTPerm}) = sort!([1:size(dt, 1);], a, o)
 Base.sortperm(dt::AbstractDataTable, a::Algorithm, o::Ordering) = sortperm(dt, a, DTPerm(o,dt))
 
+# #Extras to speed up sorting
+# dependant on https://github.com/JuliaData/CategoricalArrays.jl/issues/12
+# Base.sortperm{V}(df::AbstractDataFrame, a::Algorithm, o::FastPerm{Sort.ForwardOrdering,V}) = sortperm(o.vec)
+# Base.sortperm{V}(df::AbstractDataFrame, a::Algorithm, o::FastPerm{Sort.ReverseOrdering,V}) = reverse(sortperm(o.vec))
+
 """
     permute!(dt::AbstractDataTable, p::AbstractVector)
 
