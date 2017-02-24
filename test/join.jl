@@ -104,9 +104,9 @@ module TestJoin
                    Mass = [1.5, 2.2, 1.1])
     dt2 = DataTable(Name = ["A", "B", "C", "A"],
                     Quantity = [3, 3, 2, 4])
-    @test join(dt2, dt, on=:Name, kind=:left) == DataTable(Name = ["A", "A", "B", "C"],
-                                                           Quantity = [3, 4, 3, 2],
-                                                           Mass = [1.5, 1.5, 2.2, 1.1])
+    @test join(dt2, dt, on=:Name, kind=:left) == DataTable(Name = ["A", "B", "C", "A"],
+                                                           Quantity = [3, 3, 2, 4],
+                                                           Mass = [1.5, 2.2, 1.1, 1.5])
 
     # Test that join works when mixing Array and NullableArray (#1151)
     dt = DataTable([collect(1:10), collect(2:11)], [:x, :y])
