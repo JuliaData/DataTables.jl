@@ -26,39 +26,6 @@ end
 # Split
 #
 
-function groupsort_indexer(x::AbstractVector, ngroups::Integer, null_last::Bool=false)
-    # translated from Wes McKinney's groupsort_indexer in pandas (file: src/groupby.pyx).
-
-    # count group sizes, location 0 for NULL
-    n = length(x)
-    # counts = x.pool
-    counts = fill(0, ngroups + 1)
-    for i = 1:n
-        counts[x[i] + 1] += 1
-    end
-
-    # mark the start of each contiguous group of like-indexed data
-    where = fill(1, ngroups + 1)
-    if null_last
-        for i = 3:ngroups+1
-            where[i] = where[i - 1] + counts[i - 1]
-        end
-        where[1] = where[end] + counts[end]
-    else
-        for i = 2:ngroups+1
-            where[i] = where[i - 1] + counts[i - 1]
-        end
-    end
-
-    # this is our indexer
-    result = fill(0, n)
-    for i = 1:n
-        label = x[i] + 1
-        result[where[label]] = i
-        where[label] += 1
-    end
-    result, where, counts
-end
 
 """
 A view of an AbstractDataTable split into row groups
@@ -113,49 +80,38 @@ dt |> groupby([:a, :b]) |> [sum, length]
 ```
 
 """
-function groupby{T}(d::AbstractDataTable, cols::Vector{T})
-    ## a subset of Wes McKinney's algorithm here:
-    ##     http://wesmckinney.com/blog/?p=489
-
-    ncols = length(cols)
-    # use CategoricalArray to get a set of integer references for each unique item
-    nv = NullableCategoricalArray(d[cols[ncols]])
-    # if there are NULLs, add 1 to the refs to avoid underflows in x later
-    anynulls = (findfirst(nv.refs, 0) > 0 ? 1 : 0)
-    # use UInt32 instead of the original array's integer size since the number of levels can be high
-    x = similar(nv.refs, UInt32)
-    for i = 1:nrow(d)
-        if nv.refs[i] == 0
-            x[i] = 1
+function groupby(d::AbstractDataTable, cols::Vector)
+    intersect = d[cols]
+    mappings = OrderedDict{DataTableRow, Vector{Int}}()
+    for i = 1:nrow(intersect)
+        row = DataTableRow(intersect, i)
+        if !haskey(mappings, row)
+            mappings[row] = [i]
         else
-            x[i] = CategoricalArrays.order(nv.pool)[nv.refs[i]] + anynulls
+            push!(mappings[row], i)
         end
     end
-    # also compute the number of groups, which is the product of the set lengths
-    ngroups = length(levels(nv)) + anynulls
-    # if there's more than 1 column, do roughly the same thing repeatedly
-    for j = (ncols - 1):-1:1
-        nv = NullableCategoricalArray(d[cols[j]])
-        anynulls = (findfirst(nv.refs, 0) > 0 ? 1 : 0)
-        for i = 1:nrow(d)
-            if nv.refs[i] != 0
-                x[i] += (CategoricalArrays.order(nv.pool)[nv.refs[i]] + anynulls - 1) * ngroups
-            end
-        end
-        ngroups = ngroups * (length(levels(nv)) + anynulls)
-        # TODO if ngroups is really big, shrink it
+    ngroups = length(mappings.keys)
+    idx = Vector{Int}(nrow(d))
+    starts = fill(1, ngroups)
+    stops = Vector{Int}(ngroups)
+
+    rows = mappings.vals[1]
+    idx[1:length(rows)] = rows
+    stops[1] = length(rows)
+    for i = 2:ngroups
+        rows = mappings.vals[i]
+        starts[i] = stops[i-1] + 1
+        stops[i] = stops[i-1] + length(rows)
+        idx[starts[i]:stops[i]] = rows
     end
-    (idx, starts) = groupsort_indexer(x, ngroups)
-    # Remove zero-length groupings
-    starts = _uniqueofsorted(starts)
-    ends = starts[2:end] - 1
-    GroupedDataTable(d, cols, idx, starts[1:end-1], ends)
+    GroupedDataTable(d, cols, idx, starts, stops)
 end
-groupby(d::AbstractDataTable, cols) = groupby(d, [cols])
+groupby(d::AbstractDataTable, cols::Union{Int, Symbol}) = groupby(d, [cols])
 
 # add a function curry
-groupby{T}(cols::Vector{T}) = x -> groupby(x, cols)
-groupby(cols) = x -> groupby(x, cols)
+groupby(cols::Vector) = x -> groupby(x, cols)
+groupby(cols::Union{Int, Symbol}) = x -> groupby(x, [cols])
 
 Base.start(gd::GroupedDataTable) = 1
 Base.next(gd::GroupedDataTable, state::Int) =
