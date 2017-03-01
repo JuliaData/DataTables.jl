@@ -54,7 +54,7 @@ module TestDataTableRow
     # test incompatible frames
     @test_throws UndefVarError isequal(DataTableRow(dt, 1), DataTableRow(dt3, 1))
 
-    # test _RowGroupDict
+    # test RowGroupDict
     N = 20
     d1 = rand(map(Int64, 1:2), N)
     dt5 = DataTable(Any[d1], [:d1])

@@ -73,8 +73,8 @@ DTPerm{O<:Ordering, DT<:AbstractDataTable}(o::O, dt::DT) = DTPerm{O,DT}(o,dt)
 col_ordering{O<:Ordering}(o::DTPerm{O}, i::Int) = o.ord
 col_ordering{V<:AbstractVector}(o::DTPerm{V}, i::Int) = o.ord[i]
 
-Base.getindex(o::DTPerm, i::Int, j::Int) = o.dt[i, j]
-Base.getindex(o::DTPerm, a::DataTableRow, j::Int) = a[j]
+Base.@propagate_inbounds Base.getindex(o::DTPerm, i::Int, j::Int) = o.dt[i, j]
+Base.@propagate_inbounds Base.getindex(o::DTPerm, a::DataTableRow, j::Int) = a[j]
 
 function Sort.lt(o::DTPerm, a, b)
     @inbounds for i = 1:ncol(o.dt)
@@ -276,8 +276,8 @@ Base.sort(dt::AbstractDataTable, a::Algorithm, o::Ordering) = dt[sortperm(dt, a,
 Base.sortperm(dt::AbstractDataTable, a::Algorithm, o::Union{Perm,DTPerm}) = sort!([1:size(dt, 1);], a, o)
 Base.sortperm(dt::AbstractDataTable, a::Algorithm, o::Ordering) = sortperm(dt, a, DTPerm(o,dt))
 
-# #Extras to speed up sorting
-# dependant on https://github.com/JuliaData/CategoricalArrays.jl/issues/12
+# Extras to speed up sorting
+# dependent on https://github.com/JuliaData/CategoricalArrays.jl/issues/12
 # Base.sortperm{V}(df::AbstractDataFrame, a::Algorithm, o::FastPerm{Sort.ForwardOrdering,V}) = sortperm(o.vec)
 # Base.sortperm{V}(df::AbstractDataFrame, a::Algorithm, o::FastPerm{Sort.ReverseOrdering,V}) = reverse(sortperm(o.vec))
 

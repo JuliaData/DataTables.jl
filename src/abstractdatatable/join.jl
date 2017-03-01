@@ -153,7 +153,7 @@ immutable DataTableJoiner{DT1<:AbstractDataTable, DT2<:AbstractDataTable}
     on_cols::Vector{Symbol}
 
     function DataTableJoiner(dtl::DT1, dtr::DT2, on::Union{Symbol,Vector{Symbol}})
-        on_cols = (isa(on, Symbol) ? fill(on, 1) : on)
+        on_cols = isa(on, Symbol) ? [on] : on
         new(dtl, dtr, dtl[on_cols], dtr[on_cols], on_cols)
     end
 end
@@ -171,13 +171,6 @@ end
 
 Base.length(x::RowIndexMap) = length(x.orig)
 
-# fix the result of the rightjoin by taking the nonnull values from the right table
-function fix_rightjoin_column!(res_col::AbstractArray, col_ix::Int, joiner::DataTableJoiner,
-                               all_orig_left_ixs::Vector{Int}, rightonly_ixs::RowIndexMap)
-    res_col[rightonly_ixs.join] = joiner.dtr_on[rightonly_ixs.orig, col_ix]
-    res_col
-end
-
 # composes the joined data table using the maps between the left and right
 # table rows and the indices of rows in the result
 function compose_joined_table(joiner::DataTableJoiner,
@@ -190,24 +183,24 @@ function compose_joined_table(joiner::DataTableJoiner,
         # permute the indices to restore left table rows order
         all_orig_left_ixs[vcat(left_ixs.join, leftonly_ixs.join)] = all_orig_left_ixs
     end
-    left_dt = DataTable(Any[resize!(col[all_orig_left_ixs], length(all_orig_left_ixs)+length(rightonly_ixs))
+    ril = length(right_ixs)
+    loil = length(leftonly_ixs)
+    roil = length(rightonly_ixs)
+    left_dt = DataTable(Any[resize!(col[all_orig_left_ixs], length(all_orig_left_ixs)+roil)
                             for col in columns(joiner.dtl)],
                         names(joiner.dtl))
 
     # compose right half of the result taking all right columns excluding on
     dtr_noon = without(joiner.dtr, joiner.on_cols)
     # permutation to swap rightonly and leftonly rows
-    right_perm = vcat(1:length(right_ixs),
-                      (length(right_ixs)+length(rightonly_ixs)+1:
-                       length(right_ixs)+length(rightonly_ixs)+length(leftonly_ixs)),
-                      length(right_ixs)+1:length(right_ixs)+length(rightonly_ixs))
+    right_perm = vcat(1:ril, ril+roil+1:ril+roil+loil, ril+1:ril+roil)
     if length(leftonly_ixs) > 0
         # compose right_perm with the permutation that restores left rows order
-        right_perm[vcat(right_ixs.join, leftonly_ixs.join)] = right_perm[1:length(right_ixs)+length(leftonly_ixs)]
+        right_perm[vcat(right_ixs.join, leftonly_ixs.join)] = right_perm[1:ril+loil]
     end
     all_orig_right_ixs = vcat(right_ixs.orig, rightonly_ixs.orig)
-    right_dt = DataTable(Any[resize!(col[all_orig_right_ixs], length(all_orig_right_ixs)+length(leftonly_ixs))[right_perm]
-                             for col in columns(dtr_noon)],
+    right_dt = DataTable(Any[resize!(col[all_orig_right_ixs], length(all_orig_right_ixs)+loil)[right_perm]
+                            for col in columns(dtr_noon)],
                          names(dtr_noon))
     # merge left and right parts of the joined table
     res = hcat!(left_dt, right_dt)
@@ -216,7 +209,8 @@ function compose_joined_table(joiner::DataTableJoiner,
         # some left rows are nulls, so the values of the "on" columns
         # need to be taken from the right
         for (on_col_ix, on_col) in enumerate(joiner.on_cols)
-            res[on_col] = fix_rightjoin_column!(res[on_col], on_col_ix, joiner, all_orig_left_ixs, rightonly_ixs)
+            # fix the result of the rightjoin by taking the nonnull values from the right table
+            res[on_col][rightonly_ixs.join] = joiner.dtr_on[rightonly_ixs.orig, on_col_ix]
         end
     end
     return res
@@ -233,8 +227,8 @@ function update_row_maps!(left_table::AbstractDataTable,
                           right_ixs::Union{Void, RowIndexMap},
                           rightonly_mask::Union{Void, Vector{Bool}})
     # helper functions
-    update!(ixs::Void, orig_ix::Int, join_ix::Int, count::Int = 1) = ixs
-    function update!(ixs::RowIndexMap, orig_ix::Int, join_ix::Int, count::Int = 1)
+    @inline update!(ixs::Void, orig_ix::Int, join_ix::Int, count::Int = 1) = nothing
+    @inline function update!(ixs::RowIndexMap, orig_ix::Int, join_ix::Int, count::Int = 1)
         for i in 1:count
             push!(ixs.orig, orig_ix)
         end
@@ -243,16 +237,16 @@ function update_row_maps!(left_table::AbstractDataTable,
         end
         ixs
     end
-    update!(ixs::Void, orig_ixs::AbstractArray, join_ix::Int) = ixs
-    function update!(ixs::RowIndexMap, orig_ixs::AbstractArray, join_ix::Int)
+    @inline update!(ixs::Void, orig_ixs::AbstractArray, join_ix::Int) = nothing
+    @inline function update!(ixs::RowIndexMap, orig_ixs::AbstractArray, join_ix::Int)
         append!(ixs.orig, orig_ixs)
         for i in join_ix:(join_ix+length(orig_ixs)-1)
             push!(ixs.join, i)
         end
         ixs
     end
-    update!(ixs::Void, orig_ixs::AbstractArray) = ixs
-    update!(mask::Vector{Bool}, orig_ixs::AbstractArray) = (mask[orig_ixs] = false)
+    @inline update!(ixs::Void, orig_ixs::AbstractArray) = ixs
+    @inline update!(mask::Vector{Bool}, orig_ixs::AbstractArray) = (mask[orig_ixs] = false)
 
     # iterate over left rows and compose the left<->right index map
     next_join_ix = 1
@@ -297,10 +291,10 @@ function update_row_maps!(left_table::AbstractDataTable,
     rightonly_mask = map_rightonly ? fill(true, nrow(right_table)) : nothing
     update_row_maps!(left_table, right_table, right_dict, left_ixs, leftonly_ixs, right_ixs, rightonly_mask)
     if map_rightonly
-        rightonly_orig_ixs = (1:length(rightonly_mask))[rightonly_mask]
+        rightonly_orig_ixs = find(rightonly_mask)
         rightonly_ixs = RowIndexMap(rightonly_orig_ixs,
-                                    collect(length(right_ixs.orig)+
-                                            (leftonly_ixs === nothing ? 0 : length(leftonly_ixs))+
+                                    collect(length(right_ixs.orig) +
+                                            (leftonly_ixs === nothing ? 0 : length(leftonly_ixs)) +
                                             (1:length(rightonly_orig_ixs))))
     else
         rightonly_ixs = nothing
@@ -377,30 +371,29 @@ function Base.join(dt1::AbstractDataTable,
 
     if kind == :inner
         compose_joined_table(joiner, update_row_maps!(joiner.dtl_on, joiner.dtr_on,
-                             group_rows(joiner.dtr_on),
-                             true, false, true, false)...)
+                                                      group_rows(joiner.dtr_on),
+                                                      true, false, true, false)...)
     elseif kind == :left
         compose_joined_table(joiner, update_row_maps!(joiner.dtl_on, joiner.dtr_on,
-                             group_rows(joiner.dtr_on),
-                             true, true, true, false)...)
+                                                      group_rows(joiner.dtr_on),
+                                                      true, true, true, false)...)
     elseif kind == :right
-        right_ixs, rightonly_ixs, left_ixs, leftonly_ixs =
-            update_row_maps!(joiner.dtr_on, joiner.dtl_on,
-                            group_rows(joiner.dtl_on),
-                            true, true, true, false)
+        right_ixs, rightonly_ixs, left_ixs, leftonly_ixs = update_row_maps!(joiner.dtr_on, joiner.dtl_on,
+                                                                            group_rows(joiner.dtl_on),
+                                                                            true, true, true, false)
         compose_joined_table(joiner, left_ixs, leftonly_ixs, right_ixs, rightonly_ixs)
     elseif kind == :outer
         compose_joined_table(joiner, update_row_maps!(joiner.dtl_on, joiner.dtr_on,
-                             group_rows(joiner.dtr_on),
-                             true, true, true, true)...)
+                                                      group_rows(joiner.dtr_on),
+                                                      true, true, true, true)...)
     elseif kind == :semi
         # hash the right rows
         dtr_on_grp = group_rows(joiner.dtr_on)
         # iterate over left rows and leave those found in right
         left_ixs = Vector{Int}()
         sizehint!(left_ixs, nrow(joiner.dtl))
-        for l_ix in 1:nrow(joiner.dtl_on)
-            if in(dtr_on_grp, joiner.dtl_on, l_ix)
+        @inbounds for l_ix in 1:nrow(joiner.dtl_on)
+            if findrow(dtr_on_grp, joiner.dtl_on, l_ix) != 0
                 push!(left_ixs, l_ix)
             end
         end
@@ -411,14 +404,14 @@ function Base.join(dt1::AbstractDataTable,
         # iterate over left rows and leave those not found in right
         leftonly_ixs = Vector{Int}()
         sizehint!(leftonly_ixs, nrow(joiner.dtl))
-        for l_ix in 1:nrow(joiner.dtl_on)
-            if !in(dtr_on_grp, joiner.dtl_on, l_ix)
+        @inbounds for l_ix in 1:nrow(joiner.dtl_on)
+            if findrow(dtr_on_grp, joiner.dtl_on, l_ix) == 0
                 push!(leftonly_ixs, l_ix)
             end
         end
         return joiner.dtl[leftonly_ixs, :]
     else
-        throw(ArgumentError("Unknown kind ($kind) of join requested"))
+        throw(ArgumentError("Unknown kind of join requested: ($kind)"))
     end
 end
 

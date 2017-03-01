@@ -94,9 +94,7 @@ end
 isequal_colel(col::AbstractArray, r1::Int, r2::Int) =
     (r1 == r2) || isequal(Base.unsafe_getindex(col, r1), Base.unsafe_getindex(col, r2))
 
-function isequal_colel{T}(col::Union{NullableArray{T},
-                                     AbstractNullableCategoricalArray{T}},
-                                     r1::Int, r2::Int)
+function isequal_colel{T}(col::Union{NullableArray{T}, AbstractNullableCategoricalArray{T}}, r1::Int, r2::Int)
     (r1 == r2) && return true
     isequal(col[r1], col[r2])
 end
@@ -118,7 +116,7 @@ end
 function isequal_row(dt1::AbstractDataTable, r1::Int, dt2::AbstractDataTable, r2::Int)
     (dt1 === dt2) && return isequal_row(dt1, r1, r2)
     (ncol(dt1) == ncol(dt2)) ||
-        throw(ArgumentError("Rows of the data tables that have different number of columns cannot be compared ($(ncol(dt1)) and $(ncol(dt2)))"))
+        throw(ArgumentError("Rows of the tables that have different number of columns cannot be compared. Got $(ncol(dt1)) and $(ncol(dt2)) columns"))
     @inbounds for (col1, col2) in zip(columns(dt1), columns(dt2))
         isequal_colel(col1[r1], col2[r2]) || return false
     end
@@ -135,14 +133,14 @@ function Base.isless(r1::DataTableRow, r2::DataTableRow)
     (ncol(r1.dt) == ncol(r2.dt)) ||
         throw(ArgumentError("Rows of the data tables that have different number of columns cannot be compared ($(ncol(dt1)) and $(ncol(dt2)))"))
     @inbounds for i in 1:ncol(r1.dt)
-        col1 = r1.dt[i]
-        col2 = r2.dt[i]
-        isnull1 = _isnull(col1[r1.row])
-        isnull2 = _isnull(col2[r2.row])
-        (isnull1 != isnull2) && return isnull2 # null > !null
-        if !isnull1
-            v1 = get(col1[r1.row])
-            v2 = get(col2[r2.row])
+        x = r1.dt[i][r1.row]
+        y = r2.dt[i][r2.row]
+        isnullx = _isnull(x)
+        isnully = _isnull(y)
+        (isnullx != isnully) && return isnully # null > !null
+        if !isnullx
+            v1 = get(x)
+            v2 = get(y)
             isless(v1, v2) && return true
             !isequal(v1, v2) && return false
         end

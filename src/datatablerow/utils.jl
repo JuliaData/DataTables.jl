@@ -79,6 +79,7 @@ function row_group_slots(dt::AbstractDataTable,
                          groups::Union{Vector{Int}, Void} = nothing)
     @assert groups === nothing || length(groups) == nrow(dt)
     rhashes = hashrows(dt)
+    # inspired by Dict code from base cf. https://github.com/JuliaData/DataTables.jl/pull/17#discussion_r102481481
     sz = Base._tablesz(length(rhashes))
     @assert sz >= length(rhashes)
     szm1 = sz-1
@@ -186,6 +187,3 @@ function Base.getindex(gd::RowGroupDict, dtr::DataTableRow)
     gix = gd.groups[g_row]
     return view(gd.rperm, gd.starts[gix]:gd.stops[gix])
 end
-
-# Check if there is matching row in gd
-Base.in(gd::RowGroupDict, dt::DataTable, row::Int) = (findrow(gd, dt, row) != 0)
