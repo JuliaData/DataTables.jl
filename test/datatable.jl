@@ -80,7 +80,6 @@ module TestDataTable
                        b = NullableArray{String}(2),
                        c = NullableCategoricalArray{Float64}(2))
     @test isequal(nulldt, similar(dt, 2))
-    @test isequal(nulldt, DataTables.similar_nullable(dt, 2))
 
     # Associative methods
 

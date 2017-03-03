@@ -31,6 +31,8 @@ module TestJoin
     @test isequal(join(name, job, on = :ID, kind = :right), right)
     @test isequal(join(name, job, on = :ID, kind = :semi), semi)
     @test isequal(join(name, job, on = :ID, kind = :anti), anti)
+    @test_throws ArgumentError error(join(name, job))
+    @test_throws ArgumentError error(join(name, job, on=:ID, kind=:other))
 
     # Join with no non-key columns
     on = [:ID]

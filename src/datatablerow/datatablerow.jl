@@ -40,14 +40,14 @@ Base.convert(::Type{Array}, r::DataTableRow) = convert(Array, r.dt[r.row,:])
 # hash column element
 Base.@propagate_inbounds hash_colel(v::AbstractArray, i, h::UInt = zero(UInt)) = hash(v[i], h)
 Base.@propagate_inbounds hash_colel{T<:Nullable}(v::AbstractArray{T}, i, h::UInt = zero(UInt)) =
-    isnull(v[i]) ? hash(Base.nullablehash_seed, h) : hash(get(v[i]), h)
+    isnull(v[i]) ? h + Base.nullablehash_seed : hash(unsafe_get(v[i]), h)
 Base.@propagate_inbounds hash_colel{T}(v::NullableArray{T}, i, h::UInt = zero(UInt)) =
-    isnull(v, i) ? hash(Base.nullablehash_seed, h) : hash(v.values[i], h)
+    isnull(v, i) ? h + Base.nullablehash_seed : hash(v.values[i], h)
 Base.@propagate_inbounds hash_colel{T}(v::AbstractCategoricalArray{T}, i, h::UInt = zero(UInt)) =
     hash(CategoricalArrays.index(v.pool)[v.refs[i]], h)
 Base.@propagate_inbounds function hash_colel{T}(v::AbstractNullableCategoricalArray{T}, i, h::UInt = zero(UInt))
     ref = v.refs[i]
-    ref == 0 ? hash(Base.nullablehash_seed, h) : hash(CategoricalArrays.index(v.pool)[ref], h)
+    ref == 0 ? h + Base.nullablehash_seed : hash(CategoricalArrays.index(v.pool)[ref], h)
 end
 
 # hash of DataTable rows based on its values
@@ -139,8 +139,8 @@ function Base.isless(r1::DataTableRow, r2::DataTableRow)
         isnully = _isnull(y)
         (isnullx != isnully) && return isnully # null > !null
         if !isnullx
-            v1 = get(x)
-            v2 = get(y)
+            v1 = unsafe_get(x)
+            v2 = unsafe_get(y)
             isless(v1, v2) && return true
             !isequal(v1, v2) && return false
         end

@@ -29,10 +29,15 @@ function hashrows_col!(h::Vector{UInt}, v::AbstractVector)
     h
 end
 
+if !isdefined(Base, :unsafe_get)
+    unsafe_get(x::Nullable) = x.value
+    unsafe_get(x::Any) = x
+end
+
 function hashrows_col!{T<:Nullable}(h::Vector{UInt}, v::AbstractVector{T})
     @inbounds for i in eachindex(h)
         h[i] = isnull(v[i]) ?
-               hash(Base.nullablehash_seed, h[i]) :
+               h[i] + Base.nullablehash_seed :
                hash(unsafe_get(v[i]), h[i])
     end
     h
@@ -52,7 +57,7 @@ function hashrows_col!{T}(h::Vector{UInt}, v::AbstractNullableCategoricalVector{
     # TODO is it possible to optimize by hashing the pool values once?
     @inbounds for (i, ref) in enumerate(v.refs)
         h[i] = ref == 0 ?
-               hash(Base.nullablehash_seed, h[i]) :
+               h[i] + Base.nullablehash_seed :
                hash(CategoricalArrays.index(v.pool)[ref], h[i])
     end
     h

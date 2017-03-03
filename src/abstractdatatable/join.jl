@@ -3,146 +3,11 @@
 ##
 
 # Like similar, but returns a nullable array
-similar_nullable{T}(dv::AbstractArray{T}, dims::@compat(Union{Int, Tuple{Vararg{Int}}})) =
-    NullableArray(T, dims)
-
 similar_nullable{T<:Nullable}(dv::AbstractArray{T}, dims::@compat(Union{Int, Tuple{Vararg{Int}}})) =
     NullableArray(eltype(T), dims)
 
-similar_nullable{T,R}(dv::CategoricalArray{T,R}, dims::@compat(Union{Int, Tuple{Vararg{Int}}})) =
-    NullableCategoricalArray(T, dims)
-
 similar_nullable(dt::AbstractDataTable, dims::Int) =
     DataTable(Any[similar_nullable(x, dims) for x in columns(dt)], copy(index(dt)))
-
-function sharepools{S,N}(v1::Union{CategoricalArray{S,N}, NullableCategoricalArray{S,N}},
-                         v2::Union{CategoricalArray{S,N}, NullableCategoricalArray{S,N}},
-                         index::Vector{S},
-                         R)
-    tidx1 = convert(Vector{R}, indexin(CategoricalArrays.index(v1.pool), index))
-    tidx2 = convert(Vector{R}, indexin(CategoricalArrays.index(v2.pool), index))
-    refs1 = zeros(R, length(v1))
-    refs2 = zeros(R, length(v2))
-    for i in 1:length(refs1)
-        if v1.refs[i] != 0
-            refs1[i] = tidx1[v1.refs[i]]
-        end
-    end
-    for i in 1:length(refs2)
-        if v2.refs[i] != 0
-            refs2[i] = tidx2[v2.refs[i]]
-        end
-    end
-    pool = CategoricalPool{S, R}(index)
-    return (CategoricalArray(refs1, pool),
-            CategoricalArray(refs2, pool))
-end
-
-function sharepools{S,N}(v1::Union{CategoricalArray{S,N}, NullableCategoricalArray{S,N}},
-                         v2::Union{CategoricalArray{S,N}, NullableCategoricalArray{S,N}})
-    index = sort(unique([levels(v1); levels(v2)]))
-    sz = length(index)
-
-    R = sz <= typemax(UInt8)  ? UInt8 :
-        sz <= typemax(UInt16) ? UInt16 :
-        sz <= typemax(UInt32) ? UInt32 :
-                                UInt64
-
-    # To ensure type stability during actual work
-    sharepools(v1, v2, index, R)
-end
-
-sharepools{S,N}(v1::Union{CategoricalArray{S,N}, NullableCategoricalArray{S,N}},
-                v2::AbstractArray{S,N}) =
-    sharepools(v1, oftype(v1, v2))
-
-sharepools{S,N}(v1::AbstractArray{S,N},
-                v2::Union{CategoricalArray{S,N}, NullableCategoricalArray{S,N}}) =
-    sharepools(oftype(v2, v1), v2)
-
-# TODO: write an optimized version for (Nullable)CategoricalArray
-function sharepools{S, T}(v1::AbstractArray{S},
-                          v2::AbstractArray{T})
-    ## Return two categorical arrays that share the same pool.
-
-    ## TODO: allow specification of R
-    R = CategoricalArrays.DefaultRefType
-    refs1 = Array{R}(size(v1))
-    refs2 = Array{R}(size(v2))
-    K = promote_type(S, T)
-    poolref = Dict{K, R}()
-    maxref = 0
-
-    # loop through once to fill the poolref dict
-    for i = 1:length(v1)
-        if !_isnull(v1[i])
-            poolref[K(v1[i])] = 0
-        end
-    end
-    for i = 1:length(v2)
-        if !_isnull(v2[i])
-            poolref[K(v2[i])] = 0
-        end
-    end
-
-    # fill positions in poolref
-    pool = sort(collect(keys(poolref)))
-    i = 1
-    for p in pool
-        poolref[p] = i
-        i += 1
-    end
-
-    # fill in newrefs
-    zeroval = zero(R)
-    for i = 1:length(v1)
-        if _isnull(v1[i])
-            refs1[i] = zeroval
-        else
-            refs1[i] = poolref[K(v1[i])]
-        end
-    end
-    for i = 1:length(v2)
-        if _isnull(v2[i])
-            refs2[i] = zeroval
-        else
-            refs2[i] = poolref[K(v2[i])]
-        end
-    end
-
-    pool = CategoricalPool(pool)
-    return (NullableCategoricalArray(refs1, pool),
-            NullableCategoricalArray(refs2, pool))
-end
-
-function sharepools(dt1::AbstractDataTable, dt2::AbstractDataTable)
-    # This method exists to allow merge to work with multiple columns.
-    # It takes the columns of each DataTable and returns a categorical array
-    # with a merged pool that "keys" the combination of column values.
-    # The pools of the result don't really mean anything.
-    dv1, dv2 = sharepools(dt1[1], dt2[1])
-    # use UInt32 instead of the minimum integer size chosen by sharepools
-    # since the number of levels can be high
-    refs1 = Vector{UInt32}(dv1.refs)
-    refs2 = Vector{UInt32}(dv2.refs)
-    # the + 1 handles nulls
-    refs1[:] += 1
-    refs2[:] += 1
-    ngroups = length(levels(dv1)) + 1
-    for j = 2:ncol(dt1)
-        dv1, dv2 = sharepools(dt1[j], dt2[j])
-        for i = 1:length(refs1)
-            refs1[i] += (dv1.refs[i]) * ngroups
-        end
-        for i = 1:length(refs2)
-            refs2[i] += (dv2.refs[i]) * ngroups
-        end
-        ngroups *= length(levels(dv1)) + 1
-    end
-    # recode refs1 and refs2 to drop the unused column combinations and
-    # limit the pool size
-    sharepools(refs1, refs2)
-end
 
 # helper structure for DataTables joining
 immutable DataTableJoiner{DT1<:AbstractDataTable, DT2<:AbstractDataTable}
@@ -411,7 +276,7 @@ function Base.join(dt1::AbstractDataTable,
         end
         return joiner.dtl[leftonly_ixs, :]
     else
-        throw(ArgumentError("Unknown kind of join requested: ($kind)"))
+        throw(ArgumentError("Unknown kind of join requested: $kind"))
     end
 end
 
