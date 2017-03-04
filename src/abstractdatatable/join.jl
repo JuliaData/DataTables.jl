@@ -116,7 +116,7 @@ function update_row_maps!(left_table::AbstractDataTable,
     # iterate over left rows and compose the left<->right index map
     next_join_ix = 1
     for l_ix in 1:nrow(left_table)
-        r_ixs = get(right_dict, left_table, l_ix)
+        r_ixs = findrows(right_dict, left_table, l_ix)
         if isempty(r_ixs)
             update!(leftonly_ixs, l_ix, next_join_ix)
             next_join_ix += 1

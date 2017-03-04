@@ -179,7 +179,7 @@ end
 
 # Find indices of rows in 'gd' that match given row by content.
 # return empty set if no row matches
-function Base.get(gd::RowGroupDict, dt::DataTable, row::Int)
+function findrows(gd::RowGroupDict, dt::DataTable, row::Int)
     g_row = findrow(gd, dt, row)
     (g_row == 0) && return view(gd.rperm, 0:-1)
     gix = gd.groups[g_row]

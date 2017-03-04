@@ -67,8 +67,8 @@ module TestDataTableRow
     # getting groups for the rows of the other frames
     @test length(gd[DataTableRow(dt6, 1)]) > 0
     @test_throws KeyError gd[DataTableRow(dt6, 2)]
-    @test isempty(get(gd, dt6, 2))
-    @test length(get(gd, dt6, 2)) == 0
+    @test isempty(DataTables.findrows(gd, dt6, 2))
+    @test length(DataTables.findrows(gd, dt6, 2)) == 0
 
     # grouping empty frame
     gd = DataTables.group_rows(DataTable(x=Int[]))
