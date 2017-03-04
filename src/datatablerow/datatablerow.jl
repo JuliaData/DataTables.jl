@@ -4,10 +4,6 @@ immutable DataTableRow{T <: AbstractDataTable}
     row::Int
 end
 
-function Base.getindex(r::DataTableRow, idx::AbstractArray)
-    return DataTableRow(r.dt[idx], r.row)
-end
-
 function Base.getindex(r::DataTableRow, idx::Any)
     return r.dt[r.row, idx]
 end
@@ -62,32 +58,19 @@ end
 Base.hash(r::DataTableRow, h::UInt = zero(UInt)) = rowhash(r.dt, r.row, h)
 
 # comparison of DataTable rows
+# only the rows of the same DataTable could be compared
 # rows are equal if they have the same values (while the row indices could differ)
-# returns Nullable{Bool}
-# if all non-null values are equal, but there are nulls, returns null
-function @compat(Base.:(==))(r1::DataTableRow, r2::DataTableRow)
-    if r1.dt !== r2.dt
-        (ncol(r1.dt) != ncol(r2.dt)) &&
-            throw(ArgumentError("Cannot compare rows with different numbers of columns (got $(ncol(r1.dt)) and $(ncol(r2.dt)))"))
-        eq = Nullable(true)
-        @inbounds for (col1, col2) in zip(columns(r1.dt), columns(r2.dt))
-            eq_col = convert(Nullable{Bool}, col1[r1.row] == col2[r2.row])
-            # If true or null, need to compare remaining columns
-            get(eq_col, true) || return Nullable(false)
-            eq &= eq_col
+@compat(Base.:(==))(r1::DataTableRow, r2::DataTableRow) = isequal(r1, r2)
+
+function Base.isequal(r1::DataTableRow, r2::DataTableRow)
+    r1.dt == r2.dt || throw(ArgumentError("Comparing rows from different frames not supported"))
+    r1.row == r2.row && return true
+    for col in columns(r1.dt)
+        if !isequal(col[r1.row], col[r2.row])
+            return false
         end
-        return eq
-    else
-        r1.row == r2.row && return Nullable(true)
-        eq = Nullable(true)
-        @inbounds for col in columns(r1.dt)
-            eq_col = convert(Nullable{Bool}, col[r1.row] == col[r2.row])
-            # If true or null, need to compare remaining columns
-            get(eq_col, true) || return Nullable(false)
-            eq &= eq_col
-        end
-        return eq
     end
+    return true
 end
 
 # internal method for comparing the elements of the same data table column
@@ -104,17 +87,8 @@ isequal_colel(a::Nullable, b::Any) = !isnull(a) & isequal(unsafe_get(a), b)
 isequal_colel(a::Any, b::Nullable) = isequal_colel(b, a)
 isequal_colel(a::Nullable, b::Nullable) = isequal(a, b)
 
-# comparison of DataTable rows
-function isequal_row(dt::AbstractDataTable, r1::Int, r2::Int)
-    (r1 == r2) && return true # same row
-    @inbounds for col in columns(dt)
-        isequal_colel(col, r1, r2) || return false
-    end
-    return true
-end
-
 function isequal_row(dt1::AbstractDataTable, r1::Int, dt2::AbstractDataTable, r2::Int)
-    (dt1 === dt2) && return isequal_row(dt1, r1, r2)
+    (dt1 === dt2) && return isequal(dt1[r1], dt1[r2])
     (ncol(dt1) == ncol(dt2)) ||
         throw(ArgumentError("Rows of the tables that have different number of columns cannot be compared. Got $(ncol(dt1)) and $(ncol(dt2)) columns"))
     @inbounds for (col1, col2) in zip(columns(dt1), columns(dt2))
@@ -122,11 +96,6 @@ function isequal_row(dt1::AbstractDataTable, r1::Int, dt2::AbstractDataTable, r2
     end
     return true
 end
-
-# comparison of DataTable rows
-# rows are equal if they have the same values (while the row indices could differ)
-Base.isequal(r1::DataTableRow, r2::DataTableRow) =
-    isequal_row(r1.dt, r1.row, r2.dt, r2.row)
 
 # lexicographic ordering on DataTable rows, null > !null
 function Base.isless(r1::DataTableRow, r2::DataTableRow)

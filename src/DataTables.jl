@@ -22,7 +22,6 @@ using FileIO  # remove after read_rda deprecation period
 
 using Base: Sort, Order
 import Base: ==, |>
-import Base: permute!, ipermute!
 
 ##############################################################################
 ##
