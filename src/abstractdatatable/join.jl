@@ -66,14 +66,8 @@ function compose_joined_table(joiner::DataTableJoiner,
     # permutation to swap rightonly and leftonly rows
     right_perm = vcat(1:ril, ril+roil+1:ril+roil+loil, ril+1:ril+roil)
     if length(leftonly_ixs) > 0
-        # combine the matched (left_ixs.orig) and non-matched (leftonly_ixs.orig) indices of the left table rows
-        # preserving the original rows order
-        all_orig_left_ixs = similar(left_ixs.orig, length(left_ixs)+length(leftonly_ixs))
-        @inbounds all_orig_left_ixs[left_ixs.join] = left_ixs.orig
-        @inbounds all_orig_left_ixs[leftonly_ixs.join] = leftonly_ixs.orig
-    else
-        # the result contains only the left rows that are matched to right rows (left_ixs)
-        all_orig_left_ixs = left_ixs.orig # no need to copy left_ixs.orig as it's not used elsewhere
+        # compose right_perm with the permutation that restores left rows order
+        right_perm[vcat(right_ixs.join, leftonly_ixs.join)] = right_perm[1:ril+loil]
     end
     all_orig_right_ixs = vcat(right_ixs.orig, rightonly_ixs.orig)
     right_dt = DataTable(Any[copy!(similar(col[all_orig_right_ixs],
