@@ -805,7 +805,9 @@ end
 
 function categorical!(dt::DataTable, compact::Bool=true)
     for i in 1:size(dt, 2)
-        dt[i] = categorical(dt[i], compact)
+        if eltype(dt[i]) <: AbstractString
+            dt[i] = categorical(dt[i], compact)
+        end
     end
     dt
 end

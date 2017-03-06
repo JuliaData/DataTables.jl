@@ -4,6 +4,10 @@ immutable DataTableRow{T <: AbstractDataTable}
     row::Int
 end
 
+function Base.getindex(r::DataTableRow, idx::AbstractArray)
+    return DataTableRow(r.dt[idx], r.row)
+end
+
 function Base.getindex(r::DataTableRow, idx::Any)
     return r.dt[r.row, idx]
 end
@@ -60,27 +64,17 @@ Base.hash(r::DataTableRow, h::UInt = zero(UInt)) = rowhash(r.dt, r.row, h)
 # comparison of DataTable rows
 # only the rows of the same DataTable could be compared
 # rows are equal if they have the same values (while the row indices could differ)
+# returns Nullable{Bool}
+# if all non-null values are equal, but there are nulls, returns null
 @compat(Base.:(==))(r1::DataTableRow, r2::DataTableRow) = isequal(r1, r2)
 
 function Base.isequal(r1::DataTableRow, r2::DataTableRow)
-    r1.dt == r2.dt || throw(ArgumentError("Comparing rows from different frames not supported"))
-    r1.row == r2.row && return true
-    for col in columns(r1.dt)
-        if !isequal(col[r1.row], col[r2.row])
-            return false
-        end
-    end
-    return true
+    isequal_row(r1.dt, r1.row, r2.dt, r2.row)
 end
 
 # internal method for comparing the elements of the same data table column
 isequal_colel(col::AbstractArray, r1::Int, r2::Int) =
     (r1 == r2) || isequal(Base.unsafe_getindex(col, r1), Base.unsafe_getindex(col, r2))
-
-function isequal_colel{T}(col::Union{NullableArray{T}, AbstractNullableCategoricalArray{T}}, r1::Int, r2::Int)
-    (r1 == r2) && return true
-    isequal(col[r1], col[r2])
-end
 
 isequal_colel(a::Any, b::Any) = isequal(a, b)
 isequal_colel(a::Nullable, b::Any) = !isnull(a) & isequal(unsafe_get(a), b)
@@ -88,13 +82,23 @@ isequal_colel(a::Any, b::Nullable) = isequal_colel(b, a)
 isequal_colel(a::Nullable, b::Nullable) = isequal(a, b)
 
 function isequal_row(dt1::AbstractDataTable, r1::Int, dt2::AbstractDataTable, r2::Int)
-    (dt1 === dt2) && return isequal(dt1[r1], dt1[r2])
-    (ncol(dt1) == ncol(dt2)) ||
+    if dt1 === dt2
+        if r1 == r2
+            return true
+        else
+            @inbounds for (col1, col2) in zip(columns(dt1), columns(dt2))
+                isequal_colel(col1[r1], col2[r2]) || return false
+            end
+        end
+        return true
+    elseif (ncol(dt1) == ncol(dt2))
+        @inbounds for (col1, col2) in zip(columns(dt1), columns(dt2))
+            isequal_colel(col1[r1], col2[r2]) || return false
+        end
+        return true
+    else
         throw(ArgumentError("Rows of the tables that have different number of columns cannot be compared. Got $(ncol(dt1)) and $(ncol(dt2)) columns"))
-    @inbounds for (col1, col2) in zip(columns(dt1), columns(dt2))
-        isequal_colel(col1[r1], col2[r2]) || return false
     end
-    return true
 end
 
 # lexicographic ordering on DataTable rows, null > !null

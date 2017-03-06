@@ -146,6 +146,11 @@ function Base.getindex(sdt::SubDataTable, rowinds::Any, colinds::Any)
     return sdt.parent[sdt.rows[rowinds], colinds]
 end
 
+function Base.setindex!(sdt::SubDataTable, val::Any, colinds::Any)
+    sdt.parent[sdt.rows, colinds] = val
+    return sdt
+end
+
 function Base.setindex!(sdt::SubDataTable, val::Any, rowinds::Any, colinds::Any)
     sdt.parent[sdt.rows[rowinds], colinds] = val
     return sdt
@@ -156,5 +161,7 @@ end
 ## Miscellaneous
 ##
 ##############################################################################
+
+Base.map(f::Function, sdt::SubDataTable) = f(sdt) # TODO: deprecate
 
 without(sdt::SubDataTable, c) = view(without(sdt.parent, c), sdt.rows)

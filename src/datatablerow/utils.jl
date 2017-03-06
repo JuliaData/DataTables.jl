@@ -63,8 +63,11 @@ function hashrows_col!{T}(h::Vector{UInt}, v::AbstractNullableCategoricalVector{
     h
 end
 
-# Calculate hash for each row
-# in an efficient column-wise manner
+"""
+Calculate the vector of `dt` rows hash values.
+
+The hashes are calculated column by column, allowing for an efficient sequential memory access pattern.
+"""
 function hashrows(dt::AbstractDataTable)
     res = zeros(UInt, nrow(dt))
     for col in columns(dt)

@@ -3,8 +3,14 @@
 ##
 
 # Like similar, but returns a nullable array
+similar_nullable{T}(dv::AbstractArray{T}, dims::@compat(Union{Int, Tuple{Vararg{Int}}})) =
+    NullableArray(T, dims)
+
 similar_nullable{T<:Nullable}(dv::AbstractArray{T}, dims::@compat(Union{Int, Tuple{Vararg{Int}}})) =
     NullableArray(eltype(T), dims)
+
+similar_nullable{T,R}(dv::CategoricalArray{T,R}, dims::@compat(Union{Int, Tuple{Vararg{Int}}})) =
+    NullableCategoricalArray(T, dims)
 
 similar_nullable(dt::AbstractDataTable, dims::Int) =
     DataTable(Any[similar_nullable(x, dims) for x in columns(dt)], copy(index(dt)))
@@ -51,7 +57,7 @@ function compose_joined_table(joiner::DataTableJoiner,
     ril = length(right_ixs)
     loil = length(leftonly_ixs)
     roil = length(rightonly_ixs)
-    left_dt = DataTable(Any[resize!(col[all_orig_left_ixs], length(all_orig_left_ixs)+roil)
+    left_dt = DataTable(Any[copy!(similar(col[all_orig_left_ixs], length(all_orig_left_ixs)+roil), col[all_orig_left_ixs])
                             for col in columns(joiner.dtl)],
                         names(joiner.dtl))
 
@@ -60,12 +66,20 @@ function compose_joined_table(joiner::DataTableJoiner,
     # permutation to swap rightonly and leftonly rows
     right_perm = vcat(1:ril, ril+roil+1:ril+roil+loil, ril+1:ril+roil)
     if length(leftonly_ixs) > 0
-        # compose right_perm with the permutation that restores left rows order
-        right_perm[vcat(right_ixs.join, leftonly_ixs.join)] = right_perm[1:ril+loil]
+        # combine the matched (left_ixs.orig) and non-matched (leftonly_ixs.orig) indices of the left table rows
+        # preserving the original rows order
+        all_orig_left_ixs = similar(left_ixs.orig, length(left_ixs)+length(leftonly_ixs))
+        @inbounds all_orig_left_ixs[left_ixs.join] = left_ixs.orig
+        @inbounds all_orig_left_ixs[leftonly_ixs.join] = leftonly_ixs.orig
+    else
+        # the result contains only the left rows that are matched to right rows (left_ixs)
+        all_orig_left_ixs = left_ixs.orig # no need to copy left_ixs.orig as it's not used elsewhere
     end
     all_orig_right_ixs = vcat(right_ixs.orig, rightonly_ixs.orig)
-    right_dt = DataTable(Any[resize!(col[all_orig_right_ixs], length(all_orig_right_ixs)+loil)[right_perm]
-                            for col in columns(dtr_noon)],
+    right_dt = DataTable(Any[copy!(similar(col[all_orig_right_ixs],
+                                           length(all_orig_right_ixs)+loil),
+                                   col[all_orig_right_ixs])[right_perm]
+                             for col in columns(dtr_noon)],
                          names(dtr_noon))
     # merge left and right parts of the joined table
     res = hcat!(left_dt, right_dt)
@@ -94,23 +108,17 @@ function update_row_maps!(left_table::AbstractDataTable,
     # helper functions
     @inline update!(ixs::Void, orig_ix::Int, join_ix::Int, count::Int = 1) = nothing
     @inline function update!(ixs::RowIndexMap, orig_ix::Int, join_ix::Int, count::Int = 1)
-        for i in 1:count
-            push!(ixs.orig, orig_ix)
-        end
-        for i in join_ix:(join_ix+count-1)
-            push!(ixs.join, i)
-        end
+        append!(ixs.orig, fill(orig_ix, count))
+        append!(ixs.join, join_ix:(join_ix+count-1))
         ixs
     end
     @inline update!(ixs::Void, orig_ixs::AbstractArray, join_ix::Int) = nothing
     @inline function update!(ixs::RowIndexMap, orig_ixs::AbstractArray, join_ix::Int)
         append!(ixs.orig, orig_ixs)
-        for i in join_ix:(join_ix+length(orig_ixs)-1)
-            push!(ixs.join, i)
-        end
+        append!(ixs.join, join_ix:(join_ix+length(orig_ixs)-1))
         ixs
     end
-    @inline update!(ixs::Void, orig_ixs::AbstractArray) = ixs
+    @inline update!(ixs::Void, orig_ixs::AbstractArray) = nothing
     @inline update!(mask::Vector{Bool}, orig_ixs::AbstractArray) = (mask[orig_ixs] = false)
 
     # iterate over left rows and compose the left<->right index map
