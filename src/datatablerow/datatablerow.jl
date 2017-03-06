@@ -85,20 +85,14 @@ function isequal_row(dt1::AbstractDataTable, r1::Int, dt2::AbstractDataTable, r2
     if dt1 === dt2
         if r1 == r2
             return true
-        else
-            @inbounds for (col1, col2) in zip(columns(dt1), columns(dt2))
-                isequal_colel(col1[r1], col2[r2]) || return false
-            end
         end
-        return true
-    elseif (ncol(dt1) == ncol(dt2))
-        @inbounds for (col1, col2) in zip(columns(dt1), columns(dt2))
-            isequal_colel(col1[r1], col2[r2]) || return false
-        end
-        return true
-    else
+    elseif !(ncol(dt1) == ncol(dt2))
         throw(ArgumentError("Rows of the tables that have different number of columns cannot be compared. Got $(ncol(dt1)) and $(ncol(dt2)) columns"))
     end
+    @inbounds for (col1, col2) in zip(columns(dt1), columns(dt2))
+        isequal_colel(col1[r1], col2[r2]) || return false
+    end
+    return true
 end
 
 # lexicographic ordering on DataTable rows, null > !null

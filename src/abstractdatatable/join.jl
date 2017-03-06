@@ -51,13 +51,19 @@ function compose_joined_table(joiner::DataTableJoiner,
     # compose left half of the result taking all left columns
     all_orig_left_ixs = vcat(left_ixs.orig, leftonly_ixs.orig)
     if length(leftonly_ixs) > 0
-        # permute the indices to restore left table rows order
-        all_orig_left_ixs[vcat(left_ixs.join, leftonly_ixs.join)] = all_orig_left_ixs
+        # combine the matched (left_ixs.orig) and non-matched (leftonly_ixs.orig) indices of the left table rows
+        # preserving the original rows order
+        all_orig_left_ixs = similar(left_ixs.orig, length(left_ixs)+length(leftonly_ixs))
+        @inbounds all_orig_left_ixs[left_ixs.join] = left_ixs.orig
+        @inbounds all_orig_left_ixs[leftonly_ixs.join] = leftonly_ixs.orig
+    else
+        # the result contains only the left rows that are matched to right rows (left_ixs)
+        all_orig_left_ixs = left_ixs.orig # no need to copy left_ixs.orig as it's not used elsewhere
     end
     ril = length(right_ixs)
     loil = length(leftonly_ixs)
     roil = length(rightonly_ixs)
-    left_dt = DataTable(Any[copy!(similar(col[all_orig_left_ixs], length(all_orig_left_ixs)+roil), col[all_orig_left_ixs])
+    left_dt = DataTable(Any[resize!(col[all_orig_left_ixs], length(all_orig_left_ixs)+roil)
                             for col in columns(joiner.dtl)],
                         names(joiner.dtl))
 
@@ -70,9 +76,7 @@ function compose_joined_table(joiner::DataTableJoiner,
         right_perm[vcat(right_ixs.join, leftonly_ixs.join)] = right_perm[1:ril+loil]
     end
     all_orig_right_ixs = vcat(right_ixs.orig, rightonly_ixs.orig)
-    right_dt = DataTable(Any[copy!(similar(col[all_orig_right_ixs],
-                                           length(all_orig_right_ixs)+loil),
-                                   col[all_orig_right_ixs])[right_perm]
+    right_dt = DataTable(Any[resize!(col[all_orig_right_ixs], length(all_orig_right_ixs)+loil)[right_perm]
                              for col in columns(dtr_noon)],
                          names(dtr_noon))
     # merge left and right parts of the joined table
@@ -102,7 +106,9 @@ function update_row_maps!(left_table::AbstractDataTable,
     # helper functions
     @inline update!(ixs::Void, orig_ix::Int, join_ix::Int, count::Int = 1) = nothing
     @inline function update!(ixs::RowIndexMap, orig_ix::Int, join_ix::Int, count::Int = 1)
-        append!(ixs.orig, fill(orig_ix, count))
+        n = length(ixs.orig)
+        resize!(ixs.orig, n+count)
+        ixs.orig[n+1:end] = orig_ix
         append!(ixs.join, join_ix:(join_ix+count-1))
         ixs
     end
