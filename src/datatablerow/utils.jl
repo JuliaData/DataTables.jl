@@ -53,6 +53,7 @@ function hashrows_col!{T}(h::Vector{UInt}, v::AbstractCategoricalVector{T})
 end
 
 # should give the same hash as AbstractNullableVector{T}
+# enables efficient sequential memory access pattern
 function hashrows_col!{T}(h::Vector{UInt}, v::AbstractNullableCategoricalVector{T})
     # TODO is it possible to optimize by hashing the pool values once?
     @inbounds for (i, ref) in enumerate(v.refs)
@@ -63,11 +64,7 @@ function hashrows_col!{T}(h::Vector{UInt}, v::AbstractNullableCategoricalVector{
     h
 end
 
-"""
-Calculate the vector of `dt` rows hash values.
-
-The hashes are calculated column by column, allowing for an efficient sequential memory access pattern.
-"""
+# Calculate the vector of `dt` rows hash values.
 function hashrows(dt::AbstractDataTable)
     res = zeros(UInt, nrow(dt))
     for col in columns(dt)
