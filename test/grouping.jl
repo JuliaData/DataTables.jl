@@ -25,14 +25,24 @@ module TestGrouping
 
     byf = by(dt, :a, dt -> DataTable(bsum = sum(dt[:b])))
 
+    # colwise(::Vector{<:Function}, ::AbstractDataTable)
     cw = colwise([sum], dt)
     @test isa(cw, NullableArray{Any, 2})
     @test size(cw) == (1,ncol(dt))
     answer = NullableArray([20 12 -0.4283098098931877])
     @test isequal(cw, answer)
+    # colwise(::Tuple{<:Function}, ::AbstractDataTable)
+    cw = colwise((sum, length), dt)
+    @test isa(cw, Array{Any, 2})
+    @test size(cw) == (2,ncol(dt))
+    answer = Any[Nullable(20) Nullable(12) Nullable(-0.4283098098931877);
+                 8            8            8                            ]
+    @test isequal(cw, answer)
+    # colwise(::Function, ::AbstractDataTable)
     cw = colwise(sum, dt)
     @test all(T -> isa(T, Nullable), cw)
-    @test isequal(cw, squeeze(answer, 1))
+    answer = NullableArray([20, 12, -0.4283098098931877])
+    @test isequal(cw, answer)
 
     # groupby() without groups sorting
     gd = groupby(dt, cols)

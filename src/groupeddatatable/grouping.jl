@@ -256,6 +256,15 @@ function colwise{T<:Function}(fns::Vector{T}, d::AbstractDataTable)
         return x
     end
 end
+function colwise(fns::Tuple, d::AbstractDataTable)
+    @assert all(f -> isa(f, Function), fns) || ArgumentError("Not all tuple elements are functions")
+    x = [f(d[i]) for f in fns, i in 1:ncol(d)]
+    if eltype(x) <: Nullable
+        return NullableArray(x)
+    else
+        return x
+    end
+end
 colwise{T<:Function}(fns::Vector{T}, gd::GroupedDataTable) = map(colwise(fns), gd)
 colwise{T<:Function}(fns::Vector{T}) = x -> colwise(fns, x)
 
