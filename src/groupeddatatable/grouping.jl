@@ -241,7 +241,7 @@ colwise(f::Function, gd::GroupedDataTable) = map(colwise(f), gd)
 colwise(f::Function) = x -> colwise(f, x)
 colwise(f) = x -> colwise(f, x)
 # apply several functions to each column in a DataTable
-colwise{T<:Function}(fns::Vector{T}, d::AbstractDataTable) = map(f -> map(i -> f(d[i]), 1:ncol(d)), fns)
+colwise{T<:Function}(fns::Vector{T}, d::AbstractDataTable) = map(i -> map(f -> f(d[i]), fns), 1:ncol(d))
 colwise{T<:Function}(fns::Vector{T}, gd::GroupedDataTable) = map(colwise(fns), gd)
 colwise{T<:Function}(fns::Vector{T}) = x -> colwise(fns, x)
 
