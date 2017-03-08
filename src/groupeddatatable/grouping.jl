@@ -249,8 +249,9 @@ colwise(f::Function) = x -> colwise(f, x)
 colwise(f) = x -> colwise(f, x)
 # apply several functions to each column in a DataTable
 function colwise{T<:Function}(fns::Vector{T}, d::AbstractDataTable)
-    res = Array{AbstractVector}(ncol(d))
-    for i in eachindex(res)
+    n = ncol(d)
+    res = Array{AbstractVector}(n)
+    @inbounds for i in 1:n
         x = [f(d[i]) for f in fns]
         if eltype(x) <: Nullable
             x = NullableArray(x)
