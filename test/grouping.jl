@@ -26,12 +26,13 @@ module TestGrouping
     byf = by(dt, :a, dt -> DataTable(bsum = sum(dt[:b])))
 
     cw = colwise([sum], dt)
-    @test all(T -> T <: NullableVector, map(typeof, cw))
-    answer = [NullableArray([20]), NullableArray([12]), NullableArray([-0.4283098098931877])]
-    @test all(isequal(cw[i], answer[i]) for i in eachindex(cw, answer))
+    @test isa(cw, NullableArray{Any, 2})
+    @test size(cw) == (1,ncol(dt))
+    answer = NullableArray([20 12 -0.4283098098931877])
+    @test isequal(cw, answer)
     cw = colwise(sum, dt)
     @test all(T -> isa(T, Nullable), cw)
-    @test isequal(cw, NullableArray(Any[20, 12, -0.4283098098931877]))
+    @test isequal(cw, squeeze(answer, 1))
 
     # groupby() without groups sorting
     gd = groupby(dt, cols)

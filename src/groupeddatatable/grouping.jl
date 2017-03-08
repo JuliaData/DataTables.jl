@@ -249,16 +249,12 @@ colwise(f::Function) = x -> colwise(f, x)
 colwise(f) = x -> colwise(f, x)
 # apply several functions to each column in a DataTable
 function colwise{T<:Function}(fns::Vector{T}, d::AbstractDataTable)
-    n = ncol(d)
-    res = Array{AbstractVector}(n)
-    @inbounds for i in 1:n
-        x = [f(d[i]) for f in fns]
-        if eltype(x) <: Nullable
-            x = NullableArray(x)
-        end
-        res[i] = x
+    x = [f(d[i]) for f in fns, i in 1:ncol(d)]
+    if eltype(x) <: Nullable
+        return NullableArray(x)
+    else
+        return x
     end
-    res
 end
 colwise{T<:Function}(fns::Vector{T}, gd::GroupedDataTable) = map(colwise(fns), gd)
 colwise{T<:Function}(fns::Vector{T}) = x -> colwise(fns, x)
