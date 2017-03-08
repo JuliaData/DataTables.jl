@@ -2,6 +2,7 @@ module TestGrouping
     using Base.Test
     using DataTables
 
+    srand(1)
     dt = DataTable(a = repeat([1, 2, 3, 4], outer=[2]),
                    b = repeat([2, 1], outer=[4]),
                    c = randn(8))
@@ -24,8 +25,13 @@ module TestGrouping
 
     byf = by(dt, :a, dt -> DataTable(bsum = sum(dt[:b])))
 
-    @test all(T -> T <: AbstractVector, map(typeof, colwise([sum], dt)))
-    @test all(T -> T <: Nullable, map(typeof, colwise(sum, dt)))
+    cw = colwise([sum], dt)
+    @test all(T -> T <: NullableVector, map(typeof, cw))
+    answer = [NullableArray([20]), NullableArray([12]), NullableArray([-0.4283098098931877])]
+    @test all(isequal(cw[i], answer[i]) for i in eachindex(cw, answer))
+    cw = colwise(sum, dt)
+    @test all(T -> isa(T, Nullable{DataType}), map(typeof, cw))
+    @test isequal(cw, NullableArray(Any[20, 12, -0.4283098098931877]))
 
     # groupby() without groups sorting
     gd = groupby(dt, cols)

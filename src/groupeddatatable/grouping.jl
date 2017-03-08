@@ -236,12 +236,28 @@ colwise(sum, groupby(dt, :a))
 ```
 
 """
-colwise(f::Function, d::AbstractDataTable) = map(i -> f(d[i]), 1:ncol(d))
+function colwise(f::Function, d::AbstractDataTable)
+    x = [f(d[i]) for i in 1:ncol(d)]
+    if eltype(x) <: Nullable && isa(x, Vector{eltype(x)})
+        return NullableArray(x)
+    end
+    return x
+end
 colwise(f::Function, gd::GroupedDataTable) = map(colwise(f), gd)
 colwise(f::Function) = x -> colwise(f, x)
 colwise(f) = x -> colwise(f, x)
 # apply several functions to each column in a DataTable
-colwise{T<:Function}(fns::Vector{T}, d::AbstractDataTable) = map(i -> map(f -> f(d[i]), fns), 1:ncol(d))
+function colwise{T<:Function}(fns::Vector{T}, d::AbstractDataTable)
+    res = Array{AbstractVector}(ncol(d))
+    for i in eachindex(res)
+        x = [f(d[i]) for f in fns]
+        if eltype(x) <: Nullable && isa(x, Vector{eltype(x)})
+            x = NullableArray(x)
+        end
+        res[i] = x
+    end
+    res
+end
 colwise{T<:Function}(fns::Vector{T}, gd::GroupedDataTable) = map(colwise(fns), gd)
 colwise{T<:Function}(fns::Vector{T}) = x -> colwise(fns, x)
 
