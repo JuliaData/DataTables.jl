@@ -369,16 +369,11 @@ end
 
 function _makeheaders{T<:Function}(fs::Vector{T}, cn::Vector{Symbol})
     fnames = _fnames(fs) # see other/utils.jl
-    reshape([Symbol(colname,'_',fname) for fname in fnames, colname in cn],
-            length(fnames)*length(cn))
+    [Symbol(colname,'_',fname) for fname in fnames for colname in cn]
 end
 
-_aggregate_colwise{T<:Function}(fns::Vector{T}, d::AbstractDataTable) =
-    reshape(Any[vcat(f(d[idx])) for f in fns, idx in 1:size(d, 2)],
-            length(fns)*size(d, 2))
-
 function _aggregate{T<:Function}(d::AbstractDataTable, fs::Vector{T}, headers::Vector{Symbol}, sort::Bool=false)
-    res = DataTable(_aggregate_colwise(fs, d), headers)
+    res = DataTable(Any[vcat(f(d[i])) for f in fs for i in 1:size(d, 2)], headers)
     sort && sort!(res, cols=headers)
     res
 end
