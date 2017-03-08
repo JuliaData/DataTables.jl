@@ -238,10 +238,11 @@ colwise(sum, groupby(dt, :a))
 """
 function colwise(f::Function, d::AbstractDataTable)
     x = [f(d[i]) for i in 1:ncol(d)]
-    if eltype(x) <: Nullable && isa(x, Vector{eltype(x)})
+    if eltype(x) <: Nullable
         return NullableArray(x)
+    else
+        return x
     end
-    return x
 end
 colwise(f::Function, gd::GroupedDataTable) = map(colwise(f), gd)
 colwise(f::Function) = x -> colwise(f, x)
@@ -251,7 +252,7 @@ function colwise{T<:Function}(fns::Vector{T}, d::AbstractDataTable)
     res = Array{AbstractVector}(ncol(d))
     for i in eachindex(res)
         x = [f(d[i]) for f in fns]
-        if eltype(x) <: Nullable && isa(x, Vector{eltype(x)})
+        if eltype(x) <: Nullable
             x = NullableArray(x)
         end
         res[i] = x

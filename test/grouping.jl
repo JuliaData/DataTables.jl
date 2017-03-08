@@ -30,7 +30,7 @@ module TestGrouping
     answer = [NullableArray([20]), NullableArray([12]), NullableArray([-0.4283098098931877])]
     @test all(isequal(cw[i], answer[i]) for i in eachindex(cw, answer))
     cw = colwise(sum, dt)
-    @test all(T -> isa(T, Nullable{DataType}), map(typeof, cw))
+    @test all(T -> isa(T, Nullable{Real}), map(typeof, cw))
     @test isequal(cw, NullableArray(Any[20, 12, -0.4283098098931877]))
 
     # groupby() without groups sorting
