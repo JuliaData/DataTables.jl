@@ -38,7 +38,7 @@ module TestGrouping
     answer = Any[Nullable(20) Nullable(12) Nullable(-0.4283098098931877);
                  8            8            8                            ]
     @test isequal(cw, answer)
-    @test_throws ArgumentError colwise(("Bob", :Susie), DataTable(A = 1:10, B = 11:20))
+    @test_throws MethodError colwise(("Bob", :Susie), DataTable(A = 1:10, B = 11:20))
     # colwise(::Function, ::AbstractDataTable)
     cw = colwise(sum, dt)
     @test all(T -> isa(T, Nullable), cw)
