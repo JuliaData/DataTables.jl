@@ -25,7 +25,7 @@ module TestGrouping
     byf = by(dt, :a, dt -> DataTable(bsum = sum(dt[:b])))
 
     @test all(T -> T <: AbstractVector, map(typeof, colwise([sum], dt)))
-    @test all(T -> T <: AbstractVector, map(typeof, colwise(sum, dt)))
+    @test all(T -> T <: Nullable, map(typeof, colwise(sum, dt)))
 
     # groupby() without groups sorting
     gd = groupby(dt, cols)

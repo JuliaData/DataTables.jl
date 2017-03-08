@@ -236,14 +236,12 @@ colwise(sum, groupby(dt, :a))
 ```
 
 """
-colwise(f::Function, d::AbstractDataTable) = Any[vcat(f(d[idx])) for idx in 1:size(d, 2)]
+colwise(f::Function, d::AbstractDataTable) = map(i -> f(d[i]), 1:ncol(d))
 colwise(f::Function, gd::GroupedDataTable) = map(colwise(f), gd)
 colwise(f::Function) = x -> colwise(f, x)
 colwise(f) = x -> colwise(f, x)
 # apply several functions to each column in a DataTable
-colwise{T<:Function}(fns::Vector{T}, d::AbstractDataTable) =
-    reshape(Any[vcat(f(d[idx])) for f in fns, idx in 1:size(d, 2)],
-            length(fns)*size(d, 2))
+colwise{T<:Function}(fns::Vector{T}, d::AbstractDataTable) = map(f -> map(i -> f(d[i]), 1:ncol(d)), fns)
 colwise{T<:Function}(fns::Vector{T}, gd::GroupedDataTable) = map(colwise(fns), gd)
 colwise{T<:Function}(fns::Vector{T}) = x -> colwise(fns, x)
 
@@ -375,8 +373,12 @@ function _makeheaders{T<:Function}(fs::Vector{T}, cn::Vector{Symbol})
             length(fnames)*length(cn))
 end
 
+_aggregate_colwise{T<:Function}(fns::Vector{T}, d::AbstractDataTable) =
+    reshape(Any[vcat(f(d[idx])) for f in fns, idx in 1:size(d, 2)],
+            length(fns)*size(d, 2))
+
 function _aggregate{T<:Function}(d::AbstractDataTable, fs::Vector{T}, headers::Vector{Symbol}, sort::Bool=false)
-    res = DataTable(colwise(fs, d), headers)
+    res = DataTable(_aggregate_colwise(fs, d), headers)
     sort && sort!(res, cols=headers)
     res
 end
