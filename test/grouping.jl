@@ -10,7 +10,7 @@ module TestGrouping
     #dt[7, :b] = Nullable()
 
     nullfree = DataTable(Any[collect(1:10)], [:x1])
-    # colwise(::Vector{<:Function}, ::AbstractDataTable)
+    # colwise(::Vector, ::AbstractDataTable)
     fxn = [sum]
     cw = colwise(fxn, dt)
     answer = NullableArray([20 12 -0.4283098098931877])
@@ -34,7 +34,7 @@ module TestGrouping
 
     @test_throws MethodError colwise(["Bob", :Susie], DataTable(A = 1:10, B = 11:20))
 
-    # colwise(::Tuple{<:Function}, ::AbstractDataTable)
+    # colwise(::Tuple, ::AbstractDataTable)
     fxn = (sum, length)
     cw = colwise(fxn, dt)
     answer = Any[Nullable(20) Nullable(12) Nullable(-0.4283098098931877);
