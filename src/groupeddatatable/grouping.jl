@@ -232,11 +232,13 @@ dt = DataTable(a = repeat([1, 2, 3, 4], outer=[2]),
                b = repeat([2, 1], outer=[4]),
                c = randn(8))
 colwise(sum, dt)
+colwise([sum, lenth], dt)
+colwise((minimum, maximum), dt)
 colwise(sum, groupby(dt, :a))
 ```
 
 """
-function colwise(f::Function, d::AbstractDataTable)
+function colwise(f, d::AbstractDataTable)
     x = [f(d[i]) for i in 1:ncol(d)]
     if eltype(x) <: Nullable
         return NullableArray(x)
@@ -244,9 +246,8 @@ function colwise(f::Function, d::AbstractDataTable)
         return x
     end
 end
-colwise(f::Function, gd::GroupedDataTable) = [colwise(f, g) for g in gd]
 # apply several functions to each column in a DataTable
-function colwise{T<:Function}(fns::Vector{T}, d::AbstractDataTable)
+function colwise(fns::Union{AbstractVector, Tuple}, d::AbstractDataTable)
     x = [f(d[i]) for f in fns, i in 1:ncol(d)]
     if eltype(x) <: Nullable
         return NullableArray(x)
@@ -254,16 +255,7 @@ function colwise{T<:Function}(fns::Vector{T}, d::AbstractDataTable)
         return x
     end
 end
-colwise{T<:Function}(fns::Vector{T}, gd::GroupedDataTable) = [colwise(fns, g) for g in gd]
-function colwise{N}(fns::NTuple{N,Function}, d::AbstractDataTable)
-    x = [f(d[i]) for f in fns, i in 1:ncol(d)]
-    if eltype(x) <: Nullable
-        return NullableArray(x)
-    else
-        return x
-    end
-end
-colwise{N}(fns::NTuple{N,Function}, gd::GroupedDataTable) = [colwise(fns, g) for g in gd]
+colwise(f, gd::GroupedDataTable) = [colwise(f, g) for g in gd]
 colwise(f) = x -> colwise(f, x)
 
 """

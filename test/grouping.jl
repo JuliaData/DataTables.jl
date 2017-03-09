@@ -9,45 +9,68 @@ module TestGrouping
     #dt[6, :a] = Nullable()
     #dt[7, :b] = Nullable()
 
-    cols = [:a, :b]
-
-    f(dt) = DataTable(cmax = maximum(dt[:c]))
-
-    sdt = unique(dt[cols])
-
-    # by() without groups sorting
-    bdt = by(dt, cols, f)
-    @test bdt[cols] == sdt
-
-    # by() with groups sorting
-    sbdt = by(dt, cols, f, sort=true)
-    @test sbdt[cols] == sort(sdt)
-
-    byf = by(dt, :a, dt -> DataTable(bsum = sum(dt[:b])))
-
-    # colwise(::Vector{<:Function}, ::AbstractDataTable)
-    cw = colwise([sum], dt)
-    @test isa(cw, NullableArray{Any, 2})
-    @test size(cw) == (1,ncol(dt))
-    answer = NullableArray([20 12 -0.4283098098931877])
-    @test isequal(cw, answer)
     nullfree = DataTable(Any[collect(1:10)], [:x1])
-    @test colwise([sum, minimum], nullfree) == reshape([55, 1], (2,1))
+    # colwise(::Vector{<:Function}, ::AbstractDataTable)
+    f = [sum]
+    cw = colwise(f, dt)
+    answer = NullableArray([20 12 -0.4283098098931877])
+    @test isa(cw, NullableArray{Any, 2})
+    @test size(cw) == (length(f),ncol(dt))
+    @test isequal(cw, answer)
+
+    f = [sum, minimum]
+    cw = colwise(f, nullfree)
+    answer = reshape([55, 1], (2,1))
+    @test isa(cw, Array{Int, 2})
+    @test size(cw) == (length(f), ncol(nullfree))
+    @test cw == answer
+
+    f = [NullableArray]
+    cw = colwise(f, nullfree)
+    answer = reshape([NullableArray(1:10)], (1,1))
+    @test isa(cw, Array{NullableArray{Int,1},2})
+    @test size(cw) == (length(f), ncol(nullfree))
+    @test isequal(cw, answer)
+
+    @test_throws MethodError colwise(["Bob", :Susie], DataTable(A = 1:10, B = 11:20))
+
     # colwise(::Tuple{<:Function}, ::AbstractDataTable)
-    cw = colwise((sum, length), dt)
-    @test isa(cw, Array{Any, 2})
-    @test size(cw) == (2,ncol(dt))
+    f = (sum, length)
+    cw = colwise(f, dt)
     answer = Any[Nullable(20) Nullable(12) Nullable(-0.4283098098931877);
                  8            8            8                            ]
+    @test isa(cw, Array{Any, 2})
+    @test size(cw) == (length(f), ncol(dt))
     @test isequal(cw, answer)
+
+    cw = colwise(f, nullfree)
+    answer = reshape([55, 10], (2,1))
+    @test isa(cw, Array{Int, 2})
+    @test size(cw) == (length(f), ncol(nullfree))
+    @test cw == answer
+
+    f = (CategoricalArray, NullableArray)
+    cw = colwise(f, nullfree)
+    answer = reshape([CategoricalArray(1:10), NullableArray(1:10)], (length(f), ncol(nullfree)))
+    @test isa(cw, Array{AbstractVector,2})
+    @test size(cw) == (length(f), ncol(nullfree))
+    @test isequal(cw, answer)
+
     @test_throws MethodError colwise(("Bob", :Susie), DataTable(A = 1:10, B = 11:20))
-    @test colwise((sum, minimum), nullfree) == reshape([55, 1], (2,1))
+
     # colwise(::Function, ::AbstractDataTable)
-    cw = colwise(sum, dt)
-    @test all(T -> isa(T, Nullable), cw)
+    f = sum
+    cw = colwise(f, dt)
     answer = NullableArray([20, 12, -0.4283098098931877])
+    @test isa(cw, NullableArray{Any, 1})
+    @test size(cw) == (ncol(dt),)
     @test isequal(cw, answer)
-    @test colwise(sum, nullfree) == [55]
+
+    cw = colwise(f, nullfree)
+    answer = [55]
+    @test isa(cw, Array{Int, 1})
+    @test size(cw) == (ncol(nullfree),)
+    @test cw == answer
 
     # colwise on GroupedDataTables
     gd = groupby(DataTable(A = [:A, :A, :B, :B], B = 1:4), :A)
@@ -57,29 +80,46 @@ module TestGrouping
 
     # map magic
     cw = map(colwise(sum), (nullfree, dt))
-    answer = ([55], NullableArray([20, 12, -0.4283098098931877]))
-    @test all(isequal(x,y) for (x,y) in zip(cw, answer))
+    answer = ([55], NullableArray(Any[20, 12, -0.4283098098931877]))
+    @test isequal(cw, answer)
+
     cw = map(colwise((sum, length)), (nullfree, dt))
     answer = (reshape([55, 10], (2,1)),
               Any[Nullable(20) Nullable(12) Nullable(-0.4283098098931877);
                   8            8            8                            ])
-    @test all(isequal(x,y) for (x,y) in zip(cw, answer))
+    @test isequal(cw, answer)
+
     cw = map(colwise([sum, length]), (nullfree, dt))
-    @test all(isequal(x,y) for (x,y) in zip(cw, answer))
+    @test isequal(cw, answer)
+
+    cols = [:a, :b]
+    fxn(dt) = DataTable(cmax = maximum(dt[:c]))
+
+    sdt = unique(dt[cols])
+
+    # by() without groups sorting
+    bdt = by(dt, cols, fxn)
+    @test bdt[cols] == sdt
+
+    # by() with groups sorting
+    sbdt = by(dt, cols, fxn, sort=true)
+    @test sbdt[cols] == sort(sdt)
+
+    byf = by(dt, :a, dt -> DataTable(bsum = sum(dt[:b])))
 
     # groupby() without groups sorting
     gd = groupby(dt, cols)
-    ga = map(f, gd)
+    ga = map(fxn, gd)
 
     @test isequal(bdt, combine(ga))
 
     # groupby() with groups sorting
     gd = groupby(dt, cols, sort=true)
-    ga = map(f, gd)
+    ga = map(fxn, gd)
     @test sbdt == combine(ga)
 
     g(dt) = DataTable(cmax1 = Vector(dt[:cmax]) + 1)
-    h(dt) = g(f(dt))
+    h(dt) = g(fxn(dt))
 
     @test isequal(combine(map(h, gd)), combine(map(g, ga)))
 
