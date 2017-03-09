@@ -244,9 +244,7 @@ function colwise(f::Function, d::AbstractDataTable)
         return x
     end
 end
-colwise(f::Function, gd::GroupedDataTable) = map(colwise(f), gd)
-colwise(f::Function) = x -> colwise(f, x)
-colwise(f) = x -> colwise(f, x)
+colwise(f::Function, gd::GroupedDataTable) = [colwise(f, g) for g in gd]
 # apply several functions to each column in a DataTable
 function colwise{T<:Function}(fns::Vector{T}, d::AbstractDataTable)
     x = [f(d[i]) for f in fns, i in 1:ncol(d)]
@@ -256,6 +254,7 @@ function colwise{T<:Function}(fns::Vector{T}, d::AbstractDataTable)
         return x
     end
 end
+colwise{T<:Function}(fns::Vector{T}, gd::GroupedDataTable) = [colwise(fns, g) for g in gd]
 function colwise{N}(fns::NTuple{N,Function}, d::AbstractDataTable)
     x = [f(d[i]) for f in fns, i in 1:ncol(d)]
     if eltype(x) <: Nullable
@@ -264,9 +263,8 @@ function colwise{N}(fns::NTuple{N,Function}, d::AbstractDataTable)
         return x
     end
 end
-colwise{T<:Function}(fns::Vector{T}, gd::GroupedDataTable) = map(colwise(fns), gd)
-colwise{T<:Function}(fns::Vector{T}) = x -> colwise(fns, x)
-
+colwise{N}(fns::NTuple{N,Function}, gd::GroupedDataTable) = [colwise(fns, g) for g in gd]
+colwise(f) = x -> colwise(f, x)
 
 """
 Split-apply-combine in one step; apply `f` to each grouping in `d`

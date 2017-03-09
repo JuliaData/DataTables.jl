@@ -31,6 +31,8 @@ module TestGrouping
     @test size(cw) == (1,ncol(dt))
     answer = NullableArray([20 12 -0.4283098098931877])
     @test isequal(cw, answer)
+    nullfree = DataTable(Any[collect(1:10)], [:x1])
+    @test colwise([sum, minimum], nullfree) == reshape([55, 1], (2,1))
     # colwise(::Tuple{<:Function}, ::AbstractDataTable)
     cw = colwise((sum, length), dt)
     @test isa(cw, Array{Any, 2})
@@ -39,11 +41,31 @@ module TestGrouping
                  8            8            8                            ]
     @test isequal(cw, answer)
     @test_throws MethodError colwise(("Bob", :Susie), DataTable(A = 1:10, B = 11:20))
+    @test colwise((sum, minimum), nullfree) == reshape([55, 1], (2,1))
     # colwise(::Function, ::AbstractDataTable)
     cw = colwise(sum, dt)
     @test all(T -> isa(T, Nullable), cw)
     answer = NullableArray([20, 12, -0.4283098098931877])
     @test isequal(cw, answer)
+    @test colwise(sum, nullfree) == [55]
+
+    # colwise on GroupedDataTables
+    gd = groupby(DataTable(A = [:A, :A, :B, :B], B = 1:4), :A)
+    @test colwise(length, gd) == [[2,2], [2,2]]
+    @test colwise([length], gd) == [[2 2], [2 2]]
+    @test colwise((length), gd) == [[2,2],[2,2]]
+
+    # map magic
+    cw = map(colwise(sum), (nullfree, dt))
+    answer = ([55], NullableArray([20, 12, -0.4283098098931877]))
+    @test all(isequal(x,y) for (x,y) in zip(cw, answer))
+    cw = map(colwise((sum, length)), (nullfree, dt))
+    answer = (reshape([55, 10], (2,1)),
+              Any[Nullable(20) Nullable(12) Nullable(-0.4283098098931877);
+                  8            8            8                            ])
+    @test all(isequal(x,y) for (x,y) in zip(cw, answer))
+    cw = map(colwise([sum, length]), (nullfree, dt))
+    @test all(isequal(x,y) for (x,y) in zip(cw, answer))
 
     # groupby() without groups sorting
     gd = groupby(dt, cols)
