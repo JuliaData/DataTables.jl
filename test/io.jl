@@ -48,7 +48,6 @@ module TestIO
                    F = NullableArray(fill(Nullable(), 26)),
                    G = fill(Nullable(), 26))
 
-
-    answer = !is_windows() ? 0x4c515a9379629be9 : 0xdb9781f446a9a1f4
-    @test hash(sprint(printtable, dt), UInt64(0))) == answer
+    answer = !is_windows() ? 0xde54e70f51205910 : 0xdb9781f446a9a1f4
+    @test hash(sprint(printtable, dt), UInt64(0)) == answer
 end
