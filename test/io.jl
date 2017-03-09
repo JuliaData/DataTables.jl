@@ -47,6 +47,6 @@ module TestIO
                    E = NullableArray(rand(26)),
                    F = NullableArray(fill(Nullable(), 26)),
                    G = fill(Nullable(), 26))
-    printtable(dt)
 
+    @test hash(sprint(printtable, dt)) == 0xfa1c667155d1f19c
 end
