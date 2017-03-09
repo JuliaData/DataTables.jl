@@ -48,6 +48,6 @@ module TestIO
                    F = NullableArray(fill(Nullable(), 26)),
                    G = fill(Nullable(), 26))
 
-    answer = !is_windows() ? 0xde54e70f51205910 : 0xdb9781f446a9a1f4
-    @test hash(sprint(printtable, dt), UInt64(0)) == answer
+    answer = Sys.WORD_SIZE == 64 ? 0xde54e70f51205910 : 0x340524cd
+    @test hash(sprint(printtable, dt)) == answer
 end
