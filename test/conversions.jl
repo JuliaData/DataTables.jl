@@ -35,8 +35,6 @@ module TestConversions
     @test isa(ai, Matrix{Int})
     @test ai == convert(Matrix{Int}, dt)
 
-    dt[1,1] = Nullable()
-    @test_throws ErrorException convert(Array, dt)
     na = convert(NullableArray, dt)
     naa = convert(NullableArray{Any}, dt)
     nai = convert(NullableArray{Int}, dt)
@@ -55,28 +53,28 @@ module TestConversions
     dt = convert(DataTable,di)
     @test isa(dt,DataTable)
     @test names(dt) == Symbol[x for x in sort(collect(keys(di)))]
-    @test isequal(dt[:a], NullableArray(a))
-    @test isequal(dt[:b], NullableArray(b))
-    @test isequal(dt[:c], NullableArray(c))
+    @test isequal(dt[:a], a)
+    @test isequal(dt[:b], b)
+    @test isequal(dt[:c], c)
 
     od = OrderedDict("c"=>c, "a"=>a, "b"=>b)
     dt = convert(DataTable,od)
     @test isa(dt, DataTable)
     @test names(dt) == Symbol[x for x in keys(od)]
-    @test isequal(dt[:a], NullableArray(a))
-    @test isequal(dt[:b], NullableArray(b))
-    @test isequal(dt[:c], NullableArray(c))
+    @test isequal(dt[:a], a)
+    @test isequal(dt[:b], b)
+    @test isequal(dt[:c], c)
 
     sd = SortedDict("c"=>c, "a"=>a, "b"=>b)
     dt = convert(DataTable,sd)
     @test isa(dt, DataTable)
     @test names(dt) == Symbol[x for x in keys(sd)]
-    @test isequal(dt[:a], NullableArray(a))
-    @test isequal(dt[:b], NullableArray(b))
-    @test isequal(dt[:c], NullableArray(c))
+    @test isequal(dt[:a], a)
+    @test isequal(dt[:b], b)
+    @test isequal(dt[:c], c)
 
     a = [1.0]
     di = Dict("a"=>a, "b"=>b, "c"=>c)
-    @test_throws ArgumentError convert(DataTable,di)
+    @test convert(DataTable,di)[:a] == [1.0, 1.0]
 
 end

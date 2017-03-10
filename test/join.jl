@@ -2,8 +2,8 @@ module TestJoin
     using Base.Test
     using DataTables
 
-    name = DataTable(ID = [1, 2, 3], Name = ["John Doe", "Jane Doe", "Joe Blogs"])
-    job = DataTable(ID = [1, 2, 2, 4], Job = ["Lawyer", "Doctor", "Florist", "Farmer"])
+    name = DataTable(ID = [1, 2, 3], Name = NullableArray(["John Doe", "Jane Doe", "Joe Blogs"]))
+    job = DataTable(ID = [1, 2, 2, 4], Job = NullableArray(["Lawyer", "Doctor", "Florist", "Farmer"]))
 
     # Join on symbols or vectors of symbols
     join(name, job, on = :ID)
@@ -14,8 +14,8 @@ module TestJoin
 
     # Test output of various join types
     outer = DataTable(ID = [1, 2, 2, 3, 4],
-                      Name = NullableArray(Nullable{String}["John Doe", "Jane Doe", "Jane Doe", "Joe Blogs", Nullable()]),
-                      Job = NullableArray(Nullable{String}["Lawyer", "Doctor", "Florist", Nullable(), "Farmer"]))
+                      Name = NullableArray(["John Doe", "Jane Doe", "Jane Doe", "Joe Blogs", Nullable()]),
+                      Job = NullableArray(["Lawyer", "Doctor", "Florist", Nullable(), "Farmer"]))
 
     # (Tests use current column ordering but don't promote it)
     right = outer[Bool[!isnull(x) for x in outer[:Job]], [:ID, :Name, :Job]]
@@ -104,9 +104,9 @@ module TestJoin
     # Test that Array{Nullable} works when combined with NullableArray (#1088)
     dt = DataTable(Name = Nullable{String}["A", "B", "C"],
                    Mass = [1.5, 2.2, 1.1])
-    dt2 = DataTable(Name = ["A", "B", "C", "A"],
+    dt2 = DataTable(Name = Nullable{String}["A", "B", "C", "A"],
                     Quantity = [3, 3, 2, 4])
-    @test join(dt2, dt, on=:Name, kind=:left) == DataTable(Name = ["A", "B", "C", "A"],
+    @test join(dt2, dt, on=:Name, kind=:left) == DataTable(Name = Nullable{String}["A", "B", "C", "A"],
                                                            Quantity = [3, 3, 2, 4],
                                                            Mass = [1.5, 2.2, 1.1, 1.5])
 
@@ -114,7 +114,7 @@ module TestJoin
     dt = DataTable([collect(1:10), collect(2:11)], [:x, :y])
     dtnull = DataTable(x = 1:10, z = 3:12)
     @test join(dt, dtnull, on = :x) ==
-        DataTable([collect(1:10), collect(2:11), NullableArray(3:12)], [:x, :y, :z])
+        DataTable([collect(1:10), collect(2:11), collect(3:12)], [:x, :y, :z])
     @test join(dtnull, dt, on = :x) ==
-        DataTable([NullableArray(1:10), NullableArray(3:12), NullableArray(2:11)], [:x, :z, :y])
+        DataTable([collect(1:10), collect(3:12), collect(2:11)], [:x, :z, :y])
 end

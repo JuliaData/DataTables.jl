@@ -2,19 +2,6 @@
 ## Join / merge
 ##
 
-# Like similar, but returns a nullable array
-similar_nullable{T}(dv::AbstractArray{T}, dims::@compat(Union{Int, Tuple{Vararg{Int}}})) =
-    NullableArray(T, dims)
-
-similar_nullable{T<:Nullable}(dv::AbstractArray{T}, dims::@compat(Union{Int, Tuple{Vararg{Int}}})) =
-    NullableArray(eltype(T), dims)
-
-similar_nullable{T,R}(dv::CategoricalArray{T,R}, dims::@compat(Union{Int, Tuple{Vararg{Int}}})) =
-    NullableCategoricalArray(T, dims)
-
-similar_nullable(dt::AbstractDataTable, dims::Int) =
-    DataTable(Any[similar_nullable(x, dims) for x in columns(dt)], copy(index(dt)))
-
 # helper structure for DataTables joining
 immutable DataTableJoiner{DT1<:AbstractDataTable, DT2<:AbstractDataTable}
     dtl::DT1
@@ -76,9 +63,12 @@ function compose_joined_table(joiner::DataTableJoiner,
         right_perm[vcat(right_ixs.join, leftonly_ixs.join)] = right_perm[1:ril+loil]
     end
     all_orig_right_ixs = vcat(right_ixs.orig, rightonly_ixs.orig)
-    right_dt = DataTable(Any[resize!(col[all_orig_right_ixs], length(all_orig_right_ixs)+loil)[right_perm]
-                             for col in columns(dtr_noon)],
-                         names(dtr_noon))
+    resizelen = length(all_orig_right_ixs)+length(leftonly_ixs)
+    rightcols = Any[length(col[all_orig_right_ixs]) >= resizelen ?
+                               resize!(col[all_orig_right_ixs], resizelen)[right_perm] :
+                               NullableArray(vcat(col[all_orig_right_ixs], fill(Nullable(), resizelen - length(col[all_orig_right_ixs]))))[right_perm]
+                    for col in columns(dtr_noon)]
+    right_dt = DataTable(rightcols, names(dtr_noon))
     # merge left and right parts of the joined table
     res = hcat!(left_dt, right_dt)
 

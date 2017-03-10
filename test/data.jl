@@ -46,9 +46,9 @@ module TestData
     dt6[3] = NullableArray(["un", "deux", "troix", "quatre"])
     @test isequal(dt6[1, 3], Nullable("un"))
     dt6[:B] = [4, 3, 2, 1]
-    @test isequal(dt6[1,2], Nullable(4))
+    @test dt6[1,2] == 4
     dt6[:D] = [true, false, true, false]
-    @test isequal(dt6[1,4], Nullable(true))
+    @test dt6[1,4] == true
     delete!(dt6, :D)
     @test names(dt6) == [:A, :B, :C]
     @test size(dt6, 2) == 3
@@ -74,7 +74,7 @@ module TestData
     @test size(sdt6d) == (2,1)
 
     #test_group("ref")
-    @test isequal(sdt6a[1,2], Nullable(4))
+    @test sdt6a[1,2] == 4
 
     #test_context("Within")
     #test_group("Associative")
@@ -114,13 +114,14 @@ module TestData
     @test isequal(dt8[1:2, :d2], NullableCategoricalArray(["A", "B"]))
     @test size(dt8, 1) == 3
     @test size(dt8, 2) == 5
-    @test get(sum(dt8[:d1_length])) == N
-    @test all(dt8[:d1_length].values .> 0)
-    @test dt8[:d1_length].values == [4, 5, 11]
+    @test sum(dt8[:d1_length]) == N
+    @test all(dt8[:d1_length] .> 0)
+    @test dt8[2, :d1_length] == 5
+    @test dt8[:d1_length] == [4, 5, 11]
     @test isequal(dt8, aggregate(groupby(dt7, :d2, sort=true), [sum, length]))
-    @test isequal(dt8[1, :d1_length], Nullable(4))
-    @test isequal(dt8[2, :d1_length], Nullable(5))
-    @test isequal(dt8[3, :d1_length], Nullable(11))
+    @test dt8[1, :d1_length] == 4
+    @test dt8[2, :d1_length] == 5
+    @test dt8[3, :d1_length] == 11
     @test isequal(dt8, aggregate(groupby(dt7, :d2), [sum, length], sort=true))
 
     dt9 = dt7 |> groupby([:d2], sort=true) |> [sum, length]
@@ -130,7 +131,7 @@ module TestData
 
     dt10 = DataTable(
         Any[[1:4;], [2:5;], ["a", "a", "a", "b" ], ["c", "d", "c", "d"]],
-        [:d1, :d2, :d3, :d4]
+            [:d1, :d2, :d3, :d4]
     )
 
     gd = groupby(dt10, [:d3], sort=true)
@@ -191,9 +192,9 @@ module TestData
     d1us = unstack(d1s, :id, :variable, :value)
     d1us2 = unstack(d1s2)
     d1us3 = unstack(d1s2, :variable, :value)
-    @test isequal(d1us[:a], d1[:a])
-    @test isequal(d1us2[:d], d1[:d])
-    @test isequal(d1us2[:3], d1[:d])
+    @test d1us[:a] == d1[:a]
+    @test d1us2[:d] == d1[:d]
+    @test d1us2[:3] == d1[:d]
 
 
 
@@ -215,7 +216,7 @@ module TestData
                     v2 = randn(5))
 
     m1 = join(dt1, dt2, on = :a, kind=:inner)
-    @test isequal(m1[:a], dt1[:a][dt1[:a].values .<= 5]) # preserves dt1 order
+    @test isequal(m1[:a], dt1[:a][dt1[:a] .<= 5]) # preserves dt1 order
     m2 = join(dt1, dt2, on = :a, kind = :outer)
     @test isequal(m2[:a], dt1[:a]) # preserves dt1 order
     @test isequal(m2[:b], dt1[:b]) # preserves dt1 order
@@ -236,16 +237,16 @@ module TestData
                     c = ["New World", "Old World", "New World"])
 
     m1 = join(dt1, dt2, on = :a, kind = :inner)
-    @test isequal(m1[:a], NullableArray([1, 2]))
+    @test m1[:a] == [1, 2]
 
     m2 = join(dt1, dt2, on = :a, kind = :left)
-    @test isequal(m2[:a], NullableArray([1, 2, 3]))
+    @test m2[:a] == [1, 2, 3]
 
     m3 = join(dt1, dt2, on = :a, kind = :right)
-    @test isequal(m3[:a], NullableArray([1, 2, 4]))
+    @test m3[:a] == [1, 2, 4]
 
     m4 = join(dt1, dt2, on = :a, kind = :outer)
-    @test isequal(m4[:a], NullableArray([1, 2, 3, 4]))
+    @test m4[:a] == [1, 2, 3, 4]
 
     # test with nulls (issue #185)
     dt1 = DataTable()
@@ -270,13 +271,6 @@ module TestData
         b = [:A,:B][rand(1:2, 10)],
         v1 = randn(10)
     )
-
-    dt2 = DataTable(
-        a = [:x,:y][[1,2,1,1,2]],
-        b = [:A,:B,:C][[1,1,1,2,3]],
-        v2 = randn(5)
-    )
-    dt2[1,:a] = Nullable()
 
     # # TODO: Restore this functionality
     # m1 = join(dt1, dt2, on = [:a,:b])

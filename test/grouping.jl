@@ -54,35 +54,62 @@ module TestGrouping
     @test groupby(DataTable(A=Int[1]), :A).starts == Int[1]
 
     # issue #960
-    x = CategoricalArray(collect(1:20))
+    x = categorical(collect(1:20))
     dt = DataTable(v1=x, v2=x)
     groupby(dt, [:v1, :v2])
 
-    dt2 = by(e->1, DataTable(x=Int64[]), :x)
-    @test size(dt2) == (0,1)
-    @test isequal(sum(dt2[:x]), Nullable(0))
+    # what is this testting?
+    # dt2 = by(e->1, DataTable(x=Int64[]), :x)
+    # @test size(dt2) == (0,1)
+    # @test sum(dt2[:x]) == 0
 
     # Check that reordering levels does not confuse groupby
-    dt = DataTable(Key1 = CategoricalArray(["A", "A", "B", "B"]),
-                   Key2 = CategoricalArray(["A", "B", "A", "B"]),
+    dt = DataTable(Key1 = categorical(["A", "A", "B", "B"]),
+                   Key2 = categorical(["A", "B", "A", "B"]),
                    Value = 1:4)
     gd = groupby(dt, :Key1)
-    @test isequal(gd[1], DataTable(Key1=["A", "A"], Key2=["A", "B"], Value=1:2))
-    @test isequal(gd[2], DataTable(Key1=["B", "B"], Key2=["A", "B"], Value=3:4))
+    @test gd[1].parent[gd[1].rows, :] == DataTable(Key1 = categorical(["A", "A"]),
+                                                   Key2 = categorical(["A", "B"]),
+                                                   Value = collect(1:2))
+    @test gd[2].parent[gd[2].rows, :] == DataTable(Key1 = categorical(["B", "B"]),
+                                                   Key2 = categorical(["A", "B"]),
+                                                   Value = collect(3:4))
     gd = groupby(dt, [:Key1, :Key2])
-    @test isequal(gd[1], DataTable(Key1="A", Key2="A", Value=1))
-    @test isequal(gd[2], DataTable(Key1="A", Key2="B", Value=2))
-    @test isequal(gd[3], DataTable(Key1="B", Key2="A", Value=3))
-    @test isequal(gd[4], DataTable(Key1="B", Key2="B", Value=4))
+    @test gd[1].parent[gd[1].rows, :] == DataTable(Key1 = categorical(["A"]),
+                                                   Key2 = categorical(["A"]),
+                                                   Value = [1])
+    @test gd[2].parent[gd[2].rows, :] == DataTable(Key1 = categorical(["A"]),
+                                                   Key2 = categorical(["B"]),
+                                                   Value = [2])
+    @test gd[3].parent[gd[3].rows, :] == DataTable(Key1 = categorical(["B"]),
+                                                   Key2 = categorical(["A"]),
+                                                   Value = [3])
+    @test gd[4].parent[gd[4].rows, :] == DataTable(Key1 = categorical(["B"]),
+                                                   Key2 = categorical(["B"]),
+                                                   Value = [4])
     # Reorder levels, add unused level
     levels!(dt[:Key1], ["Z", "B", "A"])
     levels!(dt[:Key2], ["Z", "B", "A"])
     gd = groupby(dt, :Key1)
-    @test isequal(gd[1], DataTable(Key1=["A", "A"], Key2=["A", "B"], Value=1:2))
-    @test isequal(gd[2], DataTable(Key1=["B", "B"], Key2=["A", "B"], Value=3:4))
+    @test gd[1].parent[gd[1].rows, :] == DataTable(Key1 = categorical(["A", "A"]),
+                                                   Key2 = categorical(["A", "B"]),
+                                                   Value = collect(1:2))
+    @test gd[2].parent[gd[2].rows, :] == DataTable(Key1 = categorical(["B", "B"]),
+                                                   Key2 = categorical(["A", "B"]),
+                                                   Value = collect(3:4))
     gd = groupby(dt, [:Key1, :Key2])
-    @test isequal(gd[1], DataTable(Key1="A", Key2="A", Value=1))
-    @test isequal(gd[2], DataTable(Key1="A", Key2="B", Value=2))
-    @test isequal(gd[3], DataTable(Key1="B", Key2="A", Value=3))
-    @test isequal(gd[4], DataTable(Key1="B", Key2="B", Value=4))
+    @test gd[1].parent[gd[1].rows, :] == DataTable(Key1 = categorical(["A"]),
+                                                   Key2 = categorical(["A"]),
+                                                   Value = [1])
+    @test gd[2].parent[gd[2].rows, :] == DataTable(Key1 = categorical(["A"]),
+                                                   Key2 = categorical(["B"]),
+                                                   Value = [2])
+    @test gd[3].parent[gd[3].rows, :] == DataTable(Key1 = categorical(["B"]),
+                                                   Key2 = categorical(["A"]),
+                                                   Value = [3])
+    @test gd[4].parent[gd[4].rows, :] == DataTable(Key1 = categorical(["B"]),
+                                                   Key2 = categorical(["B"]),
+                                                   Value = [4])
+
+    @test names(gd) == names(dt)
 end

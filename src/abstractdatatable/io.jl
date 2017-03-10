@@ -42,19 +42,20 @@ function printtable(io::IO,
     quotestr = string(quotemark)
     for i in 1:n
         for j in 1:p
-            if !isnull(dt[j],i)
+            if !isnull(dt[j][i])
                 if ! (etypes[j] <: Real)
-		    print(io, quotemark)
-		    escapedprint(io, get(dt[i, j]), quotestr)
-		    print(io, quotemark)
+                    print(io, quotemark)
+                    x = isa(dt[i, j], Nullable) ? get(dt[i, j]) : dt[i, j]
+                    escapedprint(io, x, quotestr)
+                    print(io, quotemark)
                 else
-		    print(io, dt[i, j])
+                    print(io, dt[i, j])
                 end
             else
-		print(io, nastring)
+                print(io, nastring)
             end
             if j < p
-		print(io, separator)
+                print(io, separator)
             else
                 print(io, '\n')
             end
@@ -167,7 +168,7 @@ function Base.show(io::IO, ::MIME"text/latex", dt::AbstractDataTable)
             write(io, " & ")
             cell = dt[row,col]
             if !isnull(cell)
-                content = get(cell)
+                content = isa(cell, Nullable) ? get(cell) : cell
                 if mimewritable(MIME("text/latex"), content)
                     show(io, MIME("text/latex"), content)
                 else

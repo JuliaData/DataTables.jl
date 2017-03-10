@@ -79,7 +79,7 @@ module TestCat
     vcat(dt, null_dt)
     vcat(dt, dt)
     vcat(dt, dt, dt)
-    @test vcat(DataTable[]) == DataTable()
+    @test vcat(DataTable()) == DataTable()
 
     alt_dt = deepcopy(dt)
     vcat(dt, alt_dt)
@@ -88,27 +88,18 @@ module TestCat
     dt[1] = zeros(Int, nrow(dt))
     vcat(dt, alt_dt)
 
-    # Don't fail on non-matching names
-    names!(alt_dt, [:A, :B, :C])
-    vcat(dt, alt_dt)
-
     dtr = vcat(dt4, dt4)
     @test size(dtr, 1) == 8
     @test names(dt4) == names(dtr)
     @test isequal(dtr, [dt4; dt4])
 
-    dtr = vcat(dt2, dt3)
-    @test size(dtr) == (8,2)
-    @test names(dt2) == names(dtr)
-    @test isnull(dtr[8,:x2])
-
     # Eltype promotion
     # Fails on Julia 0.4 since promote_type(Nullable{Int}, Nullable{Float64}) gives Nullable{T}
     if VERSION >= v"0.5.0-dev"
-        @test eltypes(vcat(DataTable(a = [1]), DataTable(a = [2.1]))) == [Nullable{Float64}]
+        @test eltypes(vcat(DataTable(a = [1]), DataTable(a = [2.1]))) == [Float64]
         @test eltypes(vcat(DataTable(a = NullableArray(Int, 1)), DataTable(a = [2.1]))) == [Nullable{Float64}]
     else
-        @test eltypes(vcat(DataTable(a = [1]), DataTable(a = [2.1]))) == [Nullable{Any}]
+        @test eltypes(vcat(DataTable(a = [1]), DataTable(a = [2.1]))) == [Any]
         @test eltypes(vcat(DataTable(a = NullableArray(Int, 1)), DataTable(a = [2.1]))) == [Nullable{Any}]
     end
 
@@ -118,17 +109,8 @@ module TestCat
     dtc = DataTable(a = NullableArray([2, 3, 4]))
     dtd = DataTable(Any[2:4], [:a])
     dtab = vcat(dta, dtb)
-    dtac = vcat(dta, dtc)
-    @test isequal(dtab[:a], Nullable{Int}[1, 2, 2, 2, 3, 4])
-    @test isequal(dtac[:a], Nullable{Int}[1, 2, 2, 2, 3, 4])
-    @test isa(dtab[:a], NullableCategoricalVector{Int})
-    # Fails on Julia 0.4 since promote_type(Nullable{Int}, Nullable{Float64}) gives Nullable{T}
-    if VERSION >= v"0.5.0-dev"
-        @test isa(dtac[:a], NullableCategoricalVector{Int})
-    else
-        @test isa(dtac[:a], NullableCategoricalVector{Any})
-    end
-    # ^^ container may flip if container promotion happens in Base/DataArrays
+    @test isequal(dtab[:a], [1, 2, 2, 2, 3, 4])
+    @test isa(dtab[:a], CategoricalVector{Int})
     dc = vcat(dtd, dtc)
     @test isequal(vcat(dtc, dtd), dc)
 
@@ -137,15 +119,14 @@ module TestCat
     @test isequal(vcat(dtd, dtc0, dtc), dc)
     @test eltypes(vcat(dtd, dtc0)) == eltypes(dc)
 
-    # Missing columns
-    rename!(dtd, :a, :b)
-    dtda = DataTable(b = NullableArray(Nullable{Int}[2, 3, 4, Nullable(), Nullable(), Nullable()]),
-                     a = NullableCategoricalVector(Nullable{Int}[Nullable(), Nullable(), Nullable(), 1, 2, 2]))
-    @test isequal(vcat(dtd, dta), dtda)
-
-    # Alignment
-    @test isequal(vcat(dtda, dtd, dta), vcat(dtda, dtda))
-
     # vcat should be able to concatenate different implementations of AbstractDataTable (PR #944)
     @test isequal(vcat(view(DataTable(A=1:3),2),DataTable(A=4:5)), DataTable(A=[2,4,5]))
+
+    @testset "vcat errors" begin
+        dt1 = DataTable(A = 1:3, B = 1:3)
+        dt2 = DataTable(A = 1:3)
+        @test_throws ArgumentError vcat(dt1, dt2)
+        dt2 = DataTable(A = 1:3, C = 1:3)
+        @test_throws ArgumentError vcat(dt1, dt2)
+    end
 end

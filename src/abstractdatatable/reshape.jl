@@ -202,21 +202,16 @@ function unstack(dt::AbstractDataTable, rowkey::Int, colkey::Int, value::Int)
     if T <: Nullable
         T = eltype(T)
     end
-    payload = DataTable(Any[NullableArray(T, Nrow) for i in 1:Ncol],
+    payload = DataTable(Any[NullableVector{T}(Nrow) for i in 1:Ncol],
                         map(Symbol, levels(keycol)))
-    nowarning = true
     for k in 1:nrow(dt)
         j = Int(CategoricalArrays.order(keycol.pool)[keycol.refs[k]])
         i = Int(CategoricalArrays.order(refkeycol.pool)[refkeycol.refs[k]])
         if i > 0 && j > 0
-            if nowarning && !isnull(payload[j][i])
-                warn("Duplicate entries in unstack.")
-                nowarning = false
-            end
             payload[j][i]  = valuecol[k]
         end
     end
-    insert!(payload, 1, NullableArray(levels(refkeycol)), _names(dt)[rowkey])
+    denullify!(insert!(payload, 1, levels(refkeycol), _names(dt)[rowkey]))
 end
 unstack(dt::AbstractDataTable, rowkey, colkey, value) =
     unstack(dt, index(dt)[rowkey], index(dt)[colkey], index(dt)[value])
@@ -242,21 +237,16 @@ function unstack(dt::AbstractDataTable, colkey::Int, value::Int)
     if T <: Nullable
         T = eltype(T)
     end
-    dt2 = DataTable(Any[NullableArray(T, Nrow) for i in 1:Ncol],
+    dt2 = DataTable(Any[NullableVector{T}(Nrow) for i in 1:Ncol],
                     map(@compat(Symbol), levels(keycol)))
-    nowarning = true
     for k in 1:nrow(dt)
         j = Int(CategoricalArrays.order(keycol.pool)[keycol.refs[k]])
         i = rowkey[k]
         if i > 0 && j > 0
-            if nowarning && !isnull(dt2[j][i])
-                warn("Duplicate entries in unstack at row $k.")
-                nowarning = false
-            end
             dt2[j][i]  = valuecol[k]
         end
     end
-    hcat(dt1, dt2)
+    denullify!(hcat(dt1, dt2))
 end
 
 unstack(dt::AbstractDataTable) = unstack(dt, :id, :variable, :value)
