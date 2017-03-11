@@ -23,6 +23,31 @@ Nullable()
 Nullable(1) + Nullable()
 ```
 
+The get() function is very usefull to extract the value from the Nullable wrapper.
+
+example :
+```julia
+julia> a = Nullable{String}("14:00:00")
+Nullable{String}("14:00:00")
+
+julia> typeof(a)
+Nullable{String}
+
+julia> b = Dates.DateTime(get(a), "HH:MM:SS")
+0001-01-01T14:00:00
+
+julia> typeof(b)
+DateTime
+
+julia> c = get(a)
+"14:00:00"
+
+julia> typeof(c)
+String
+
+```
+
+
 Note that operations mixing `Nullable` and scalars (e.g. `1 + Nullable()`) are not supported.
 
 ## The `NullableArray` Type
