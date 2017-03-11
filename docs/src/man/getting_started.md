@@ -23,7 +23,7 @@ Nullable()
 Nullable(1) + Nullable()
 ```
 
-The get() function can be used to extract the value from the `Nullable` wrapper.
+The get() function can be used to extract the value from the `Nullable` wrapper when it is not null.
 
 example :
 ```julia
@@ -35,9 +35,7 @@ julia> c = get(a)
 
 julia> typeof(c)
 String
-
 ```
-
 Note that operations mixing `Nullable` and scalars (e.g. `1 + Nullable()`) are not supported.
 
 ## The `NullableArray` Type
