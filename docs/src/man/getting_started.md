@@ -23,7 +23,7 @@ Nullable()
 Nullable(1) + Nullable()
 ```
 
-The get() function can be used to extract the value from the `Nullable` wrapper when it is not null.
+The get() function can be used to extract the value from the `[Nullable](http://docs.julialang.org/en/stable/manual/types/#nullable-types-representing-missing-values)` wrapper when it is not null.
 
 example :
 ```julia
