@@ -30,10 +30,10 @@ example :
 julia> a = Nullable{String}("14:00:00")
 Nullable{String}("14:00:00")
 
-julia> c = get(a)
+julia> b = get(a)
 "14:00:00"
 
-julia> typeof(c)
+julia> typeof(b)
 String
 ```
 Note that operations mixing `Nullable` and scalars (e.g. `1 + Nullable()`) are not supported.
