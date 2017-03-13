@@ -710,11 +710,30 @@ Base.hcat(dt1::AbstractDataTable, dt2::AbstractDataTable) = hcat!(dt[:, :], dt2)
 Base.hcat(dt::AbstractDataTable, x, y...) = hcat!(hcat(dt, x), y...)
 Base.hcat(dt1::AbstractDataTable, dt2::AbstractDataTable, dtn::AbstractDataTable...) = hcat!(hcat(dt1, dt2), dtn...)
 
-# vcat only accepts DataTables. Finds union of columns, maintaining order
-# of first dt. Missing data become null values.
+"""
+    vcat(dts::AbstractDataTable...)
 
+Vertically concatenate `AbstractDataTables` with matching columns.
+
+```julia
+julia> dt1 = DataTable(A=1:3, B=1:3); dt2 = DataTable(A=4:6, B=4:6); dt3 = DataTable(A=7:9, B=7:9, C=7:9);
+
+julia> vcat(dt1, dt2)
+6×2 DataTables.DataTable
+│ Row │ A │ B │
+├─────┼───┼───┤
+│ 1   │ 1 │ 1 │
+│ 2   │ 2 │ 2 │
+│ 3   │ 3 │ 3 │
+│ 4   │ 4 │ 4 │
+│ 5   │ 5 │ 5 │
+│ 6   │ 6 │ 6 │
+
+julia> vcat(dt1, dt2, dt3)
+ERROR: ArgumentError: columns (A, B) of input(s) (1, 2) != columns (A, B, C) of input(s) (3)
+```
+"""
 Base.vcat(dt::AbstractDataTable) = dt
-
 function Base.vcat(dts::AbstractDataTable...)
     isempty(dts) && return DataTable()
     allheaders = map(names, dts)
@@ -723,15 +742,13 @@ function Base.vcat(dts::AbstractDataTable...)
     uniqueheaders = unique(allheaders[notempty])
     if length(uniqueheaders) == 0
         return DataTable()
-    elseif length(unique(map(length, uniqueheaders))) > 1
+    elseif length(uniqueheaders) > 1
         estring = Vector{String}(length(uniqueheaders))
         for (i,u) in enumerate(uniqueheaders)
             indices = string.(find(x -> x == u, allheaders))
             estring[i] = "columns ($(join(u, ", "))) of input(s) ($(join(indices, ", ")))"
         end
         throw(ArgumentError(join(estring, " != ")))
-    elseif length(uniqueheaders) > 1
-        throw(ArgumentError("Column names do not match. Use `rename!` or `names!` to adjust columns names. Resolve column(s): $(setdiff(union(allheaders...), intersect(allheaders...)))"))
     else
         header = uniqueheaders[1]
         dts_to_vcat = dts[notempty]
