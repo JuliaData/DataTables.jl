@@ -45,7 +45,7 @@ function printtable(io::IO,
             if !isnull(dt[j][i])
                 if ! (etypes[j] <: Real)
                     print(io, quotemark)
-                    x = isa(dt[i, j], Nullable) ? get(dt[i, j]) : dt[i, j]
+                    x = isa(dt[i, j], Nullable) ? _unsafe_get(dt[i, j]) : dt[i, j]
                     escapedprint(io, x, quotestr)
                     print(io, quotemark)
                 else

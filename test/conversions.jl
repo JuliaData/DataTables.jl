@@ -73,7 +73,7 @@ module TestConversions
     @test isequal(dt[:b], b)
     @test isequal(dt[:c], c)
 
-    a = [1.0]
+    a = 1.0
     di = Dict("a"=>a, "b"=>b, "c"=>c)
     @test convert(DataTable,di)[:a] == [1.0, 1.0]
 

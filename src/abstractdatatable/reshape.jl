@@ -204,14 +204,19 @@ function unstack(dt::AbstractDataTable, rowkey::Int, colkey::Int, value::Int)
     end
     payload = DataTable(Any[NullableVector{T}(Nrow) for i in 1:Ncol],
                         map(Symbol, levels(keycol)))
+    nowarning = true
     for k in 1:nrow(dt)
         j = Int(CategoricalArrays.order(keycol.pool)[keycol.refs[k]])
         i = Int(CategoricalArrays.order(refkeycol.pool)[refkeycol.refs[k]])
         if i > 0 && j > 0
+            if nowarning && !isnull(payload[j][i])
+                warn("Duplicate entries in unstack.")
+                nowarning = false
+            end
             payload[j][i]  = valuecol[k]
         end
     end
-    denullify!(insert!(payload, 1, levels(refkeycol), _names(dt)[rowkey]))
+    denullify!(insert!(payload, 1, NullableArray(levels(refkeycol)), _names(dt)[rowkey]))
 end
 unstack(dt::AbstractDataTable, rowkey, colkey, value) =
     unstack(dt, index(dt)[rowkey], index(dt)[colkey], index(dt)[value])
