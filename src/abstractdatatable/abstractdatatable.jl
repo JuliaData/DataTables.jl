@@ -724,7 +724,12 @@ function Base.vcat(dts::AbstractDataTable...)
     if length(uniqueheaders) == 0
         return DataTable()
     elseif length(unique(map(length, uniqueheaders))) > 1
-        throw(ArgumentError("not all DataTables have the same number of columns. Resolve column(s): $(setdiff(union(allheaders...), intersect(allheaders...)))"))
+        estring = Vector{String}(length(uniqueheaders))
+        for (i,u) in enumerate(uniqueheaders)
+            indices = string.(find(x -> x == u, allheaders))
+            estring[i] = "columns ($(join(u, ", "))) of input(s) ($(join(indices, ", ")))"
+        end
+        throw(ArgumentError(join(estring, " != ")))
     elseif length(uniqueheaders) > 1
         throw(ArgumentError("Column names do not match. Use `rename!` or `names!` to adjust columns names. Resolve column(s): $(setdiff(union(allheaders...), intersect(allheaders...)))"))
     else
