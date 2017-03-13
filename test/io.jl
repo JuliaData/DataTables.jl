@@ -48,6 +48,6 @@ module TestIO
                    F = NullableArray(fill(Nullable(), 26)),
                    G = fill(Nullable(), 26))
 
-    answer = Sys.WORD_SIZE == 64 ? 0xde54e70f51205910 : 0x340524cd
+    answer = Sys.WORD_SIZE == 64 ? 0xd4b5a035796ad770 : 0x1950ccd7
     @test hash(sprint(printtable, dt)) == answer
 end

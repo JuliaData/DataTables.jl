@@ -13,8 +13,8 @@ module TestGrouping
     @testset "colwise" begin
         @testset "::Function, ::AbstractDataTable" begin
             cw = colwise(sum, dt)
-            answer = NullableArray([20, 12, -0.4283098098931877])
-            @test isa(cw, NullableArray{Any, 1})
+            answer = Real[20, 12, -0.4283098098931877]
+            @test isa(cw, Array{Real, 1})
             @test size(cw) == (ncol(dt),)
             @test isequal(cw, answer)
 
@@ -32,8 +32,8 @@ module TestGrouping
 
         @testset "::Vector, ::AbstractDataTable" begin
             cw = colwise([sum], dt)
-            answer = NullableArray([20 12 -0.4283098098931877])
-            @test isa(cw, NullableArray{Any, 2})
+            answer = Real[20 12 -0.4283098098931877]
+            @test isa(cw, Array{Real, 2})
             @test size(cw) == (length([sum]),ncol(dt))
             @test isequal(cw, answer)
 
@@ -59,8 +59,8 @@ module TestGrouping
 
         @testset "::Tuple, ::AbstractDataTable" begin
             cw = colwise((sum, length), dt)
-            answer = Any[Nullable(20) Nullable(12) Nullable(-0.4283098098931877); 8 8 8]
-            @test isa(cw, Array{Any, 2})
+            answer = Real[20 12 -0.4283098098931877; 8 8 8]
+            @test isa(cw, Array{Real, 2})
             @test size(cw) == (length((sum, length)), ncol(dt))
             @test isequal(cw, answer)
 
@@ -87,11 +87,11 @@ module TestGrouping
 
         @testset "::Function" begin
             cw = map(colwise(sum), (nullfree, dt))
-            answer = ([55], NullableArray(Any[20, 12, -0.4283098098931877]))
+            answer = ([55], Real[20, 12, -0.4283098098931877])
             @test isequal(cw, answer)
 
             cw = map(colwise((sum, length)), (nullfree, dt))
-            answer = (reshape([55, 10], (2,1)), Any[Nullable(20) Nullable(12) Nullable(-0.4283098098931877); 8 8 8])
+            answer = (reshape([55, 10], (2,1)), Real[20 12 -0.4283098098931877; 8 8 8])
             @test isequal(cw, answer)
 
             cw = map(colwise([sum, length]), (nullfree, dt))
