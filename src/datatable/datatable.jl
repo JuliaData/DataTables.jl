@@ -79,9 +79,6 @@ type DataTable <: AbstractDataTable
         elseif length(columns) != length(colindex)
             throw(DimensionMismatch("Number of columns ($(length(columns))) and column names ($(length(colindex))) are not equal"))
         end
-        # do we allow people assigning arrays to columns now?
-        # make sure that doesn't work
-        # can use !get(size(c, 2), 0)
         lengths = length.(columns)
         minlen, maxlen = extrema(lengths)
         if minlen == 0 && maxlen == 0
@@ -91,7 +88,7 @@ type DataTable <: AbstractDataTable
             if minlen == 1 && maxlen > 1
                 indices = find(lengths .== minlen)
                 for i in indices
-                    if !(typeof(columns[i]) <: AbstractArray)
+                    if !(typeof(columns[i]) <: AbstractVector)
                         columns[i] = fill(columns[i], maxlen)
                         lengths[i] = maxlen
                     end
@@ -112,7 +109,7 @@ type DataTable <: AbstractDataTable
             if isa(c, Range)
                 columns[i] = collect(c)
             elseif !isa(c, AbstractVector)
-                columns[i] =  size(c, 2) > 1 ? reshape(c, length(c)) : [c]
+                columns[i] =  size(c, 2) > 1 ? throw(DimensionMismatch("columns must be 1-dimensional")) : [c]
             end
         end
         return new(columns, colindex)

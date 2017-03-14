@@ -64,6 +64,7 @@ module TestConstructors
     @testset "constructor errors" begin
         @test_throws DimensionMismatch DataTable(a=1, b=[])
         @test_throws DimensionMismatch DataTable(Any[collect(1:10)], DataTables.Index([:A, :B]))
+        @test_throws DimensionMismatch DataTable(A = rand(2,2))
     end
 
     @testset "column types" begin
