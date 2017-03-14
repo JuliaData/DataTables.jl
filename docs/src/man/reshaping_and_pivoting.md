@@ -53,29 +53,6 @@ If the remaining columns are unique, you can skip the id variable and use:
 widedt = unstack(longdt, :variable, :value)
 ```
 
-`stackdt` and `meltdt` are two additional functions that work like `stack` and `melt`, but they provide a view into the original wide DataTable. Here is an example:
-
-```julia
-d = stackdt(iris)
-```
-
-This saves memory. To create the view, several AbstractVectors are defined:
-
-`:variable` column -- `EachRepeatedVector`  
-This repeats the variables N times where N is the number of rows of the original AbstractDataTable.
-
-`:value` column -- `StackedVector`  
-This is provides a view of the original columns stacked together.
-
-Id columns -- `RepeatedVector`  
-This repeats the original columns N times where N is the number of columns stacked.
-
-For more details on the storage representation, see:
-
-```julia
-dump(stackdt(iris))
-```
-
 None of these reshaping functions perform any aggregation. To do aggregation, use the split-apply-combine functions in combination with reshaping. Here is an example:
 
 ```julia

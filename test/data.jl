@@ -169,22 +169,22 @@ module TestData
     d1m_named = melt(d1[[1,3,4]], :a, variable_name=:letter, value_name=:someval)
     @test names(d1m_named) == [:letter, :someval, :a]
 
-    stackdt(d1, :a)
-    d1s = stackdt(d1, [:a, :b])
-    d1s2 = stackdt(d1, [:c, :d])
-    d1s3 = stackdt(d1)
-    d1m = meltdt(d1, [:c, :d, :e])
+    stack(d1, :a)
+    d1s = stack(d1, [:a, :b])
+    d1s2 = stack(d1, [:c, :d])
+    d1s3 = stack(d1)
+    d1m = melt(d1, [:c, :d, :e])
     @test isequal(d1s[1:12, :c], d1[:c])
     @test isequal(d1s[13:24, :c], d1[:c])
     @test isequal(d1s2, d1s3)
     @test names(d1s) == [:variable, :value, :c, :d, :e]
     @test isequal(d1s, d1m)
-    d1m = meltdt(d1[[1,3,4]], :a)
+    d1m = melt(d1[[1,3,4]], :a)
     @test names(d1m) == [:variable, :value, :a]
 
-    d1s_named = stackdt(d1, [:a, :b], variable_name=:letter, value_name=:someval)
+    d1s_named = stack(d1, [:a, :b], variable_name=:letter, value_name=:someval)
     @test names(d1s_named) == [:letter, :someval, :c, :d, :e]
-    d1m_named = meltdt(d1, [:c, :d, :e], variable_name=:letter, value_name=:someval)
+    d1m_named = melt(d1, [:c, :d, :e], variable_name=:letter, value_name=:someval)
     @test names(d1m_named) == [:letter, :someval, :c, :d, :e]
 
     d1s[:id] = [1:12; 1:12]

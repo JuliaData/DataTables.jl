@@ -103,7 +103,7 @@ type DataTable <: AbstractDataTable
                 strnames = string.(names(colindex))
                 for (i,u) in enumerate(uniques)
                     indices = find(lengths .== u)
-                    estring[i] = "column length ($(lengths[1])) for column(s) ($(join(strnames[indices], ", ")))"
+                    estring[i] = "column length ($(uniques[i])) for column(s) ($(join(strnames[indices], ", ")))"
                 end
                 throw(DimensionMismatch(join(estring, " is incompatible with ")))
             end
@@ -630,16 +630,6 @@ Base.setindex!(dt::DataTable, x::Void, col_ind::Int) = delete!(dt, col_ind)
 Base.empty!(dt::DataTable) = (empty!(dt.columns); empty!(index(dt)); dt)
 
 function Base.insert!(dt::DataTable, col_ind::Int, item::AbstractVector, name::Symbol)
-    0 < col_ind <= ncol(dt) + 1 || throw(BoundsError())
-    size(dt, 1) == length(item) || size(dt, 1) == 0 || error("number of rows does not match")
-
-    insert!(index(dt), col_ind, name)
-    insert!(dt.columns, col_ind, item)
-    dt
-end
-
-# FIXME: Needed to work around a crash: JuliaLang/julia#18299
-function Base.insert!(dt::DataTable, col_ind::Int, item::NullableArray, name::Symbol)
     0 < col_ind <= ncol(dt) + 1 || throw(BoundsError())
     size(dt, 1) == length(item) || size(dt, 1) == 0 || error("number of rows does not match")
 

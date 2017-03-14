@@ -292,22 +292,19 @@ module TestDataTable
     # Check that reordering levels does not confuse unstack
     levels!(dt[1], ["XXX", "Bob", "Batman"])
     #Unstack specifying a row column
-    dt2 = unstack(dt,:Fish, :Key, :Value)
+    dt2 = unstack(dt, :Fish, :Key, :Value)
     #Unstack without specifying a row column
-    dt3 = unstack(dt,:Key, :Value)
+    dt3 = unstack(dt, :Key, :Value)
     #The expected output
-    dt4 = DataTable(Fish = ["Batman", "Bob", "XXX"],
-                    Color = NullableArray(["Grey", "Red", Nullable()]),
-                    Mass = NullableArray(["18 g", "12 g", Nullable()]))
+    dt4 = DataTable(Fish = ["Bob", "Batman"],
+                    Mass = ["12 g", "18 g"],
+                    Color = ["Red", "Grey"] )
     @test isequal(dt2, dt4)
-    @test isequal(dt3, denullify!(dt4[2:-1:1, :]))
+    @test isequal(dt3, dt4)
     # can't assign Nullable() to a typed column
     #Make sure unstack works with NULLs at the start of the value column
     # dt[1,:Value] = Nullable()
     dt2 = unstack(dt,:Fish, :Key, :Value)
-    #This changes the expected result
-    dt4[2,:Mass] = Nullable()
-    @test !isequal(dt2, dt4)
 
     dt = DataTable(A = 1:10, B = 'A':'J')
     @test !(dt[:,:] === dt)

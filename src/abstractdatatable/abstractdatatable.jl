@@ -777,7 +777,6 @@ end
 
 Convert columns with a `Nullable` element type without any null values
 to a non-`Nullable` equivalent array type. The table `dt` is modified in place.
-`NullableVectors` are aliased to their `values` field.
 
 # Examples
 
@@ -852,7 +851,7 @@ julia> eltypes(dt)
 
 See also [`denullify!`] & [`nullify`](@ref).
 """
-denullify(dt::AbstractDataTable) = denullify!(copy(dt))
+denullify(dt::AbstractDataTable) = denullify!(deepcopy(dt))
 
 """
     nullify!(dt::AbstractDataTable)
@@ -933,7 +932,7 @@ julia> eltypes(dt)
 See also [`nullify!`](@ref) & [`denullify`](@ref).
 """
 function nullify(dt::AbstractDataTable)
-    nullify!(copy(dt))
+    nullify!(deepcopy(dt))
 end
 
 ## Documentation for methods defined elsewhere

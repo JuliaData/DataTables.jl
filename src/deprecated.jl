@@ -18,5 +18,5 @@ import Base: keys, values, insert!
 
 @deprecate sub(dt::AbstractDataTable, rows) view(dt, rows)
 
-@deprecate stackdf stackdt
-@deprecate meltdf meltdt
+@deprecate stackdf stack
+@deprecate meltdf melt
