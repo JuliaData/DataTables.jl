@@ -76,9 +76,9 @@ function stack(dt::AbstractDataTable, measure_vars::Vector{Int},
     cnames = names(dt)[id_vars]
     insert!(cnames, 1, value_name)
     insert!(cnames, 1, variable_name)
-    DataTable(Any[Compat.repeat(_names(dt)[measure_vars], inner=nrow(dt)),   # variable
+    DataTable(Any[repeat(_names(dt)[measure_vars], inner=nrow(dt)),   # variable
                   vcat([dt[c] for c in measure_vars]...),                    # value
-                  [Compat.repeat(dt[c], outer=N) for c in id_vars]...],      # id_var columns
+                  [repeat(dt[c], outer=N) for c in id_vars]...],      # id_var columns
               cnames)
 end
 function stack(dt::AbstractDataTable, measure_var::Int, id_var::Int;
@@ -188,14 +188,12 @@ function unstack(dt::AbstractDataTable, rowkey::Int, colkey::Int, value::Int)
     # `rowkey` integer indicating which column to place along rows
     # `colkey` integer indicating which column to place along column headers
     # `value` integer indicating which column has values
-    anchor = dt[rowkey]
     values = dt[value]
     newcols = dt[colkey]
     uniquenewcols = unique(newcols)
-    nrow = length(anchor)
     ncol = length(uniquenewcols) + 1
     columns = Vector{Any}(ncol)
-    columns[1] = unique(anchor)
+    columns[1] = unique(dt[rowkey])
     for (i,coli) in enumerate(2:ncol)
         columns[coli] = values[find(newcols .== uniquenewcols[i])]
     end
