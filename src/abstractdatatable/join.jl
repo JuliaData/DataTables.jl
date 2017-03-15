@@ -12,9 +12,6 @@ similar_nullable{T<:Nullable}(dv::AbstractArray{T}, dims::Union{Int, Tuple{Varar
 similar_nullable{T,R}(dv::CategoricalArray{T,R}, dims::Union{Int, Tuple{Vararg{Int}}}) =
     NullableCategoricalArray(T, dims)
 
-similar_nullable(dt::AbstractDataTable, dims::Int) =
-    DataTable(Any[similar_nullable(x, dims) for x in columns(dt)], copy(index(dt)))
-
 # helper structure for DataTables joining
 immutable DataTableJoiner{DT1<:AbstractDataTable, DT2<:AbstractDataTable}
     dtl::DT1
@@ -44,7 +41,7 @@ Base.length(x::RowIndexMap) = length(x.orig)
 
 # composes the joined data table using the maps between the left and right
 # table rows and the indices of rows in the result
-function compose_joined_table(joiner::DataTableJoiner,
+function compose_joined_table(joiner::DataTableJoiner, kind::Symbol,
                               left_ixs::RowIndexMap, leftonly_ixs::RowIndexMap,
                               right_ixs::RowIndexMap, rightonly_ixs::RowIndexMap)
     @assert length(left_ixs) == length(right_ixs)
@@ -77,9 +74,9 @@ function compose_joined_table(joiner::DataTableJoiner,
     end
     all_orig_right_ixs = vcat(right_ixs.orig, rightonly_ixs.orig)
     resizelen = length(all_orig_right_ixs)+length(leftonly_ixs)
-    rightcols = Any[length(all_orig_right_ixs) >= resizelen ?
-                       resize!(col[all_orig_right_ixs], resizelen)[right_perm] :
-                       copy!(similar_nullable(col[all_orig_right_ixs], resizelen), col[all_orig_right_ixs])[right_perm]
+    rightcols = Any[kind == :inner ?
+                        col[all_orig_right_ixs][right_perm] :
+                        copy!(similar_nullable(col, resizelen), col[all_orig_right_ixs])[right_perm]
                     for col in columns(dtr_noon)]
     right_dt = DataTable(rightcols, names(dtr_noon))
     # merge left and right parts of the joined table
@@ -246,22 +243,22 @@ function Base.join(dt1::AbstractDataTable,
     joiner = DataTableJoiner(dt1, dt2, on)
 
     if kind == :inner
-        compose_joined_table(joiner, update_row_maps!(joiner.dtl_on, joiner.dtr_on,
-                                                      group_rows(joiner.dtr_on),
-                                                      true, false, true, false)...)
+        compose_joined_table(joiner, kind, update_row_maps!(joiner.dtl_on, joiner.dtr_on,
+                                                            group_rows(joiner.dtr_on),
+                                                            true, false, true, false)...)
     elseif kind == :left
-        compose_joined_table(joiner, update_row_maps!(joiner.dtl_on, joiner.dtr_on,
-                                                      group_rows(joiner.dtr_on),
-                                                      true, true, true, false)...)
+        compose_joined_table(joiner, kind, update_row_maps!(joiner.dtl_on, joiner.dtr_on,
+                                                            group_rows(joiner.dtr_on),
+                                                            true, true, true, false)...)
     elseif kind == :right
         right_ixs, rightonly_ixs, left_ixs, leftonly_ixs = update_row_maps!(joiner.dtr_on, joiner.dtl_on,
                                                                             group_rows(joiner.dtl_on),
                                                                             true, true, true, false)
-        compose_joined_table(joiner, left_ixs, leftonly_ixs, right_ixs, rightonly_ixs)
+        compose_joined_table(joiner, kind, left_ixs, leftonly_ixs, right_ixs, rightonly_ixs)
     elseif kind == :outer
-        compose_joined_table(joiner, update_row_maps!(joiner.dtl_on, joiner.dtr_on,
-                                                      group_rows(joiner.dtr_on),
-                                                      true, true, true, true)...)
+        compose_joined_table(joiner, kind, update_row_maps!(joiner.dtl_on, joiner.dtr_on,
+                                                            group_rows(joiner.dtr_on),
+                                                            true, true, true, true)...)
     elseif kind == :semi
         # hash the right rows
         dtr_on_grp = group_rows(joiner.dtr_on)
