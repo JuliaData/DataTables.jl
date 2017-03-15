@@ -76,9 +76,9 @@ function stack(dt::AbstractDataTable, measure_vars::Vector{Int},
     cnames = names(dt)[id_vars]
     insert!(cnames, 1, value_name)
     insert!(cnames, 1, variable_name)
-    DataTable(Any[repeat(_names(dt)[measure_vars], inner=nrow(dt)),   # variable
-                  vcat([dt[c] for c in measure_vars]...),                    # value
-                  [repeat(dt[c], outer=N) for c in id_vars]...],      # id_var columns
+    DataTable(Any[repeat(_names(dt)[measure_vars], inner=nrow(dt)), # variable
+                  vcat([dt[c] for c in measure_vars]...),           # value
+                  [repeat(dt[c], outer=N) for c in id_vars]...],    # id_var columns
               cnames)
 end
 function stack(dt::AbstractDataTable, measure_var::Int, id_var::Int;
