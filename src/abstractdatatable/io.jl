@@ -45,7 +45,7 @@ function printtable(io::IO,
             if !isnull(dt[j][i])
                 if ! (etypes[j] <: Real)
                     print(io, quotemark)
-                    x = isa(dt[i, j], Nullable) ? NullableArrays.unsafe_get(dt[i, j]) : dt[i, j]
+                    x = isa(dt[i, j], Nullable) ? @compat(unsafe_get(dt[i, j])) : dt[i, j]
                     escapedprint(io, x, quotestr)
                     print(io, quotemark)
                 else
@@ -168,7 +168,7 @@ function Base.show(io::IO, ::MIME"text/latex", dt::AbstractDataTable)
             write(io, " & ")
             cell = dt[row,col]
             if !isnull(cell)
-                content = isa(cell, Nullable) ? NullableArrays.unsafe_get(cell) : cell
+                content = isa(cell, Nullable) ? @compat(unsafe_get(cell)) : cell
                 if mimewritable(MIME("text/latex"), content)
                     show(io, MIME("text/latex"), content)
                 else
