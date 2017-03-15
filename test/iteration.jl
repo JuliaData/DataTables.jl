@@ -16,7 +16,7 @@ module TestIteration
     end
 
     for col in eachcol(dt)
-        @test isa(col, Tuple{Symbol,Vector{Int}})
+        @test isa(col, Tuple{Symbol, Vector{Int}})
     end
 
     @test isequal(map(x -> minimum(convert(Array, x)), eachrow(dt)), [1,2])

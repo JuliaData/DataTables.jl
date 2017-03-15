@@ -148,7 +148,7 @@ end
 # Initialize an empty DataTable with specific eltypes and names
 # and whether a nominal array should be created
 function DataTable{T<:Type}(column_eltypes::AbstractVector{T}, cnames::AbstractVector{Symbol},
-                              nominal::Vector{Bool}, nrows::Integer)
+                            nominal::Vector{Bool}, nrows::Integer)
     p = length(column_eltypes)
     columns = Vector{Any}(p)
     for j in 1:p
