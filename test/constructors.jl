@@ -39,8 +39,8 @@ module TestConstructors
     dt = DataTable([Nullable{Int}, Nullable{Float64}], [:x1, :x2], 2)
     @test size(dt) == (2, 2)
     @test eltypes(dt) == [Nullable{Int}, Nullable{Float64}]
-
     @test isequal(dt, DataTable([Nullable{Int}, Nullable{Float64}], 2))
+    @test all(isnull, (dt[:x1], dt[:x2]))
 
     @test_throws BoundsError SubDataTable(DataTable(A=1), 0)
     @test_throws BoundsError SubDataTable(DataTable(A=1), 0)

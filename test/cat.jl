@@ -76,9 +76,9 @@ module TestCat
     @test vcat(null_dt, null_dt) == DataTable()
     @test vcat(null_dt, dt) == dt
     @test vcat(dt, null_dt) == dt
-    @test all(map((x,y) -> x <: y, eltypes(vcat(dt, dt)), (Float64, Float64, Int)))
+    @test eltypes(vcat(dt, dt)) == [Float64, Float64, Int]
     @test size(vcat(dt, dt)) == (size(dt,1)*2, size(dt,2))
-    @test all(map((x,y) -> x <: y, eltypes(vcat(dt, dt, dt)), (Float64, Float64, Int)))
+    @test eltypes(vcat(dt, dt, dt)) == [Float64, Float64, Int]
     @test size(vcat(dt, dt, dt)) == (size(dt,1)*3, size(dt,2))
 
     alt_dt = deepcopy(dt)
@@ -103,7 +103,9 @@ module TestCat
     dtc = DataTable(a = NullableArray([2, 3, 4]))
     dtd = DataTable(Any[2:4], [:a])
     dtab = vcat(dta, dtb)
+    @test isa(dtab[1], CategoricalArray)
     dtac = vcat(nullify(dta), dtc)
+    @test isa(dtac[1], NullableCategoricalArray)
     @test isequal(dtab[:a], [1, 2, 2, 2, 3, 4])
     @test isa(dtab[:a], CategoricalVector{Int})
     dc = vcat(dtd, dtc)
