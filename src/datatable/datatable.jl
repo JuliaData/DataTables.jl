@@ -102,7 +102,11 @@ type DataTable <: AbstractDataTable
             if isa(c, Range)
                 columns[i] = collect(c)
             elseif !isa(c, AbstractVector)
-                throw(DimensionMismatch("columns must be 1-dimensional"))
+                if isa(c, AbstractArray)
+                    throw(DimensionMismatch("columns must be 1-dimensional"))
+                else
+                    columns[i] = [c]
+                end
             else
                 columns[i] = c
             end
