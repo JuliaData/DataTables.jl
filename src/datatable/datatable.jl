@@ -92,7 +92,6 @@ type DataTable <: AbstractDataTable
             end
             uls = unique(lengths)
             if length(uls) != 1
-                # estring = Vector{String}(length(uniques))
                 strnames = string.(names(colindex))
                 estring = ["column length ($(uls[i])) for column(s) ($(join(strnames[find(uls .== u)], ", ")))"
                            for (i,u) in enumerate(uls)]
@@ -103,7 +102,9 @@ type DataTable <: AbstractDataTable
             if isa(c, Range)
                 columns[i] = collect(c)
             elseif !isa(c, AbstractVector)
-                columns[i] = size(c, 2) > 1 ? throw(DimensionMismatch("columns must be 1-dimensional")) : [c]
+                throw(DimensionMismatch("columns must be 1-dimensional"))
+            else
+                columns[i] = c
             end
         end
         return new(columns, colindex)
@@ -139,8 +140,8 @@ function DataTable{T<:Type}(column_eltypes::AbstractVector{T}, cnames::AbstractV
     p = length(column_eltypes)
     columns = Vector{Any}(p)
     for j in 1:p
-        colT = column_eltypes[j]
-        columns[j] = colT <: Nullable ? NullableArray{eltype(colT)}(nrows) : Vector{colT}(nrows)
+        elty = column_eltypes[j]
+        columns[j] = elty <: Nullable ? NullableArray{eltype(elty)}(nrows) : Vector{elty}(nrows)
     end
     return DataTable(columns, Index(convert(Vector{Symbol}, cnames)))
 end
@@ -152,11 +153,11 @@ function DataTable{T<:Type}(column_eltypes::AbstractVector{T}, cnames::AbstractV
     p = length(column_eltypes)
     columns = Vector{Any}(p)
     for j in 1:p
-        colT = column_eltypes[j]
+        elty = column_eltypes[j]
         if nominal[j]
-            columns[j] = colT <: Nullable ? NullableCategoricalArray{colT}(nrows) : CategoricalVector{colT}(nrows)
+            columns[j] = elty <: Nullable ? NullableCategoricalArray{elty}(nrows) : CategoricalVector{elty}(nrows)
         else
-            columns[j] = colT <: Nullable ? NullableArray{colT}(nrows) : Vector{colT}(nrows)
+            columns[j] = elty <: Nullable ? NullableArray{elty}(nrows) : Vector{elty}(nrows)
         end
     end
     return DataTable(columns, Index(convert(Vector{Symbol}, cnames)))
@@ -168,8 +169,8 @@ function DataTable{T<:Type}(column_eltypes::AbstractVector{T}, nrows::Integer)
     columns = Vector{Any}(p)
     cnames = gennames(p)
     for j in 1:p
-        colT = column_eltypes[j]
-        columns[j] = colT <: Nullable ? NullableArray{colT}(nrows) : Vector{colT}(nrows)
+        elty = column_eltypes[j]
+        columns[j] = elty <: Nullable ? NullableArray{elty}(nrows) : Vector{elty}(nrows)
     end
     return DataTable(columns, Index(cnames))
 end
