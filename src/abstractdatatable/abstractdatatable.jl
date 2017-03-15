@@ -713,10 +713,15 @@ Base.hcat(dt1::AbstractDataTable, dt2::AbstractDataTable, dtn::AbstractDataTable
 """
     vcat(dts::AbstractDataTable...)
 
-Vertically concatenate `AbstractDataTables` with matching columns.
+Vertically concatenate `AbstractDataTables` that have the same column names in
+the same order.
 
 ```julia
-julia> dt1 = DataTable(A=1:3, B=1:3); dt2 = DataTable(A=4:6, B=4:6); dt3 = DataTable(A=7:9, B=7:9, C=7:9);
+julia> dt1 = DataTable(A=1:3, B=1:3);
+
+julia> dt2 = DataTable(A=4:6, B=4:6);
+
+julia> dt3 = DataTable(A=7:9, B=7:9, C=7:9);
 
 julia> vcat(dt1, dt2)
 6×2 DataTables.DataTable
@@ -778,6 +783,9 @@ end
 Convert columns with a `Nullable` element type without any null values
 to a non-`Nullable` equivalent array type. The table `dt` is modified in place.
 
+Columns in the returned `AbstractDataTable` may alias the columns of the
+input `dt`.
+
 # Examples
 
 ```jldoctest
@@ -822,6 +830,9 @@ end
 Return a copy of `dt` where columns with a `Nullable` element type without any
 null values have been converted to a non-`Nullable` equivalent array type.
 
+Columns in the returned `AbstractDataTable` may alias the columns of the
+input `dt`. If no aliasing is desired, use `denullify!(deepcopy(dt))`.
+
 # Examples
 
 ```jldoctest
@@ -851,12 +862,15 @@ julia> eltypes(dt)
 
 See also [`denullify!`] & [`nullify`](@ref).
 """
-denullify(dt::AbstractDataTable) = denullify!(deepcopy(dt))
+denullify(dt::AbstractDataTable) = denullify!(copy(dt))
 
 """
     nullify!(dt::AbstractDataTable)
 
 Convert all columns of `dt` to nullable arrays. The table `dt` is modified in place.
+
+Columns in the returned `AbstractDataTable` may alias the columns of the
+input `dt`.
 
 # Examples
 
@@ -902,6 +916,9 @@ nullify(x::AbstractCategoricalArray) = convert(NullableCategoricalArray, x)
 
 Return a copy of `dt` with all columns converted to nullable arrays.
 
+Columns in the returned `AbstractDataTable` may alias the columns of the
+input `dt`. If no aliasing is desired, use `nullify!(deepcopy(dt))`.
+
 # Examples
 
 ```jldoctest
@@ -932,7 +949,7 @@ julia> eltypes(dt)
 See also [`nullify!`](@ref) & [`denullify`](@ref).
 """
 function nullify(dt::AbstractDataTable)
-    nullify!(deepcopy(dt))
+    nullify!(copy(dt))
 end
 
 ## Documentation for methods defined elsewhere
