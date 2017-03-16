@@ -218,8 +218,8 @@ module TestData
     m1 = join(dt1, dt2, on = :a, kind=:inner)
     @test isequal(m1[:a], dt1[:a][dt1[:a] .<= 5]) # preserves dt1 order
     m2 = join(dt1, dt2, on = :a, kind = :outer)
-    @test isequal(m2[:a], dt1[:a]) # preserves dt1 order
-    @test isequal(m2[:b], dt1[:b]) # preserves dt1 order
+    @test isequal(m2[:a], NullableArray(dt1[:a])) # preserves dt1 order
+    @test isequal(m2[:b], NullableArray(dt1[:b])) # preserves dt1 order
     # TODO: Re-enable
     m2 = join(dt1, dt2, on = :a, kind = :outer)
     # @test isequal(m2[:b2],
@@ -240,13 +240,13 @@ module TestData
     @test m1[:a] == [1, 2]
 
     m2 = join(dt1, dt2, on = :a, kind = :left)
-    @test m2[:a] == [1, 2, 3]
+    @test isequal(m2[:a], NullableArray([1, 2, 3]))
 
     m3 = join(dt1, dt2, on = :a, kind = :right)
-    @test m3[:a] == [1, 2, 4]
+    @test isequal(m3[:a], NullableArray([1, 2, 4]))
 
     m4 = join(dt1, dt2, on = :a, kind = :outer)
-    @test m4[:a] == [1, 2, 3, 4]
+    @test isequal(m4[:a], NullableArray([1, 2, 3, 4]))
 
     # test with nulls (issue #185)
     dt1 = DataTable()
