@@ -41,31 +41,29 @@ Base.length(x::RowIndexMap) = length(x.orig)
 
 # composes the joined data table using the maps between the left and right
 # table rows and the indices of rows in the result
-function compose_joined_table(joiner::DataTableJoiner, kind::Symbol,
+function compose_joined_table(joiner::DataTableJoiner,
                               left_ixs::RowIndexMap, leftonly_ixs::RowIndexMap,
                               right_ixs::RowIndexMap, rightonly_ixs::RowIndexMap)
     @assert length(left_ixs) == length(right_ixs)
     # compose left half of the result taking all left columns
     all_orig_left_ixs = vcat(left_ixs.orig, leftonly_ixs.orig)
-    if length(leftonly_ixs) > 0
+
+    lil = length(left_ixs)
+    loil = length(leftonly_ixs)
+    ril = length(right_ixs)
+    roil = length(rightonly_ixs)
+
+    if loil > 0
         # combine the matched (left_ixs.orig) and non-matched (leftonly_ixs.orig) indices of the left table rows
         # preserving the original rows order
-        all_orig_left_ixs = similar(left_ixs.orig, length(left_ixs)+length(leftonly_ixs))
+        all_orig_left_ixs = similar(left_ixs.orig, lil + loil)
         @inbounds all_orig_left_ixs[left_ixs.join] = left_ixs.orig
         @inbounds all_orig_left_ixs[leftonly_ixs.join] = leftonly_ixs.orig
     else
         # the result contains only the left rows that are matched to right rows (left_ixs)
         all_orig_left_ixs = left_ixs.orig # no need to copy left_ixs.orig as it's not used elsewhere
     end
-    ril = length(right_ixs)
-    loil = length(leftonly_ixs)
-    roil = length(rightonly_ixs)
-    left_dt = DataTable(Any[resize!(col[all_orig_left_ixs], length(all_orig_left_ixs)+roil)
-                            for col in columns(joiner.dtl)],
-                        names(joiner.dtl))
 
-    # compose right half of the result taking all right columns excluding on
-    dtr_noon = without(joiner.dtr, joiner.on_cols)
     # permutation to swap rightonly and leftonly rows
     right_perm = vcat(1:ril, ril+roil+1:ril+roil+loil, ril+1:ril+roil)
     if length(leftonly_ixs) > 0
@@ -73,15 +71,30 @@ function compose_joined_table(joiner::DataTableJoiner, kind::Symbol,
         right_perm[vcat(right_ixs.join, leftonly_ixs.join)] = right_perm[1:ril+loil]
     end
     all_orig_right_ixs = vcat(right_ixs.orig, rightonly_ixs.orig)
-    resizelen = length(all_orig_right_ixs)+length(leftonly_ixs)
-    rightcols = Any[kind == :inner ?
-                        col[all_orig_right_ixs][right_perm] :
-                        copy!(similar_nullable(col, resizelen), col[all_orig_right_ixs])[right_perm]
-                    for col in columns(dtr_noon)]
-    right_dt = DataTable(rightcols, names(dtr_noon))
-    # merge left and right parts of the joined table
-    res = hcat!(left_dt, right_dt)
 
+    # compose right half of the result taking all right columns excluding on
+    dtr_noon = without(joiner.dtr, joiner.on_cols)
+
+    laoli = length(all_orig_left_ixs)
+    laori = length(all_orig_right_ixs)
+    @assert laoli + roil == laori + loil
+    numrows = length(all_orig_left_ixs) + roil
+    numcols = ncol(joiner.dtl) + ncol(dtr_noon)
+
+    # if either size is smaller, then it's null
+    leftnull = laoli < laoli + roil
+    rightnull = laori < laori + loil
+    dtcols = Vector{Any}(numcols)
+    for (i,col) in enumerate(columns(joiner.dtl))
+        dtcols[i] = leftnull ? copy!(similar_nullable(col, numrows), col[all_orig_left_ixs]) :
+                               col[all_orig_left_ixs]
+    end
+    for (i,col) in enumerate(columns(dtr_noon))
+        dtcols[i+ncol(joiner.dtl)] = rightnull ? copy!(similar_nullable(col, numrows), col[all_orig_right_ixs])[right_perm] :
+                                                 col[all_orig_right_ixs][right_perm]
+    end
+    colnames = vcat(names(joiner.dtl), names(dtr_noon))
+    res = DataTable(dtcols, Index(colnames))
     if length(rightonly_ixs.join) > 0
         # some left rows are nulls, so the values of the "on" columns
         # need to be taken from the right
@@ -207,6 +220,8 @@ join(dt1::AbstractDataTable,
   - `:cross` : a full Cartesian product of the key combinations; every
     row of `dt1` is matched with every row of `dt2`
 
+For the three join operations that may introduce missing values, `:outer`, `:left`,
+and `:right`,
 Null values are filled in where needed to complete joins.
 
 ### Result
@@ -243,22 +258,21 @@ function Base.join(dt1::AbstractDataTable,
     joiner = DataTableJoiner(dt1, dt2, on)
 
     if kind == :inner
-        compose_joined_table(joiner, kind, update_row_maps!(joiner.dtl_on, joiner.dtr_on,
-                                                            group_rows(joiner.dtr_on),
-                                                            true, false, true, false)...)
+        compose_joined_table(joiner, update_row_maps!(joiner.dtl_on, joiner.dtr_on,
+                                                      group_rows(joiner.dtr_on),
+                                                      true, false, true, false)...)
     elseif kind == :left
-        compose_joined_table(joiner, kind, update_row_maps!(joiner.dtl_on, joiner.dtr_on,
-                                                            group_rows(joiner.dtr_on),
-                                                            true, true, true, false)...)
+        compose_joined_table(joiner, update_row_maps!(joiner.dtl_on, joiner.dtr_on,
+                                                      group_rows(joiner.dtr_on),
+                                                      true, true, true, false)...)
     elseif kind == :right
-        right_ixs, rightonly_ixs, left_ixs, leftonly_ixs = update_row_maps!(joiner.dtr_on, joiner.dtl_on,
-                                                                            group_rows(joiner.dtl_on),
-                                                                            true, true, true, false)
-        compose_joined_table(joiner, kind, left_ixs, leftonly_ixs, right_ixs, rightonly_ixs)
+        compose_joined_table(joiner, update_row_maps!(joiner.dtr_on, joiner.dtl_on,
+                                                      group_rows(joiner.dtl_on),
+                                                      true, true, true, false)[[3, 4, 1, 2]]...)
     elseif kind == :outer
-        compose_joined_table(joiner, kind, update_row_maps!(joiner.dtl_on, joiner.dtr_on,
-                                                            group_rows(joiner.dtr_on),
-                                                            true, true, true, true)...)
+        compose_joined_table(joiner, update_row_maps!(joiner.dtl_on, joiner.dtr_on,
+                                                      group_rows(joiner.dtr_on),
+                                                      true, true, true, true)...)
     elseif kind == :semi
         # hash the right rows
         dtr_on_grp = group_rows(joiner.dtr_on)

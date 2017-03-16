@@ -117,4 +117,26 @@ module TestJoin
         DataTable([collect(1:10), collect(2:11), collect(3:12)], [:x, :y, :z])
     @test join(dtnull, dt, on = :x) ==
         DataTable([collect(1:10), collect(3:12), collect(2:11)], [:x, :z, :y])
+
+    @testset "missingness" begin
+        small = DataTable(fruit = [:banana, :plantain, :melon],
+                          vegetable = [:artichoke, :leek, :pepper])
+        large = DataTable(fruit = [:banana, :plantain, :melon, :raspberry],
+                          vegetable = [:artichoke, :collards, :leek, :pepper])
+
+        @test join(small, large, on=:fruit, kind=:left) == DataTable(fruit = [:banana, :plantain, :melon],
+                                                                     vegetable = [:artichoke, :leek, :pepper],
+                                                                     vegetable_1 = [:artichoke, :collards, :leek])
+        @test join(small, large, on=:fruit, kind=:right) == DataTable(fruit = [:banana, :plantain, :melon],
+                                                                     vegetable = [:artichoke, :leek, :pepper],
+                                                                     vegetable_1 = [:artichoke, :collards, :leek])
+        @test join(small, large, on=:fruit, kind=:outer)
+
+        @test join(small, large, on=:vegetable, kind=:left)
+        @test join(small, large, on=:vegetable, kind=:right)
+        @test join(small, large, on=:vegetable, kind=:outer)
+
+        @test join(small, large, on=[:fruit, :vegetable], kind=:outer)
+        @test join(small, large, on=[:fruit, :vegetable], kind=:left)
+        @test join(small, large, on=[:fruit, :vegetable], kind=:right)
 end
