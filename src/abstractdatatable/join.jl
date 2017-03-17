@@ -76,14 +76,14 @@ function compose_joined_table(joiner::DataTableJoiner, kind::Symbol,
 
     nrow = length(all_orig_left_ixs) + roil
     @assert nrow == length(all_orig_right_ixs) + loil
-    ncl = ncol(joiner.dtl)
-    cols = Vector{Any}(ncl + ncol(dtr_noon))
+    ncleft = ncol(joiner.dtl)
+    cols = Vector{Any}(ncleft + ncol(dtr_noon))
     for (i, col) in enumerate(columns(joiner.dtl))
         cols[i] = kind == :inner ? col[all_orig_left_ixs] :
                                    copy!(similar_nullable(col, nrow), col[all_orig_left_ixs])
     end
     for (i, col) in enumerate(columns(dtr_noon))
-        cols[i+ncl] = kind == :inner ? col[all_orig_right_ixs] :
+        cols[i+ncleft] = kind == :inner ? col[all_orig_right_ixs] :
                                        copy!(similar_nullable(col, nrow), col[all_orig_right_ixs])[right_perm]
     end
     res = DataTable(cols, vcat(names(joiner.dtl), names(dtr_noon)))
@@ -93,7 +93,7 @@ function compose_joined_table(joiner::DataTableJoiner, kind::Symbol,
         # need to be taken from the right
         for (on_col_ix, on_col) in enumerate(joiner.on_cols)
             # fix the result of the rightjoin by taking the nonnull values from the right table
-            res[on_col][rightonly_ixs.join] = joiner.dtr_on[rightonly_ixs.orig, on_col_ix]
+            res[on_col][end-length(rightonly_ixs.orig)+1:end] = joiner.dtr_on[rightonly_ixs.orig, on_col_ix]
         end
     end
     return res

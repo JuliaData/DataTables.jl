@@ -128,12 +128,15 @@ module TestJoin
                                                            id_1 = repeat([0, 1, 2, 3, 4], outer=3),
                                                            fid_1 = repeat([0.0, 1.0, 2.0, 3.0, 4.0], outer=3))
         # id
-        @test join(small, large, on=:id, kind=:inner) == DataTable(id = [1, 3], fid = [1.0, 3.0], fid_1 = [1.0, 3.0])
-        @test join(small, large, on=:id, kind=:left) == nullify!(DataTable(id = [1, 3, 5], fid = [1.0, 3.0, 5.0], fid_1 = [1.0, 3.0, N]))
-        # FIXME
-        # @test join(small, large, on=:id, kind=:right) == nullify!(DataTable(id = [1, 3, 0, 2, 4],
-        #                                                                     fid = [1.0, 3.0, N, N, N],
-        #                                                                     fid_1 = [1.0, 3.0, 0.0, 2.0, 4.0])
+        @test join(small, large, on=:id, kind=:inner) == DataTable(id = [1, 3],
+                                                                   fid = [1.0, 3.0],
+                                                                   fid_1 = [1.0, 3.0])
+        @test join(small, large, on=:id, kind=:left) == nullify!(DataTable(id = [1, 3, 5],
+                                                                           fid = [1.0, 3.0, 5.0],
+                                                                           fid_1 = [1.0, 3.0, N]))
+        @test join(small, large, on=:id, kind=:right) == nullify!(DataTable(id = [1, 3, 0, 2, 4],
+                                                                            fid = [1.0, 3.0, N, N, N],
+                                                                            fid_1 = [1.0, 3.0, 0.0, 2.0, 4.0]))
         @test join(small, large, on=:id, kind=:outer) == nullify!(DataTable(id = [1, 3, 5, 0, 2, 4],
                                                                             fid = [1.0, 3.0, 5.0, N, N, N],
                                                                             fid_1 = [1.0, 3.0, N, 0.0, 2.0, 4.0]))
@@ -141,12 +144,15 @@ module TestJoin
         @test join(small, large, on=:id, kind=:anti) == DataTable(id = 5, fid = 5.0)
 
         # fid
-        @test join(small, large, on=:fid, kind=:inner) == DataTable(id = [1, 3], fid = [1.0, 3.0], id_1 = [1, 3])
-        @test join(small, large, on=:fid, kind=:left) == nullify!(DataTable(id = [1, 3, 5], fid = [1.0, 3.0, 5.0], id_1 = [1, 3, N]))
-        # FIXME
-        # @test join(small, large, on=:fid, kind=:right) == nullify!(DataTable(id = [1, 3, N, N, N],
-        #                                                                      fid = [1.0, 3.0, 0.0, 2.0, 4.0],
-        #                                                                      id_1 = [1, 3, 0, 2, 4]))
+        @test join(small, large, on=:fid, kind=:inner) == DataTable(id = [1, 3],
+                                                                    fid = [1.0, 3.0],
+                                                                    id_1 = [1, 3])
+        @test join(small, large, on=:fid, kind=:left) == nullify!(DataTable(id = [1, 3, 5],
+                                                                            fid = [1.0, 3.0, 5.0],
+                                                                            id_1 = [1, 3, N]))
+        @test join(small, large, on=:fid, kind=:right) == nullify!(DataTable(id = [1, 3, N, N, N],
+                                                                             fid = [1.0, 3.0, 0.0, 2.0, 4.0],
+                                                                             id_1 = [1, 3, 0, 2, 4]))
         @test join(small, large, on=:fid, kind=:outer) == nullify!(DataTable(id = [1, 3, 5, N, N, N],
                                                                              fid = [1.0, 3.0, 5.0, 0.0, 2.0, 4.0],
                                                                              id_1 = [1, 3, N, 0, 2, 4]))
@@ -154,13 +160,17 @@ module TestJoin
         @test join(small, large, on=:fid, kind=:anti) == DataTable(id = 5, fid = 5.0)
 
         # both
-        @test join(small, large, on=[:id, :fid], kind=:inner) == DataTable(id = [1, 3], fid = [1.0, 3.0])
-        @test join(small, large, on=[:id, :fid], kind=:left) == nullify!(DataTable(id = [1, 3, 5], fid = [1.0, 3.0, 5.0]))
-        # FIXME
-        # @test join(small, large, on=[:id, :fid], kind=:right) == nullify!(DataTable(id = [1, 3, 0, 2, 4], fid = [1.0, 3.0, 0.0, 2.0, 4.0]))
+        @test join(small, large, on=[:id, :fid], kind=:inner) == DataTable(id = [1, 3],
+                                                                           fid = [1.0, 3.0])
+        @test join(small, large, on=[:id, :fid], kind=:left) == nullify!(DataTable(id = [1, 3, 5],
+                                                                                   fid = [1.0, 3.0, 5.0]))
+        @test join(small, large, on=[:id, :fid], kind=:right) == nullify!(DataTable(id = [1, 3, 0, 2, 4],
+                                                                                    fid = [1.0, 3.0, 0.0, 2.0, 4.0]))
         @test join(small, large, on=[:id, :fid], kind=:outer) == nullify!(DataTable(id = [1, 3, 5, 0, 2, 4],
                                                                                     fid = [1.0, 3.0, 5.0, 0.0, 2.0, 4.0]))
-        @test join(small, large, on=[:id, :fid], kind=:semi) == DataTable(id = [1, 3], fid = [1.0, 3.0])
-        @test join(small, large, on=[:id, :fid], kind=:anti) == DataTable(id = 5, fid = 5.0)
+        @test join(small, large, on=[:id, :fid], kind=:semi) == DataTable(id = [1, 3],
+                                                                          fid = [1.0, 3.0])
+        @test join(small, large, on=[:id, :fid], kind=:anti) == DataTable(id = 5,
+                                                                          fid = 5.0)
     end
 end
