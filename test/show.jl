@@ -30,11 +30,11 @@ module TestShow
 
     dt = DataTable(A = Vector{String}(3))
 
-    A = DataTables.StackedVector(Any[[1, 2, 3], [4, 5, 6], [7, 8, 9]])		
-    show(io, A)		
-    A = DataTables.RepeatedVector([1, 2, 3], 5, 1)		
-    show(io, A)		
-    A = DataTables.RepeatedVector([1, 2, 3], 1, 5)		
+    A = DataTables.StackedVector(Any[[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    show(io, A)
+    A = DataTables.RepeatedVector([1, 2, 3], 5, 1)
+    show(io, A)
+    A = DataTables.RepeatedVector([1, 2, 3], 1, 5)
     show(io, A)
 
     #Test show output for REPL and similar
