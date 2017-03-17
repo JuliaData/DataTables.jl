@@ -93,6 +93,7 @@ function compose_joined_table(joiner::DataTableJoiner, kind::Symbol,
         # need to be taken from the right
         for (on_col_ix, on_col) in enumerate(joiner.on_cols)
             # fix the result of the rightjoin by taking the nonnull values from the right table
+            # end-length(rightonly_ixs.orig)+1:end was rightonly_ixs.join. Try and FIXME
             res[on_col][end-length(rightonly_ixs.orig)+1:end] = joiner.dtr_on[rightonly_ixs.orig, on_col_ix]
         end
     end
@@ -214,8 +215,7 @@ join(dt1::AbstractDataTable,
     row of `dt1` is matched with every row of `dt2`
 
 For the three join operations that may introduce missing values, `:outer`, `:left`,
-and `:right`,
-Null values are filled in where needed to complete joins.
+and `:right`, all columns of the returned datatable will be nullable.
 
 ### Result
 
