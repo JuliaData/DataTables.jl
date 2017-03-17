@@ -860,7 +860,7 @@ julia> eltypes(dt)
  Nullable{Int64}
 ```
 
-See also [`denullify!`] & [`nullify`](@ref).
+See also [`denullify!`] and [`nullify`](@ref).
 """
 denullify(dt::AbstractDataTable) = denullify!(copy(dt))
 
@@ -899,7 +899,7 @@ julia> eltypes(dt)
  Nullable{Int64}
 ```
 
-See also [`nullify`](@ref) & [`denullify!`](@ref).
+See also [`nullify`](@ref) and [`denullify!`](@ref).
 """
 function nullify!(dt::AbstractDataTable)
     for i in 1:size(dt,2)
@@ -946,7 +946,7 @@ julia> eltypes(dt)
  Int64
 ```
 
-See also [`nullify!`](@ref) & [`denullify`](@ref).
+See also [`nullify!`](@ref) and [`denullify`](@ref).
 """
 function nullify(dt::AbstractDataTable)
     nullify!(copy(dt))

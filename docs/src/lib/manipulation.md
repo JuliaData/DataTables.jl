@@ -20,4 +20,6 @@ join
 melt
 stack
 unstack
+stackdt
+meltdt
 ```

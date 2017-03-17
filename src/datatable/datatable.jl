@@ -145,7 +145,19 @@ function DataTable{T<:Type}(column_eltypes::AbstractVector{T}, cnames::AbstractV
     columns = Vector{Any}(p)
     for j in 1:p
         elty = column_eltypes[j]
-        columns[j] = elty <: Nullable ? NullableArray{eltype(elty)}(nrows) : Vector{elty}(nrows)
+        if elty <: Nullable
+            if eltype(elty) <: CategoricalValue
+                columns[j] = NullableCategoricalArray{eltype(elty).parameters[1]}(nrows)
+            else
+                columns[j] = NullableArray{eltype(elty)}(nrows)
+            end
+        else
+            if elty <: CategoricalValue
+                columns[j] = CategoricalArray{elty.parameters[1]}(nrows)
+            else
+                columns[j] = Vector{elty}(nrows)
+            end
+        end
     end
     return DataTable(columns, Index(convert(Vector{Symbol}, cnames)))
 end
@@ -731,11 +743,7 @@ function hcat!(dt1::DataTable, dt2::AbstractDataTable)
 
     return dt1
 end
-hcat!(dt::DataTable, x::CategoricalArray) = hcat!(dt, DataTable(Any[x]))
-hcat!(dt::DataTable, x::NullableCategoricalArray) = hcat!(dt, DataTable(Any[x]))
-hcat!(dt::DataTable, x::NullableVector) = hcat!(dt, DataTable(Any[x]))
-hcat!(dt::DataTable, x::Vector) = hcat!(dt, DataTable(Any[(x)]))
-hcat!(dt::DataTable, x) = hcat!(dt, DataTable(Any[([x])]))
+hcat!(dt::DataTable, x::AbstractVector) = hcat!(dt, DataTable(Any[x]))
 
 # hcat! for 1-n arguments
 hcat!(dt::DataTable) = dt
