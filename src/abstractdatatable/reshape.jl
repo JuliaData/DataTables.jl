@@ -334,7 +334,6 @@ NOTE: Not exported.
 
 ```julia
 RepeatedVector(parent::AbstractVector, inner::Int, outer::Int)
-
 ```
 
 ### Arguments
