@@ -344,6 +344,7 @@ RepeatedVector(parent::AbstractVector, inner::Int, outer::Int)
 * `inner` : the numer of times each element is repeated
 * `outer` : the numer of times the whole vector is repeated after
   expanded by `inner`
+
 `inner` and `outer` have the same meaning as similarly named arguments
 to `repeat`.
 
@@ -398,6 +399,7 @@ end
 
 """
 A stacked view of a DataTable (long format)
+
 Like `stack` and `melt`, but a view is returned rather than data
 copies.
 
@@ -432,6 +434,7 @@ The result is a view because the columns are special AbstractVectors
 that return indexed views into the original DataTable.
 
 ### Examples
+
 ```julia
 d1 = DataTable(a = repeat([1:3;], inner = [4]),
                b = repeat([1:4;], inner = [3]),
