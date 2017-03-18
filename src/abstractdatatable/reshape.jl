@@ -140,7 +140,6 @@ end
 melt(dt::AbstractDataTable; variable_name::Symbol=:variable, value_name::Symbol=:value) =
     stack(dt; variable_name=variable_name, value_name=value_name)
 
-
 ##############################################################################
 ##
 ## unstack()
