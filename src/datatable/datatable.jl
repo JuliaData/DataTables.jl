@@ -739,7 +739,7 @@ function hcat!(dt1::DataTable, dt2::AbstractDataTable)
 
     return dt1
 end
-hcat!(dt::DataTable, x::AbstractVector) = hcat!(dt, DataTable(Any[x]))
+hcat!(dt::DataTable, x) = hcat!(dt, DataTable(Any[x]))
 
 # hcat! for 1-n arguments
 hcat!(dt::DataTable) = dt

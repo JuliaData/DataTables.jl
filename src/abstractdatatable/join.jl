@@ -86,7 +86,7 @@ function compose_joined_table(joiner::DataTableJoiner, kind::Symbol,
                                    copy!(similar_nullable(col, nrow), col[all_orig_left_ixs])
     end
     for (i, col) in enumerate(columns(dtr_noon))
-        cols[i+ncleft] = kind == :inner ? col[all_orig_right_ixs] :
+        cols[i+ncleft] = kind == :inner ? col[all_orig_right_ixs][right_perm] :
                                           copy!(similar_nullable(col, nrow), col[all_orig_right_ixs])[right_perm]
     end
     res = DataTable(cols, vcat(names(joiner.dtl), names(dtr_noon)))
