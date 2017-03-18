@@ -663,15 +663,15 @@ unique!(dt)  # modifies dt
 """
 (unique, unique!)
 
-function nonuniquekey(dt::AbstractDataTable)		
-    # Here's another (probably a lot faster) way to do `nonunique`		
-    # by grouping on all columns. It will fail if columns cannot be		
-    # made into CategoricalVector's.		
-    gd = groupby(dt, _names(dt))		
-    idx = [1:length(gd.idx)][gd.idx][gd.starts]		
-    res = fill(true, nrow(dt))		
-    res[idx] = false		
-    res		
+function nonuniquekey(dt::AbstractDataTable)
+    # Here's another (probably a lot faster) way to do `nonunique`
+    # by grouping on all columns. It will fail if columns cannot be
+    # made into CategoricalVector's.
+    gd = groupby(dt, _names(dt))
+    idx = [1:length(gd.idx)][gd.idx][gd.starts]
+    res = fill(true, nrow(dt))
+    res[idx] = false
+    res
 end
 
 # Count the number of missing values in every column of an AbstractDataTable.
@@ -748,18 +748,33 @@ function Base.vcat(dts::AbstractDataTable...)
     if length(uniqueheaders) == 0
         return DataTable()
     end
-    coldiff = setdiff(union(uniqueheaders...), intersect(uniqueheaders...))
     if length(uniqueheaders) > 1
+        unionunique = union(uniqueheaders...)
+        coldiff = setdiff(unionunique, intersect(uniqueheaders...))
         if !isempty(coldiff)
-            headerlengths = length.(allheaders)
-            minheaderloci = find(headerlengths .== minimum(headerlengths))
-            throw(ArgumentError("column(s) ($(join(string.(coldiff), ", "))) are missing from argument(s) ($(join(string.(minheaderloci), ", ")))"))
+            # if any datatables are a full superset of names, skip them
+            filter!(u -> Set(u) != Set(unionunique), uniqueheaders)
+            estrings = Vector{String}(length(uniqueheaders))
+            for (i, u) in enumerate(uniqueheaders)
+                matchingloci = find(h -> u == h, allheaders)
+                headerdiff = filter(x -> !in(x, u), coldiff)
+                headerdiff = length(headerdiff) > 1 ?
+                                join(string.(headerdiff[1:end-1]), ", ") * " and " * string(headerdiff[end]) :
+                                string(headerdiff[end])
+                matchingloci = length(matchingloci) > 1 ?
+                                    join(string.(matchingloci[1:end-1]), ", ") * " and " * string(matchingloci[end]) :
+                                    string(matchingloci[end])
+                estrings[i] = "column(s) $headerdiff are missing from argument(s) $matchingloci"
+            end
+            throw(ArgumentError(join(estrings, ", and ")))
         else
             estrings = Vector{String}(length(uniqueheaders))
             for (i, u) in enumerate(uniqueheaders)
                 indices = find(a -> a == u, allheaders)
-                indices = join(string.(indices), ", ")
-                estrings[i] = "column order of argument(s) ($indices)"
+                indices = length(indices) > 1 ?
+                            join(string.(indices[1:end-1]), ", ") * " and " * string(indices[end]) :
+                            string(indices[end])
+                estrings[i] = "column order of argument(s) $indices"
             end
             throw(ArgumentError(join(estrings, " != ")))
         end

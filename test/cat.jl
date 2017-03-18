@@ -122,24 +122,69 @@ module TestCat
     @testset "vcat errors" begin
         dt1 = DataTable(A = 1:3, B = 1:3)
         dt2 = DataTable(A = 1:3)
-        @test_throws ArgumentError vcat(dt1, dt2)
-        dt2 = DataTable(A = 1:3, C = 1:3)
-        @test_throws ArgumentError vcat(dt1, dt2)
+        # right missing 1 column
+        err = @test_throws ArgumentError vcat(dt1, dt2)
+        @test err.value.msg == "column(s) B are missing from argument(s) 2"
+        # left missing 1 column
+        err = @test_throws ArgumentError vcat(dt2, dt1)
+        @test err.value.msg == "column(s) B are missing from argument(s) 1"
+        # multiple missing 1 column
+        err = @test_throws ArgumentError vcat(dt1, dt2, dt2, dt2, dt2, dt2)
+        @test err.value.msg == "column(s) B are missing from argument(s) 2, 3, 4, 5 and 6"
+        # argument missing >1columns
+        dt1 = DataTable(A = 1:3, B = 1:3, C = 1:3, D = 1:3, E = 1:3)
+        err = @test_throws ArgumentError vcat(dt1, dt2)
+        @test err.value.msg == "column(s) B, C, D and E are missing from argument(s) 2"
+        # >1 arguments missing >1 columns
+        err = @test_throws ArgumentError vcat(dt1, dt2, dt2, dt2, dt2)
+        @test err.value.msg == "column(s) B, C, D and E are missing from argument(s) 2, 3, 4 and 5"
+        # out of order
+        dt2 = dt1[reverse(names(dt1))]
+        err = @test_throws ArgumentError vcat(dt1, dt2)
+        @test err.value.msg == "column order of argument(s) 1 != column order of argument(s) 2"
+        # left >1
+        err = @test_throws ArgumentError vcat(dt1, dt1, dt2)
+        @test err.value.msg == "column order of argument(s) 1 and 2 != column order of argument(s) 3"
+        # right >1
+        err = @test_throws ArgumentError vcat(dt1, dt2, dt2)
+        @test err.value.msg == "column order of argument(s) 1 != column order of argument(s) 2 and 3"
+        # left and right >1
+        err = @test_throws ArgumentError vcat(dt1, dt1, dt1, dt2, dt2, dt2)
+        @test err.value.msg == "column order of argument(s) 1, 2 and 3 != column order of argument(s) 4, 5 and 6"
+        # >2 groups out of order
+        srand(1)
+        dt3 = dt1[shuffle(names(dt1))]
+        err = @test_throws ArgumentError vcat(dt1, dt1, dt1, dt2, dt2, dt2, dt3, dt3, dt3, dt3)
+        @test err.value.msg == "column order of argument(s) 1, 2 and 3 != column order of argument(s) 4, 5 and 6 != column order of argument(s) 7, 8, 9 and 10"
+        # missing columns throws error before out of order columns
         dt1 = DataTable(A = 1, B = 1)
-        dt2 = DataTable(B = 1, A = 1)
-        @test_throws ArgumentError vcat(dt1, dt2)
-        @test_throws ArgumentError vcat(dt1, dt1, dt1, dt1, dt2, dt2, dt2, dt2)
-        dt3 = DataTable(A = 1, B = 1, C = 1)
-        @test_throws ArgumentError vcat(dt1, dt3)
-        @test_throws ArgumentError vcat(dt1, dt1, dt3, dt3)
-        @test_throws ArgumentError vcat(dt2, dt3)
-        dt4 = DataTable(A = 1, B = 1, C = 1, D = 1)
-        @test_throws ArgumentError vcat(dt1, dt4)
-        @test_throws ArgumentError vcat(dt2, dt4)
-        @test_throws ArgumentError vcat(dt3, dt4)
-        dt5 = hcat(dt4, dt4, dt4, dt4)
-        @test_throws ArgumentError vcat(dt3, dt5)
-        dt5r = names!(copy(dt5), reverse(names(dt5)))
-        @test_throws ArgumentError vcat(dt5, dt5r)
+        dt2 = DataTable(A = 1)
+        dt3 = DataTable(B = 1, A = 1)
+        err = @test_throws ArgumentError vcat(dt1, dt2, dt3)
+        @test err.value.msg == "column(s) B are missing from argument(s) 2"
+        # unique columns for both sides
+        dt1 = DataTable(A = 1, B = 1, C = 1, D = 1)
+        dt2 = DataTable(A = 1, C = 1, D = 1, E = 1, F = 1)
+        err = @test_throws ArgumentError vcat(dt1, dt2)
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1, and column(s) B are missing from argument(s) 2"
+        err = @test_throws ArgumentError vcat(dt1, dt1, dt2, dt2)
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1 and 2, and column(s) B are missing from argument(s) 3 and 4"
+        dt3 = DataTable(A = 1, B = 1, C = 1, D = 1, E = 1)
+        err = @test_throws ArgumentError vcat(dt1, dt2, dt3)
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1, and column(s) B are missing from argument(s) 2, and column(s) F are missing from argument(s) 3"
+        err = @test_throws ArgumentError vcat(dt1, dt1, dt2, dt2, dt3, dt3)
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1 and 2, and column(s) B are missing from argument(s) 3 and 4, and column(s) F are missing from argument(s) 5 and 6"
+        err = @test_throws ArgumentError vcat(dt1, dt1, dt1, dt2, dt2, dt2, dt3, dt3, dt3)
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1, 2 and 3, and column(s) B are missing from argument(s) 4, 5 and 6, and column(s) F are missing from argument(s) 7, 8 and 9"
+        # dt4 is a superset of names found in all other datatables and won't be shown in error
+        dt4 = DataTable(A = 1, B = 1, C = 1, D = 1, E = 1, F = 1)
+        err = @test_throws ArgumentError vcat(dt1, dt2, dt3, dt4)
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1, and column(s) B are missing from argument(s) 2, and column(s) F are missing from argument(s) 3"
+        err = @test_throws ArgumentError vcat(dt1, dt1, dt2, dt2, dt3, dt3, dt4, dt4)
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1 and 2, and column(s) B are missing from argument(s) 3 and 4, and column(s) F are missing from argument(s) 5 and 6"
+        err = @test_throws ArgumentError vcat(dt1, dt1, dt1, dt2, dt2, dt2, dt3, dt3, dt3, dt4, dt4, dt4)
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1, 2 and 3, and column(s) B are missing from argument(s) 4, 5 and 6, and column(s) F are missing from argument(s) 7, 8 and 9"
+        err = @test_throws ArgumentError vcat(dt1, dt2, dt3, dt4, dt1, dt2, dt3, dt4, dt1, dt2, dt3, dt4)
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1, 5 and 9, and column(s) B are missing from argument(s) 2, 6 and 10, and column(s) F are missing from argument(s) 3, 7 and 11"
     end
 end

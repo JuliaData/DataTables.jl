@@ -214,8 +214,9 @@ function unstack(dt::AbstractDataTable, rowkey::Int, colkey::Int, value::Int)
             payload[j][i]  = valuecol[k]
         end
     end
-    col = typeof(similar_nullable(dt[rowkey], 1))(levels(refkeycol))
-    insert!(payload, 1, col, _names(dt)[rowkey])
+    levs = levels(refkeycol)
+    col = similar_nullable(dt[rowkey], length(levs))
+    insert!(payload, 1, copy!(col, levs), _names(dt)[rowkey])
 end
 unstack(dt::AbstractDataTable, rowkey, colkey, value) =
     unstack(dt, index(dt)[rowkey], index(dt)[colkey], index(dt)[value])
