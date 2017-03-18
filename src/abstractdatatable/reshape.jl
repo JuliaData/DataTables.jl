@@ -53,6 +53,11 @@ melt(dt::AbstractDataTable, [id_vars], [measure_vars];
   column `:variable` a Vector of Symbols with the `measure_vars` name,
   and with columns for each of the `id_vars`.
 
+See also `stackdt` and `meltdt` for stacking methods that return a
+view into the original DataTable. See `unstack` for converting from
+long to wide format.
+
+
 ### Examples
 
 ```julia
@@ -135,6 +140,7 @@ end
 melt(dt::AbstractDataTable; variable_name::Symbol=:variable, value_name::Symbol=:value) =
     stack(dt; variable_name=variable_name, value_name=value_name)
 
+
 ##############################################################################
 ##
 ## unstack()
@@ -188,17 +194,28 @@ function unstack(dt::AbstractDataTable, rowkey::Int, colkey::Int, value::Int)
     # `rowkey` integer indicating which column to place along rows
     # `colkey` integer indicating which column to place along column headers
     # `value` integer indicating which column has values
-    values = dt[value]
-    newcols = dt[colkey]
-    uniquenewcols = unique(newcols)
-    ncol = length(uniquenewcols) + 1
-    columns = Vector{Any}(ncol)
-    columns[1] = unique(dt[rowkey])
-    for (i,coli) in enumerate(2:ncol)
-        columns[coli] = values[find(newcols .== uniquenewcols[i])]
+    refkeycol = NullableCategoricalArray(dt[rowkey])
+    levels!(refkeycol, unique(dt[rowkey]))
+    valuecol = dt[value]
+    keycol = NullableCategoricalArray(dt[colkey])
+    levels!(keycol, unique(dt[colkey]))
+    Nrow = length(refkeycol.pool)
+    Ncol = length(keycol.pool)
+    payload = DataTable(Any[similar_nullable(valuecol, Nrow) for i in 1:Ncol], map(Symbol, levels(keycol)))
+    nowarning = true
+    for k in 1:nrow(dt)
+        j = Int(CategoricalArrays.order(keycol.pool)[keycol.refs[k]])
+        i = Int(CategoricalArrays.order(refkeycol.pool)[refkeycol.refs[k]])
+        if i > 0 && j > 0
+            if nowarning && !isnull(payload[j][i])
+                warn("Duplicate entries in unstack.")
+                nowarning = false
+            end
+            payload[j][i]  = valuecol[k]
+        end
     end
-    colnames = vcat(names(dt)[rowkey], Symbol.(uniquenewcols))
-    DataTable(columns, colnames)
+    col = typeof(similar_nullable(dt[rowkey], 1))(levels(refkeycol))
+    insert!(payload, 1, col, _names(dt)[rowkey])
 end
 unstack(dt::AbstractDataTable, rowkey, colkey, value) =
     unstack(dt, index(dt)[rowkey], index(dt)[colkey], index(dt)[value])
@@ -208,19 +225,37 @@ unstack(dt::AbstractDataTable, colkey, value) =
     unstack(dt, index(dt)[colkey], index(dt)[value])
 
 function unstack(dt::AbstractDataTable, colkey::Int, value::Int)
-    anchor = unique(dt[deleteat!(names(dt), [colkey, value])])
-    groups = groupby(dt, names(anchor))
-    newcolnames = unique(dt[colkey])
-    newcols = DataTable(Any[typeof(dt[value])(size(anchor,1)) for n in newcolnames], Symbol.(newcolnames))
-    for (i, g) in enumerate(groups)
-        for col in newcolnames
-            newcols[i, Symbol(col)] = g[g[colkey] .== col, value][1]
+    # group on anything not a key or value:
+    g = groupby(dt, setdiff(_names(dt), _names(dt)[[colkey, value]]))
+    groupidxs = [g.idx[g.starts[i]:g.ends[i]] for i in 1:length(g.starts)]
+    rowkey = zeros(Int, size(dt, 1))
+    for i in 1:length(groupidxs)
+        rowkey[groupidxs[i]] = i
+    end
+    keycol = NullableCategoricalArray(dt[colkey])
+    levels!(keycol, unique(dt[colkey]))
+    valuecol = dt[value]
+    dt1 = nullify!(dt[g.idx[g.starts], g.cols])
+    Nrow = length(g)
+    Ncol = length(levels(keycol))
+    dt2 = DataTable(Any[similar_nullable(valuecol, Nrow) for i in 1:Ncol], map(Symbol, levels(keycol)))
+    nowarning = true
+    for k in 1:nrow(dt)
+        j = Int(CategoricalArrays.order(keycol.pool)[keycol.refs[k]])
+        i = rowkey[k]
+        if i > 0 && j > 0
+            if nowarning && !isnull(dt2[j][i])
+                warn("Duplicate entries in unstack at row $k.")
+                nowarning = false
+            end
+            dt2[j][i]  = valuecol[k]
         end
     end
-    hcat(anchor, newcols)
+    hcat(dt1, dt2)
 end
 
 unstack(dt::AbstractDataTable) = unstack(dt, :id, :variable, :value)
+
 
 ##############################################################################
 ##

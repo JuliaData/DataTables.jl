@@ -286,25 +286,48 @@ module TestDataTable
         @test nothing == describe(f, NullableCategoricalArray(Nullable{String}["1", "2", Nullable()]))
     end
 
-    dt = DataTable(Fish = CategoricalArray(["Bob", "Bob", "Batman", "Batman"]),
-                   Key = ["Mass", "Color", "Mass", "Color"],
-                   Value = ["12 g", "Red", "18 g", "Grey"])
-    # Check that reordering levels does not confuse unstack
-    levels!(dt[1], ["XXX", "Bob", "Batman"])
-    #Unstack specifying a row column
-    dt2 = unstack(dt, :Fish, :Key, :Value)
-    #Unstack without specifying a row column
-    dt3 = unstack(dt, :Key, :Value)
-    #The expected output
-    dt4 = DataTable(Fish = ["Bob", "Batman"],
-                    Mass = ["12 g", "18 g"],
-                    Color = ["Red", "Grey"] )
-    @test isequal(dt2, dt4)
-    @test isequal(dt3, dt4)
-    # can't assign Nullable() to a typed column
-    #Make sure unstack works with NULLs at the start of the value column
-    # dt[1,:Value] = Nullable()
-    dt2 = unstack(dt,:Fish, :Key, :Value)
+    @testset "unstacking and nullables" begin
+        dtA = DataTable(Fish = CategoricalArray(["Bob", "Bob", "Batman", "Batman"]),
+                        Key = ["Mass", "Color", "Mass", "Color"],
+                        Value = ["12 g", "Red", "18 g", "Grey"])
+        # Check that reordering levels does not confuse unstack
+        levels!(dtA[1], ["XXX", "Bob", "Batman"])
+        # should all be the same, just different column types
+        dt2A = unstack(dtA, :Fish, :Key, :Value)
+        dt3A = unstack(dtA, :Key, :Value)
+        #The expected output
+        dt4A = DataTable(Fish = NullableCategoricalArray(["Bob", "Batman"]),
+                         Mass = NullableArray(["12 g", "18 g"]),
+                         Color = NullableArray(["Red", "Grey"]))
+        @test dt2A == dt3A == dt4A
+
+        dtB = DataTable(Fish = CategoricalArray(["Bob", "Bob", "Batman", "Batman"]),
+                        Key = CategoricalArray(["Mass", "Color", "Mass", "Color"]),
+                        Value = CategoricalArray(["12 g", "Red", "18 g", "Grey"]))
+        dt2B = unstack(dtB, :Fish, :Key, :Value)
+        dt3B = unstack(dtB, :Key, :Value)
+        # fixme, these are all being reordered by NullableCategoricalArray constructor
+        dt4B = DataTable(Fish = NullableCategoricalArray(["Batman", "Bob"]),
+                         Color = NullableCategoricalArray(["Grey", "Red"]),
+                         Mass = NullableCategoricalArray(["18 g", "12 g"]))
+        @test dt2B == dt3B[[2,1], :] == dt4B
+
+        # test multiple entries in unstack error
+        dt = DataTable(id=[1, 2, 1, 2], variable=["a", "b", "a", "b"], value=[3, 4, 5, 6])
+        a = unstack(dt, :id, :variable, :value)
+        b = unstack(dt, :variable, :value)
+        @test a == b == DataTable(id = Nullable[1, 2], a = Nullable[5, Nullable()], b =  Nullable[Nullable(), 6])
+
+        dt = DataTable(id=1:2, variable=["a", "b"], value=3:4)
+        a = unstack(dt, :id, :variable, :value)
+        b = unstack(dt, :variable, :value)
+        @test a == b == DataTable(id = Nullable[1, 2], a = Nullable[3, Nullable()], b =  Nullable[Nullable(), 4])
+
+        dt = DataTable(id=1:2, variable=["a", "b"], value=3:4)
+        a = unstack(dt, :id, :variable, :value)
+        b = unstack(dt, :variable, :value)
+        @test a == b == DataTable(id = Nullable[1, 2], a = [3, Nullable()], b = [Nullable(), 4])
+    end
 
     dt = DataTable(A = 1:10, B = 'A':'J')
     @test !(dt[:,:] === dt)

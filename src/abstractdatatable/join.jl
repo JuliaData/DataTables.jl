@@ -3,14 +3,17 @@
 ##
 
 # Like similar, but returns a nullable array
-similar_nullable{T}(dv::AbstractArray{T}, dims::Union{Int, Tuple{Vararg{Int}}}) =
-    NullableArray(T, dims)
+similar_nullable{T}(dv::AbstractVector{T}, dims::Union{Int, Tuple{Vararg{Int}}}) =
+    NullableVector{T}(dims)
 
-similar_nullable{T<:Nullable}(dv::AbstractArray{T}, dims::Union{Int, Tuple{Vararg{Int}}}) =
-    NullableArray(eltype(T), dims)
+similar_nullable{T<:Nullable}(dv::AbstractVector{T}, dims::Union{Int, Tuple{Vararg{Int}}}) =
+    NullableVector{eltype(T)}(dims)
 
-similar_nullable{T,R}(dv::CategoricalArray{T,R}, dims::Union{Int, Tuple{Vararg{Int}}}) =
-    NullableCategoricalArray(T, dims)
+similar_nullable{T,R}(dv::CategoricalVector{T,R}, dims::Union{Int, Tuple{Vararg{Int}}}) =
+    NullableCategoricalVector{T}(dims)
+
+similar_nullable{T,R}(dv::NullableCategoricalVector{T,R}, dims::Union{Int, Tuple{Vararg{Int}}}) =
+    NullableCategoricalVector{T}(dims)
 
 # helper structure for DataTables joining
 immutable DataTableJoiner{DT1<:AbstractDataTable, DT2<:AbstractDataTable}

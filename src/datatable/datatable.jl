@@ -147,13 +147,13 @@ function DataTable{T<:Type}(column_eltypes::AbstractVector{T}, cnames::AbstractV
         elty = column_eltypes[j]
         if elty <: Nullable
             if eltype(elty) <: CategoricalValue
-                columns[j] = NullableCategoricalArray{eltype(elty).parameters[1]}(nrows)
+                columns[j] = NullableCategoricalVector{eltype(elty).parameters[1]}(nrows)
             else
-                columns[j] = NullableArray{eltype(elty)}(nrows)
+                columns[j] = NullableVector{eltype(elty)}(nrows)
             end
         else
             if elty <: CategoricalValue
-                columns[j] = CategoricalArray{elty.parameters[1]}(nrows)
+                columns[j] = CategoricalVector{elty.parameters[1]}(nrows)
             else
                 columns[j] = Vector{elty}(nrows)
             end

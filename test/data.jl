@@ -192,9 +192,9 @@ module TestData
     d1us = unstack(d1s, :id, :variable, :value)
     d1us2 = unstack(d1s2)
     d1us3 = unstack(d1s2, :variable, :value)
-    @test d1us[:a] == d1[:a]
-    @test d1us2[:d] == d1[:d]
-    @test d1us2[:3] == d1[:d]
+    @test isequal(d1us[:a], NullableArray(d1[:a]))
+    @test isequal(d1us2[:d], NullableArray(d1[:d]))
+    @test isequal(d1us2[:3], NullableArray(d1[:d]))
 
 
 
