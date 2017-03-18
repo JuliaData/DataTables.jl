@@ -716,7 +716,7 @@ Base.hcat(dt1::AbstractDataTable, dt2::AbstractDataTable, dtn::AbstractDataTable
 Vertically concatenate `AbstractDataTables` that have the same column names in
 the same order.
 
-```julia
+```jldoctest
 julia> dt1 = DataTable(A=1:3, B=1:3);
 
 julia> dt2 = DataTable(A=4:6, B=4:6);
