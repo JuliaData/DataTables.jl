@@ -747,13 +747,23 @@ function Base.vcat(dts::AbstractDataTable...)
     uniqueheaders = unique(allheaders[notempty])
     if length(uniqueheaders) == 0
         return DataTable()
-    elseif length(uniqueheaders) > 1
-        estring = Vector{String}(length(uniqueheaders))
-        for (i,u) in enumerate(uniqueheaders)
-            indices = string.(find(x -> x == u, allheaders))
-            estring[i] = "columns ($(join(u, ", "))) of input(s) ($(join(indices, ", ")))"
+    end
+    coldiff = setdiff(union(uniqueheaders...), intersect(uniqueheaders...))
+    if length(uniqueheaders) > 1
+        if !isempty(coldiff)
+            headerlengths = length.(uniqueheaders)
+            minheaderloci = find(headerlengths .== minimum(headerlengths))
+            minheaders = uniqueheaders[minheaderloci[1]]
+            throw(ArgumentError("column(s) ($(join(string.(coldiff), ", "))) are missing from argument(s) ($(join(string.(minheaderloci), ", ")))"))
+        else
+            estrings = Vector{String}(length(uniqueheaders))
+            for (i, u) in enumerate(uniqueheaders)
+                indices = find(a -> a == u, allheaders)
+                indices = join(string.(indices), ", ")
+                estrings[i] = "column order of argument(s) ($indices)"
+            end
+            throw(ArgumentError(join(estrings, " != ")))
         end
-        throw(ArgumentError(join(estring, " != ")))
     else
         header = uniqueheaders[1]
         dts_to_vcat = dts[notempty]
