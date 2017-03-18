@@ -721,8 +721,6 @@ julia> dt1 = DataTable(A=1:3, B=1:3);
 
 julia> dt2 = DataTable(A=4:6, B=4:6);
 
-julia> dt3 = DataTable(A=7:9, B=7:9, C=7:9);
-
 julia> vcat(dt1, dt2)
 6×2 DataTables.DataTable
 │ Row │ A │ B │
@@ -733,9 +731,6 @@ julia> vcat(dt1, dt2)
 │ 4   │ 4 │ 4 │
 │ 5   │ 5 │ 5 │
 │ 6   │ 6 │ 6 │
-
-julia> vcat(dt1, dt2, dt3)
-ERROR: ArgumentError: columns (A, B) of input(s) (1, 2) != columns (A, B, C) of input(s) (3)
 ```
 """
 Base.vcat(dt::AbstractDataTable) = dt
