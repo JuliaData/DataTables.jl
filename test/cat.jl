@@ -131,6 +131,7 @@ module TestCat
         @test_throws ArgumentError vcat(dt1, dt1, dt1, dt1, dt2, dt2, dt2, dt2)
         dt3 = DataTable(A = 1, B = 1, C = 1)
         @test_throws ArgumentError vcat(dt1, dt3)
+        @test_throws ArgumentError vcat(dt1, dt1, dt3, dt3)
         @test_throws ArgumentError vcat(dt2, dt3)
         dt4 = DataTable(A = 1, B = 1, C = 1, D = 1)
         @test_throws ArgumentError vcat(dt1, dt4)
