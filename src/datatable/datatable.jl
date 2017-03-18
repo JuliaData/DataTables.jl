@@ -83,7 +83,7 @@ type DataTable <: AbstractDataTable
         minlen, maxlen = extrema(lengths)
         if minlen == 0 && maxlen == 0
             return new(columns, colindex)
-        elseif minlen != maxlen
+        elseif minlen != maxlen || minlen == maxlen == 1
             # recycle scalars
             for i in 1:length(columns)
                 typeof(columns[i]) <: AbstractArray && continue
@@ -101,12 +101,8 @@ type DataTable <: AbstractDataTable
         for (i,c) in enumerate(columns)
             if isa(c, Range)
                 columns[i] = collect(c)
-            elseif !isa(c, AbstractVector)
-                if isa(c, AbstractArray)
+            elseif !isa(c, AbstractVector) && isa(c, AbstractArray)
                     throw(DimensionMismatch("columns must be 1-dimensional"))
-                else
-                    columns[i] = [c]
-                end
             else
                 columns[i] = c
             end

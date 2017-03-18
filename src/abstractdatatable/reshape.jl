@@ -269,17 +269,25 @@ unstack(dt::AbstractDataTable) = unstack(dt, :id, :variable, :value)
 """
 An AbstractVector{Any} that is a linear, concatenated view into
 another set of AbstractVectors
+
 NOTE: Not exported.
+
 ### Constructor
+
 ```julia
 StackedVector(d::AbstractVector...)
 ```
+
 ### Arguments
+
 * `d...` : one or more AbstractVectors
+
 ### Examples
+
 ```julia
 StackedVector(Any[[1,2], [9,10], [11,12]])  # [1,2,9,10,11,12]
 ```
+
 """
 type StackedVector <: AbstractVector{Any}
     components::Vector{Any}
@@ -319,24 +327,33 @@ CategoricalArrays.CategoricalArray(v::StackedVector) = CategoricalArray(v[:]) # 
 """
 An AbstractVector that is a view into another AbstractVector with
 repeated elements
+
 NOTE: Not exported.
+
 ### Constructor
+
 ```julia
 RepeatedVector(parent::AbstractVector, inner::Int, outer::Int)
+
 ```
+
 ### Arguments
+
 * `parent` : the AbstractVector that's repeated
 * `inner` : the numer of times each element is repeated
 * `outer` : the numer of times the whole vector is repeated after
   expanded by `inner`
 `inner` and `outer` have the same meaning as similarly named arguments
 to `repeat`.
+
 ### Examples
+
 ```julia
 RepeatedVector([1,2], 3, 1)   # [1,1,1,2,2,2]
 RepeatedVector([1,2], 1, 3)   # [1,2,1,2,1,2]
 RepeatedVector([1,2], 2, 2)   # [1,2,1,2,1,2,1,2]
 ```
+
 """
 type RepeatedVector{T} <: AbstractVector{T}
     parent::AbstractVector{T}
@@ -382,28 +399,37 @@ end
 A stacked view of a DataTable (long format)
 Like `stack` and `melt`, but a view is returned rather than data
 copies.
+
 ```julia
 stackdt(dt::AbstractDataTable, [measure_vars], [id_vars];
         variable_name::Symbol=:variable, value_name::Symbol=:value)
 meltdt(dt::AbstractDataTable, [id_vars], [measure_vars];
        variable_name::Symbol=:variable, value_name::Symbol=:value)
 ```
+
 ### Arguments
+
 * `dt` : the wide AbstractDataTable
+
 * `measure_vars` : the columns to be stacked (the measurement
   variables), a normal column indexing type, like a Symbol,
   Vector{Symbol}, Int, etc.; for `melt`, defaults to all
   variables that are not `id_vars`
+
 * `id_vars` : the identifier columns that are repeated during
   stacking, a normal column indexing type; for `stack` defaults to all
   variables that are not `measure_vars`
+
 ### Result
+
 * `::DataTable` : the long-format datatable with column `:value`
   holding the values of the stacked columns (`measure_vars`), with
   column `:variable` a Vector of Symbols with the `measure_vars` name,
   and with columns for each of the `id_vars`.
+
 The result is a view because the columns are special AbstractVectors
 that return indexed views into the original DataTable.
+
 ### Examples
 ```julia
 d1 = DataTable(a = repeat([1:3;], inner = [4]),
@@ -411,10 +437,12 @@ d1 = DataTable(a = repeat([1:3;], inner = [4]),
                c = randn(12),
                d = randn(12),
                e = map(string, 'a':'l'))
+
 d1s = stackdt(d1, [:c, :d])
 d1s2 = stackdt(d1, [:c, :d], [:a])
 d1m = meltdt(d1, [:a, :b, :e])
 ```
+
 """
 function stackdt(dt::AbstractDataTable, measure_vars::Vector{Int},
                  id_vars::Vector{Int}; variable_name::Symbol=:variable,
