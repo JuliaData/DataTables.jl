@@ -194,10 +194,8 @@ function unstack(dt::AbstractDataTable, rowkey::Int, colkey::Int, value::Int)
     # `colkey` integer indicating which column to place along column headers
     # `value` integer indicating which column has values
     refkeycol = NullableCategoricalArray(dt[rowkey])
-    levels!(refkeycol, unique(dt[rowkey]))
     valuecol = dt[value]
     keycol = NullableCategoricalArray(dt[colkey])
-    levels!(keycol, unique(dt[colkey]))
     Nrow = length(refkeycol.pool)
     Ncol = length(keycol.pool)
     payload = DataTable(Any[similar_nullable(valuecol, Nrow) for i in 1:Ncol], map(Symbol, levels(keycol)))
@@ -226,14 +224,13 @@ unstack(dt::AbstractDataTable, colkey, value) =
 
 function unstack(dt::AbstractDataTable, colkey::Int, value::Int)
     # group on anything not a key or value:
-    g = groupby(dt, setdiff(_names(dt), _names(dt)[[colkey, value]]))
+    g = groupby(dt, setdiff(_names(dt), _names(dt)[[colkey, value]]), sort=true)
     groupidxs = [g.idx[g.starts[i]:g.ends[i]] for i in 1:length(g.starts)]
     rowkey = zeros(Int, size(dt, 1))
     for i in 1:length(groupidxs)
         rowkey[groupidxs[i]] = i
     end
     keycol = NullableCategoricalArray(dt[colkey])
-    levels!(keycol, unique(dt[colkey]))
     valuecol = dt[value]
     dt1 = nullify!(dt[g.idx[g.starts], g.cols])
     Nrow = length(g)
