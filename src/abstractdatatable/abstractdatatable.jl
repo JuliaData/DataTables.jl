@@ -414,7 +414,7 @@ completecases(dt::AbstractDataTable[, indices])
 **Arguments**
 
 * `dt` : the AbstractDataTable
-* `dt` : which columns to check for `Null`s
+* `indices` : which columns to check for `Null`s
 
 **Result**
 
