@@ -408,12 +408,13 @@ end
 Indexes of complete cases (rows without null values)
 
 ```julia
-completecases(dt::AbstractDataTable)
+completecases(dt::AbstractDataTable[, indices])
 ```
 
 **Arguments**
 
 * `dt` : the AbstractDataTable
+* `dt` : which columns to check for `Null`s
 
 **Result**
 
@@ -438,6 +439,9 @@ function completecases(dt::AbstractDataTable)
     end
     res
 end
+
+completecases(dt::AbstractDataTable, indices) = completecases(dt[indices])
+
 
 """
 Remove rows with null values.
