@@ -438,16 +438,38 @@ end
     iscomplete(dt::AbstractDataTable, 1)
     iscomplete(dt::AbstractDataTable, 2)
 
-Check for the absence of nulls along rows, columns, or both
+Check if the entire datatable is free of nulls, or complete. Returns a
+BitArray when called by rows (1) or columns (2) indicating whether each
+row/column is free of missing data.
 
 # Examples
 
-```julia
-dt = DataTable(i = 1:10, x = rand(10), y = rand(["a", "b", "c"], 10))
-dt[[1,4,5], :x] = Nullable()
-dt[[9,10], :y] = Nullable()
-iscomplete(dt)
-iscomplete(dt, 1)
+```jldocttest
+julia> dt = DataTable(i = [1, 2, Nullable()], x = 1.0:3.0, y = ["a", Nullable(), "c"])
+3×3 DataTables.DataTable
+│ Row │ i     │ x   │ y     │
+├─────┼───────┼─────┼───────┤
+│ 1   │ 1     │ 1.0 │ a     │
+│ 2   │ 2     │ 2.0 │ #NULL │
+│ 3   │ #NULL │ 3.0 │ c     │
+
+julia> iscomplete(dt)
+false
+
+julia> iscomplete(dt, 1)
+3-element BitArray{1}:
+  true
+ false
+ false
+
+julia> iscomplete(dt, 2)
+3-element BitArray{1}:
+ false
+  true
+ false
+
+julia> iscomplete(DataTable(A = 1))
+true
 ```
 
 See also [`dropnull`](@ref) and [`dropnull!`](@ref).
@@ -580,18 +602,66 @@ end
     isunique(dt::AbstractDataTable, 1)
     isunique(dt::AbstractDataTable, 2)
 
-Check if all rows and columns in `dt` are unique, or check for uniqueness along
-a particular dimension.
+Check if all rows and columns in `dt` are unique. Returns a
+BitArray when called by rows (1) or columns (2) indicating whether each
+row/column is the first unique instance along the given dimension.
 
 See also [`unique`](@ref) and [`unique!`](@ref).
 
 # Examples
 
-```julia
-dt = DataTable(i = 1:10, x = rand(10), y = rand(["a", "b", "c"], 10))
-dt = vcat(dt, dt)
-isunique(dt)
-isunique(dt, 1)
+```jldoctest
+julia> dt = DataTable(i = 1:10, x = rand(10), y = rand(["a", "b", "c"], 10))
+10×3 DataTables.DataTable
+│ Row │ i  │ x        │ y │
+├─────┼────┼──────────┼───┤
+│ 1   │ 1  │ 0.848847 │ b │
+│ 2   │ 2  │ 0.264144 │ c │
+│ 3   │ 3  │ 0.8903   │ c │
+│ 4   │ 4  │ 0.674214 │ c │
+│ 5   │ 5  │ 0.17855  │ c │
+│ 6   │ 6  │ 0.141237 │ b │
+│ 7   │ 7  │ 0.712775 │ b │
+│ 8   │ 8  │ 0.781719 │ b │
+│ 9   │ 9  │ 0.160474 │ b │
+│ 10  │ 10 │ 0.241164 │ c │
+
+julia> dt2 = vcat(dt, dt);
+
+julia> isunique(dt)
+true
+
+julia> isunique(dt2)
+false
+
+julia> isunique(dt2, 1)
+20-element Array{Bool,1}:
+  true
+  true
+  true
+  true
+  true
+  true
+  true
+  true
+  true
+  true
+ false
+ false
+ false
+ false
+ false
+ false
+ false
+ false
+ false
+ false
+
+julia> isunique(dt2, 2)
+3-element BitArray{1}:
+ true
+ true
+ true
 ```
 
 """
