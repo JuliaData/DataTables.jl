@@ -54,7 +54,7 @@ module TestData
     @test size(dt6, 2) == 3
 
     #test_group("null handling")
-    @test nrow(dt5[completecases(dt5), :]) == 3
+    @test nrow(dt5[iscomplete(dt5, 1), :]) == 3
     @test nrow(dropnull(dt5)) == 3
     returned = dropnull(dt4)
     @test dt4 == returned && dt4 !== returned
@@ -310,28 +310,64 @@ module TestData
     # m2 = join(dt1, dt2, on = [:x1, :x2, :x3])
     # @test isequal(sort(m1[:a]), sort(m2[:a]))
 
-    # test nonunique() with extra argument
+    # test isunique() with extra argument
     dt1 = DataTable(a = ["a", "b", "a", "b", "a", "b"], b = 1:6, c = [1:3;1:3])
     dt = vcat(dt1, dt1)
-    @test find(nonunique(dt)) == collect(7:12)
-    @test find(nonunique(dt, :)) == collect(7:12)
-    @test find(nonunique(dt, Colon())) == collect(7:12)
-    @test find(nonunique(dt, :a)) == collect(3:12)
-    @test find(nonunique(dt, [:a, :c])) == collect(7:12)
-    @test find(nonunique(dt, [1, 3])) == collect(7:12)
-    @test find(nonunique(dt, 1)) == collect(3:12)
+    @test find(!, isunique(dt, 1)) == collect(7:12)
+    @test find(!, isunique(dt[:], 1)) == collect(7:12)
+    @test find(!, isunique(dt[Colon()], 1)) == collect(7:12)
+    @test find(!, isunique(dt[[:a]], 1)) == collect(3:12)
+    @test find(!, isunique(dt[[:a, :c]], 1)) == collect(7:12)
+    @test find(!, isunique(dt[[1, 3]], 1)) == collect(7:12)
+    @test find(!, isunique(dt[[1]], 1)) == collect(3:12)
 
     # Test unique() with extra argument
     @test isequal(unique(dt), dt1)
-    @test isequal(unique(dt, :), dt1)
-    @test isequal(unique(dt, Colon()), dt1)
-    @test isequal(unique(dt, 2:3), dt1)
-    @test isequal(unique(dt, 3), dt1[1:3,:])
-    @test isequal(unique(dt, [1, 3]), dt1)
-    @test isequal(unique(dt, [:a, :c]), dt1)
-    @test isequal(unique(dt, :a), dt1[1:2,:])
+    @test isequal(unique(dt[:]), dt1)
+    @test isequal(unique(dt[Colon()]), dt1)
+    @test isequal(dt[isunique(dt[2:3], 1), :], dt1)
+    @test isequal(dt[isunique(dt[[3]], 1), :], dt1[1:3,:])
+    @test isequal(dt[isunique(dt[[1, 3]], 1), :], dt1)
+    @test isequal(dt[isunique(dt[[:a, :c]], 1), :], dt1)
+    @test isequal(dt[isunique(dt[[:a]], 1), :], dt1[1:2,:])
 
     #test unique!() with extra argument
-    unique!(dt, [1, 3])
+    unique!(dt)
     @test isequal(dt, dt1)
+
+    @testset "iscomplete" begin
+        A = NullableArray(1:10)
+        B = NullableArray([collect(1:9)..., Nullable()])
+        C = [Nullable(i) for i in 1:10]
+        D = vcat(C[1:9], [Nullable()])
+        E = 1:10
+
+        nulls = DataTable(Any[A, B, C, D, E], [:A, :B, :C, :D, :E])
+        nullfree = DataTable(Any[A, C, E], [:A, :C, :E])
+        @test iscomplete(nulls) == false
+        @test iscomplete(nullfree) == true
+        @test iscomplete(nulls, 1) == push!(trues(9), false)
+        @test iscomplete(nulls, 2) == [true, false, true, false, true]
+        @test iscomplete(nullfree, 1) == trues(10)
+        @test iscomplete(nullfree, 2) == trues(3)
+    end
+
+    @testset "isunique" begin
+        A = 1:10
+        B = 1.0:10.0
+        C = rand(10)
+
+        dupfree = DataTable(A = A, B = B, C = C)
+        duprows = vcat(dupfree, dupfree)
+        dupcols = hcat(dupfree, dupfree)
+        @test isunique(dupfree) == true
+        @test isunique(duprows) == false
+        @test isunique(dupcols) == false
+        @test isunique(dupfree, 1) == trues(10)
+        @test isunique(duprows, 1) == vcat(trues(10), falses(10))
+        @test isunique(dupcols, 1) == trues(10)
+        @test isunique(dupfree, 2) == trues(3)
+        @test isunique(duprows, 2) == trues(3)
+        @test isunique(dupcols, 2) == vcat(trues(3), falses(3))
+    end
 end

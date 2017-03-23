@@ -4,7 +4,7 @@ module TestDuplicates
 
     dt = DataTable(a = [1, 2, 3, 3, 4])
     udt = DataTable(a = [1, 2, 3, 4])
-    @test isequal(nonunique(dt), [false, false, false, true, false])
+    @test isequal(.!isunique(dt, 1), [false, false, false, true, false])
     @test isequal(udt, unique(dt))
     unique!(dt)
     @test isequal(dt, udt)
@@ -15,8 +15,8 @@ module TestDuplicates
                                                               Nullable(), "b", "a", "a", "a"]))
     updt = DataTable(a = NullableCategoricalArray(Nullable{String}["a", "a", Nullable(), "b", Nullable()]),
                      b = NullableCategoricalArray(Nullable{String}["a", "b", Nullable(), "b", "a"]))
-    @test isequal(nonunique(pdt), [false, false, false, true, false, false, true, true])
-    @test isequal(nonunique(updt), falses(5) )
+    @test isequal(.!isunique(pdt, 1), [false, false, false, true, false, false, true, true])
+    @test isequal(.!isunique(updt, 1), falses(5))
     @test isequal(updt, unique(pdt))
     unique!(pdt)
     @test isequal(pdt, updt)
