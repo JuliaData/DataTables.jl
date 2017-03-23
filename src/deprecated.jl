@@ -14,7 +14,8 @@ import Base: keys, values, insert!
 @deprecate pool! categorical!
 
 @deprecate complete_cases! dropnull!
-@deprecate complete_cases completecases
+@deprecate complete_cases(dt) iscomplete(dt, 1)
+@deprecate completecases(dt) iscomplete(dt, 1)
 
 @deprecate sub(dt::AbstractDataTable, rows) view(dt, rows)
 

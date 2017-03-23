@@ -25,10 +25,10 @@ The following are normally implemented for AbstractDataTables:
 * [`tail`](@ref) : last `n` rows
 * `convert` : convert to an array
 * `NullableArray` : convert to a NullableArray
-* [`completecases`](@ref) : boolean vector of complete cases (rows with no nulls)
+* [`iscomplete`](@ref) : check for the absence of nulls along rows, columns, or both
 * [`dropnull`](@ref) : remove rows with null values
 * [`dropnull!`](@ref) : remove rows with null values in-place
-* [`nonunique`](@ref) : indexes of duplicate rows
+* [`isunique`](@ref) : check for unique data along rows, columns, or both
 * [`unique!`](@ref) : remove duplicate rows
 * `similar` : a DataTable with similar columns as `d`
 
@@ -434,39 +434,43 @@ end
 
 
 """
-Indexes of complete cases (rows without null values)
+    iscomplete(dt::AbstractDataTable)
+    iscomplete(dt::AbstractDataTable, 1)
+    iscomplete(dt::AbstractDataTable, 2)
 
-```julia
-completecases(dt::AbstractDataTable)
-```
+Check for the absence of nulls along rows, columns, or both
 
-**Arguments**
-
-* `dt` : the AbstractDataTable
-
-**Result**
-
-* `::Vector{Bool}` : indexes of complete cases
-
-See also [`dropnull`](@ref) and [`dropnull!`](@ref).
-
-**Examples**
+# Examples
 
 ```julia
 dt = DataTable(i = 1:10, x = rand(10), y = rand(["a", "b", "c"], 10))
 dt[[1,4,5], :x] = Nullable()
 dt[[9,10], :y] = Nullable()
-completecases(dt)
+iscomplete(dt)
+iscomplete(dt, 1)
 ```
 
+See also [`dropnull`](@ref) and [`dropnull!`](@ref).
 """
-function completecases(dt::AbstractDataTable)
-    res = trues(size(dt, 1))
-    for i in 1:size(dt, 2)
-        _nonnull!(res, dt[i])
+function iscomplete(dt::AbstractDataTable, dim::Int)
+    if dim > 2 || dim < 0
+        throw(ArgumentError("DataTables only have 2-dimensions"))
+    elseif dim == 1
+        res = trues(nrow(dt))
+        for i in 1:ncol(dt)
+            eltype(dt[i]) <: Nullable && _nonnull!(res, dt[i])
+        end
+        return res
+    else
+        res = trues(ncol(dt))
+        for i in 1:length(res)
+            res[i] = eltype(dt[i]) <: Nullable ? !anynull(dt[i]) : true
+        end
+        return res
     end
-    res
 end
+
+iscomplete(dt::AbstractDataTable) = nrow(dt) > ncol(dt) ? all(iscomplete(dt, 2)) : all(iscomplete(dt, 1))
 
 """
 Remove rows with null values.
@@ -483,7 +487,7 @@ dropnull(dt::AbstractDataTable)
 
 * `::AbstractDataTable` : the updated copy
 
-See also [`completecases`](@ref) and [`dropnull!`](@ref).
+See also [`iscomplete`](@ref) and [`dropnull!`](@ref).
 
 **Examples**
 
@@ -495,7 +499,7 @@ dropnull(dt)
 ```
 
 """
-dropnull(dt::AbstractDataTable) = deleterows!(copy(dt), find(!, completecases(dt)))
+dropnull(dt::AbstractDataTable) = deleterows!(copy(dt), find(!, iscomplete(dt, 1)))
 
 """
 Remove rows with null values in-place.
@@ -512,7 +516,7 @@ dropnull!(dt::AbstractDataTable)
 
 * `::AbstractDataTable` : the updated version
 
-See also [`dropnull`](@ref) and [`completecases`](@ref).
+See also [`dropnull`](@ref) and [`iscomplete`](@ref).
 
 **Examples**
 
@@ -524,7 +528,7 @@ dropnull!(dt)
 ```
 
 """
-dropnull!(dt::AbstractDataTable) = deleterows!(dt, find(!, completecases(dt)))
+dropnull!(dt::AbstractDataTable) = deleterows!(dt, find(!, iscomplete(dt, 1)))
 
 function Base.convert(::Type{Array}, dt::AbstractDataTable)
     convert(Matrix, dt)
@@ -572,65 +576,59 @@ function Base.convert{T}(::Type{NullableMatrix{T}}, dt::AbstractDataTable)
 end
 
 """
-Indexes of duplicate rows (a row that is a duplicate of a prior row)
+    isunique(dt::AbstractDataTable)
+    isunique(dt::AbstractDataTable, 1)
+    isunique(dt::AbstractDataTable, 2)
 
-```julia
-nonunique(dt::AbstractDataTable)
-nonunique(dt::AbstractDataTable, cols)
-```
-
-**Arguments**
-
-* `dt` : the AbstractDataTable
-* `cols` : a column indicator (Symbol, Int, Vector{Symbol}, etc.) specifying the column(s) to compare
-
-**Result**
-
-* `::Vector{Bool}` : indicates whether the row is a duplicate of some
-  prior row
+Check if all rows and columns in `dt` are unique, or check for uniqueness along
+a particular dimension.
 
 See also [`unique`](@ref) and [`unique!`](@ref).
 
-**Examples**
+# Examples
 
 ```julia
 dt = DataTable(i = 1:10, x = rand(10), y = rand(["a", "b", "c"], 10))
 dt = vcat(dt, dt)
-nonunique(dt)
-nonunique(dt, 1)
+isunique(dt)
+isunique(dt, 1)
 ```
 
 """
-function nonunique(dt::AbstractDataTable)
-    gslots = row_group_slots(dt)[3]
-    # unique rows are the first encountered group representatives,
-    # nonunique are everything else
-    res = fill(true, nrow(dt))
-    @inbounds for g_row in gslots
-        (g_row > 0) && (res[g_row] = false)
+function isunique(dt::AbstractDataTable, dim::Int)
+    if dim > 2 || dim < 0
+        throw(ArgumentError("DataTables only have 2-dimensions"))
+    elseif dim == 1
+        gslots = row_group_slots(dt)[3]
+        # unique rows are the first encountered group representatives
+        res = fill(false, nrow(dt))
+        @inbounds for g_row in gslots
+            (g_row > 0) && (res[g_row] = true)
+        end
+        return res
+    else
+        res = trues(ncol(dt))
+        for i in length(res):-1:1
+            for j in i-1:-1:1
+                a = eltype(dt[i])
+                b = eltype(dt[j])
+                a != b && continue
+                res[i] &= a <: Nullable ? !isequal(dt[i], dt[j]) : dt[i] != dt[j]
+            end
+        end
+        return res
     end
-    return res
 end
 
-nonunique(dt::AbstractDataTable, cols::Union{Real, Symbol}) = nonunique(dt[[cols]])
-nonunique(dt::AbstractDataTable, cols::Any) = nonunique(dt[cols])
-
-unique!(dt::AbstractDataTable) = deleterows!(dt, find(nonunique(dt)))
-unique!(dt::AbstractDataTable, cols::Any) = deleterows!(dt, find(nonunique(dt, cols)))
-
-# Unique rows of an AbstractDataTable.
-Base.unique(dt::AbstractDataTable) = dt[(!).(nonunique(dt)), :]
-Base.unique(dt::AbstractDataTable, cols::Any) = dt[(!).(nonunique(dt, cols)), :]
+isunique(dt::AbstractDataTable) = all(isunique(dt, 1)) && all(isunique(dt, 2))
 
 """
-Delete duplicate rows
+    unique(dt::AbstractDataTable)
+    unique(dt::AbstractDataTable, dim::Int)
+    unique!(dt::AbstractDataTable)
+    unique!(dt::AbstractDataTable, dim::Int)
 
-```julia
-unique(dt::AbstractDataTable)
-unique(dt::AbstractDataTable, cols)
-unique!(dt::AbstractDataTable)
-unique!(dt::AbstractDataTable, cols)
-```
+Drop duplicate rows, columns, or both
 
 **Arguments**
 
@@ -644,7 +642,7 @@ specifying the column(s) to compare.
 When `cols` is specified, the return DataTable contains complete rows,
 retaining in each case the first instance for which `dt[cols]` is unique.
 
-See also [`nonunique`](@ref).
+See also [`isunique`](@ref).
 
 **Examples**
 
@@ -657,6 +655,35 @@ unique!(dt)  # modifies dt
 ```
 
 """
+function unique!(dt::AbstractDataTable)
+    rowindices = find(!, isunique(dt, 1))
+    colindices = find(!, isunique(dt, 2))
+    delete!(deleterows!(dt, rowindices), colindices)
+end
+
+function unique!(dt::AbstractDataTable, dim::Int)
+    if dim > 2 || dim < 0
+        throw(ArgumentError("DataTables only have 2-dimensions"))
+    elseif dim == 1
+        rowindices = find(!, isunique(dt, 1))
+        return deleterows!(dt, rowindices)
+    else
+        colindices = find(!, isunique(dt, 2))
+        return delete!(dt, colindices)
+    end
+end
+
+# Unique rows of an AbstractDataTable.
+Base.unique(dt::AbstractDataTable) = dt[isunique(dt, 1), isunique(dt, 2)]
+function Base.unique(dt::AbstractDataTable, dim::Int)
+    if dim > 2 || dim < 0
+        throw(ArgumentError("DataTables only have 2-dimensions"))
+    elseif dim == 1
+        return dt[isunique(dt, 1), :]
+    else
+        return dt[isunique(dt, 2)]
+    end
+end
 (unique, unique!)
 
 function nonuniquekey(dt::AbstractDataTable)

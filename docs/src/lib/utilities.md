@@ -11,13 +11,13 @@ Pages = ["utilities.md"]
 ```@docs
 eltypes
 head
-completecases
+iscomplete
 describe
 dropnull
 dropnull!
 dump
 names!
-nonunique
+isunique
 rename
 rename!
 tail

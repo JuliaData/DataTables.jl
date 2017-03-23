@@ -1,6 +1,6 @@
 # Rows grouping.
 # Maps row contents to the indices of all the equal rows.
-# Used by groupby(), join(), nonunique()
+# Used by groupby(), join(), isunique()
 immutable RowGroupDict{T<:AbstractDataTable}
     "source data table"
     dt::T
