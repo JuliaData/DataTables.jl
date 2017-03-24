@@ -761,7 +761,8 @@ function Base.vcat(dts::AbstractDataTable...)
                                     string(matchingloci[end])
                 estrings[i] = "column(s) $headerdiff are missing from argument(s) $matchingloci"
             end
-            throw(ArgumentError(join(estrings, ", and ")))
+            length(estrings) == 1 ? throw(ArgumentError(estrings[1])) :
+                throw(ArgumentError(join(estrings[1:end-1], ", ") * ", and " * estrings[end]))
         else
             estrings = Vector{String}(length(uniqueheaders))
             for (i, u) in enumerate(uniqueheaders)

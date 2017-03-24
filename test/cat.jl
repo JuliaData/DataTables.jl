@@ -171,20 +171,20 @@ module TestCat
         @test err.value.msg == "column(s) E and F are missing from argument(s) 1 and 2, and column(s) B are missing from argument(s) 3 and 4"
         dt3 = DataTable(A = 1, B = 1, C = 1, D = 1, E = 1)
         err = @test_throws ArgumentError vcat(dt1, dt2, dt3)
-        @test err.value.msg == "column(s) E and F are missing from argument(s) 1, and column(s) B are missing from argument(s) 2, and column(s) F are missing from argument(s) 3"
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1, column(s) B are missing from argument(s) 2, and column(s) F are missing from argument(s) 3"
         err = @test_throws ArgumentError vcat(dt1, dt1, dt2, dt2, dt3, dt3)
-        @test err.value.msg == "column(s) E and F are missing from argument(s) 1 and 2, and column(s) B are missing from argument(s) 3 and 4, and column(s) F are missing from argument(s) 5 and 6"
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1 and 2, column(s) B are missing from argument(s) 3 and 4, and column(s) F are missing from argument(s) 5 and 6"
         err = @test_throws ArgumentError vcat(dt1, dt1, dt1, dt2, dt2, dt2, dt3, dt3, dt3)
-        @test err.value.msg == "column(s) E and F are missing from argument(s) 1, 2 and 3, and column(s) B are missing from argument(s) 4, 5 and 6, and column(s) F are missing from argument(s) 7, 8 and 9"
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1, 2 and 3, column(s) B are missing from argument(s) 4, 5 and 6, and column(s) F are missing from argument(s) 7, 8 and 9"
         # dt4 is a superset of names found in all other datatables and won't be shown in error
         dt4 = DataTable(A = 1, B = 1, C = 1, D = 1, E = 1, F = 1)
         err = @test_throws ArgumentError vcat(dt1, dt2, dt3, dt4)
-        @test err.value.msg == "column(s) E and F are missing from argument(s) 1, and column(s) B are missing from argument(s) 2, and column(s) F are missing from argument(s) 3"
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1, column(s) B are missing from argument(s) 2, and column(s) F are missing from argument(s) 3"
         err = @test_throws ArgumentError vcat(dt1, dt1, dt2, dt2, dt3, dt3, dt4, dt4)
-        @test err.value.msg == "column(s) E and F are missing from argument(s) 1 and 2, and column(s) B are missing from argument(s) 3 and 4, and column(s) F are missing from argument(s) 5 and 6"
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1 and 2, column(s) B are missing from argument(s) 3 and 4, and column(s) F are missing from argument(s) 5 and 6"
         err = @test_throws ArgumentError vcat(dt1, dt1, dt1, dt2, dt2, dt2, dt3, dt3, dt3, dt4, dt4, dt4)
-        @test err.value.msg == "column(s) E and F are missing from argument(s) 1, 2 and 3, and column(s) B are missing from argument(s) 4, 5 and 6, and column(s) F are missing from argument(s) 7, 8 and 9"
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1, 2 and 3, column(s) B are missing from argument(s) 4, 5 and 6, and column(s) F are missing from argument(s) 7, 8 and 9"
         err = @test_throws ArgumentError vcat(dt1, dt2, dt3, dt4, dt1, dt2, dt3, dt4, dt1, dt2, dt3, dt4)
-        @test err.value.msg == "column(s) E and F are missing from argument(s) 1, 5 and 9, and column(s) B are missing from argument(s) 2, 6 and 10, and column(s) F are missing from argument(s) 3, 7 and 11"
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1, 5 and 9, column(s) B are missing from argument(s) 2, 6 and 10, and column(s) F are missing from argument(s) 3, 7 and 11"
     end
 end
