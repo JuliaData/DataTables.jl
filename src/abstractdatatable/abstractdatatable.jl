@@ -31,6 +31,10 @@ The following are normally implemented for AbstractDataTables:
 * [`nonunique`](@ref) : indexes of duplicate rows
 * [`unique!`](@ref) : remove duplicate rows
 * `similar` : a DataTable with similar columns as `d`
+* `denullify` : unwrap `Nullable` columns
+* `denullify!` : unwrap `Nullable` columns in-place
+* `nullify` : convert all columns to NullableArrays
+* `nullify!` : convert all columns to NullableArrays in-place
 
 **Indexing**
 
@@ -706,83 +710,75 @@ Base.hcat(dt1::AbstractDataTable, dt2::AbstractDataTable) = hcat!(dt[:, :], dt2)
 Base.hcat(dt::AbstractDataTable, x, y...) = hcat!(hcat(dt, x), y...)
 Base.hcat(dt1::AbstractDataTable, dt2::AbstractDataTable, dtn::AbstractDataTable...) = hcat!(hcat(dt1, dt2), dtn...)
 
-# vcat only accepts DataTables. Finds union of columns, maintaining order
-# of first dt. Missing data become null values.
+"""
+    vcat(dts::AbstractDataTable...)
 
+Vertically concatenate `AbstractDataTables` that have the same column names in
+the same order.
+
+```jldoctest
+julia> dt1 = DataTable(A=1:3, B=1:3);
+
+julia> dt2 = DataTable(A=4:6, B=4:6);
+
+julia> vcat(dt1, dt2)
+6×2 DataTables.DataTable
+│ Row │ A │ B │
+├─────┼───┼───┤
+│ 1   │ 1 │ 1 │
+│ 2   │ 2 │ 2 │
+│ 3   │ 3 │ 3 │
+│ 4   │ 4 │ 4 │
+│ 5   │ 5 │ 5 │
+│ 6   │ 6 │ 6 │
+```
+"""
 Base.vcat(dt::AbstractDataTable) = dt
-
-Base.vcat(dts::AbstractDataTable...) = vcat(AbstractDataTable[dts...])
-
-function Base.vcat{T<:AbstractDataTable}(dts::Vector{T})
+function Base.vcat(dts::AbstractDataTable...)
     isempty(dts) && return DataTable()
-    coltyps, colnams, similars = _colinfo(dts)
-
-    res = DataTable()
-    Nrow = sum(nrow, dts)
-    for j in 1:length(colnams)
-        colnam = colnams[j]
-        col = similar(similars[j], coltyps[j], Nrow)
-
-        i = 1
-        for dt in dts
-            if haskey(dt, colnam)
-                copy!(col, i, dt[colnam])
+    allheaders = map(names, dts)
+    # don't vcat empty DataTables
+    notempty = find(x -> length(x) > 0, allheaders)
+    uniqueheaders = unique(allheaders[notempty])
+    if length(uniqueheaders) == 0
+        return DataTable()
+    end
+    if length(uniqueheaders) > 1
+        unionunique = union(uniqueheaders...)
+        coldiff = setdiff(unionunique, intersect(uniqueheaders...))
+        if !isempty(coldiff)
+            # if any datatables are a full superset of names, skip them
+            filter!(u -> Set(u) != Set(unionunique), uniqueheaders)
+            estrings = Vector{String}(length(uniqueheaders))
+            for (i, u) in enumerate(uniqueheaders)
+                matchingloci = find(h -> u == h, allheaders)
+                headerdiff = filter(x -> !in(x, u), coldiff)
+                headerdiff = length(headerdiff) > 1 ?
+                                join(string.(headerdiff[1:end-1]), ", ") * " and " * string(headerdiff[end]) :
+                                string(headerdiff[end])
+                matchingloci = length(matchingloci) > 1 ?
+                                    join(string.(matchingloci[1:end-1]), ", ") * " and " * string(matchingloci[end]) :
+                                    string(matchingloci[end])
+                estrings[i] = "column(s) $headerdiff are missing from argument(s) $matchingloci"
             end
-            i += size(dt, 1)
-        end
-
-        res[colnam] = col
-    end
-    res
-end
-
-_isnullable{T}(::AbstractArray{T}) = T <: Nullable
-const EMPTY_DATA = NullableArray(Void, 0)
-
-function _colinfo{T<:AbstractDataTable}(dts::Vector{T})
-    dt1 = dts[1]
-    colindex = copy(index(dt1))
-    coltyps = eltypes(dt1)
-    similars = collect(columns(dt1))
-    nonnull_ct = Int[_isnullable(c) for c in columns(dt1)]
-
-    for i in 2:length(dts)
-        dt = dts[i]
-        for j in 1:size(dt, 2)
-            col = dt[j]
-            cn, ct = _names(dt)[j], eltype(col)
-            if haskey(colindex, cn)
-                idx = colindex[cn]
-
-                oldtyp = coltyps[idx]
-                if !(ct <: oldtyp)
-                    coltyps[idx] = promote_type(oldtyp, ct)
-                    # Needed on Julia 0.4 since e.g.
-                    # promote_type(Nullable{Int}, Nullable{Float64}) gives Nullable{T},
-                    # which is not a usable type: fall back to Nullable{Any}
-                    if VERSION < v"0.5.0-dev" &&
-                       coltyps[idx] <: Nullable && !isa(coltyps[idx].types[2], DataType)
-                        coltyps[idx] = Nullable{Any}
-                    end
-                end
-                nonnull_ct[idx] += !_isnullable(col)
-            else # new column
-                push!(colindex, cn)
-                push!(coltyps, ct)
-                push!(similars, col)
-                push!(nonnull_ct, !_isnullable(col))
+            length(estrings) == 1 ? throw(ArgumentError(estrings[1])) :
+                throw(ArgumentError(join(estrings[1:end-1], ", ") * ", and " * estrings[end]))
+        else
+            estrings = Vector{String}(length(uniqueheaders))
+            for (i, u) in enumerate(uniqueheaders)
+                indices = find(a -> a == u, allheaders)
+                indices = length(indices) > 1 ?
+                            join(string.(indices[1:end-1]), ", ") * " and " * string(indices[end]) :
+                            string(indices[end])
+                estrings[i] = "column order of argument(s) $indices"
             end
+            throw(ArgumentError(join(estrings, " != ")))
         end
+    else
+        header = uniqueheaders[1]
+        dts_to_vcat = dts[notempty]
+        return DataTable(Any[vcat(map(dt -> dt[col], dts_to_vcat)...) for col in header], header)
     end
-
-    for j in 1:length(colindex)
-        if nonnull_ct[j] < length(dts) && !_isnullable(similars[j])
-            similars[j] = EMPTY_DATA
-        end
-    end
-    colnams = _names(colindex)
-
-    coltyps, colnams, similars
 end
 
 ##############################################################################
@@ -801,6 +797,180 @@ function Base.hash(dt::AbstractDataTable)
     return @compat UInt(h)
 end
 
+"""
+    denullify!(dt::AbstractDataTable)
+
+Convert columns with a `Nullable` element type without any null values
+to a non-`Nullable` equivalent array type. The table `dt` is modified in place.
+
+Columns in the returned `AbstractDataTable` may alias the columns of the
+input `dt`.
+
+# Examples
+
+```jldoctest
+julia> dt = DataTable(A = NullableArray(1:3), B = [Nullable(i) for i=1:3])
+3×2 DataTables.DataTable
+│ Row │ A │ B │
+├─────┼───┼───┤
+│ 1   │ 1 │ 1 │
+│ 2   │ 2 │ 2 │
+│ 3   │ 3 │ 3 │
+
+julia> eltypes(dt)
+2-element Array{Type,1}:
+ Nullable{Int64}
+ Nullable{Int64}
+
+julia> eltypes(denullify!(dt))
+2-element Array{Type,1}:
+ Int64
+ Int64
+
+julia> eltypes(dt)
+2-element Array{Type,1}:
+ Int64
+ Int64
+```
+
+See also [`denullify`](@ref) and [`nullify!`](@ref).
+"""
+function denullify!(dt::AbstractDataTable)
+    for i in 1:size(dt,2)
+        if !anynull(dt[i])
+            dt[i] = dropnull!(dt[i])
+        end
+    end
+    dt
+end
+
+"""
+    denullify(dt::AbstractDataTable)
+
+Return a copy of `dt` where columns with a `Nullable` element type without any
+null values have been converted to a non-`Nullable` equivalent array type.
+
+Columns in the returned `AbstractDataTable` may alias the columns of the
+input `dt`. If no aliasing is desired, use `denullify!(deepcopy(dt))`.
+
+# Examples
+
+```jldoctest
+julia> dt = DataTable(A = NullableArray(1:3), B = [Nullable(i) for i=1:3])
+3×2 DataTables.DataTable
+│ Row │ A │ B │
+├─────┼───┼───┤
+│ 1   │ 1 │ 1 │
+│ 2   │ 2 │ 2 │
+│ 3   │ 3 │ 3 │
+
+julia> eltypes(dt)
+2-element Array{Type,1}:
+ Nullable{Int64}
+ Nullable{Int64}
+
+julia> eltypes(denullify(dt))
+2-element Array{Type,1}:
+ Int64
+ Int64
+
+julia> eltypes(dt)
+2-element Array{Type,1}:
+ Nullable{Int64}
+ Nullable{Int64}
+```
+
+See also [`denullify!`] and [`nullify`](@ref).
+"""
+denullify(dt::AbstractDataTable) = denullify!(copy(dt))
+
+"""
+    nullify!(dt::AbstractDataTable)
+
+Convert all columns of `dt` to nullable arrays. The table `dt` is modified in place.
+
+Columns in the returned `AbstractDataTable` may alias the columns of the
+input `dt`.
+
+# Examples
+
+```jldoctest
+julia> dt = DataTable(A = 1:3, B = 1:3)
+3×2 DataTables.DataTable
+│ Row │ A │ B │
+├─────┼───┼───┤
+│ 1   │ 1 │ 1 │
+│ 2   │ 2 │ 2 │
+│ 3   │ 3 │ 3 │
+
+julia> eltypes(dt)
+2-element Array{Type,1}:
+ Int64
+ Int64
+
+julia> eltypes(nullify!(dt))
+2-element Array{Type,1}:
+ Nullable{Int64}
+ Nullable{Int64}
+
+julia> eltypes(dt)
+2-element Array{Type,1}:
+ Nullable{Int64}
+ Nullable{Int64}
+```
+
+See also [`nullify`](@ref) and [`denullify!`](@ref).
+"""
+function nullify!(dt::AbstractDataTable)
+    for i in 1:size(dt,2)
+        dt[i] = nullify(dt[i])
+    end
+    dt
+end
+
+nullify(x::AbstractArray) = convert(NullableArray, x)
+nullify(x::AbstractCategoricalArray) = convert(NullableCategoricalArray, x)
+
+"""
+    nullify(dt::AbstractDataTable)
+
+Return a copy of `dt` with all columns converted to nullable arrays.
+
+Columns in the returned `AbstractDataTable` may alias the columns of the
+input `dt`. If no aliasing is desired, use `nullify!(deepcopy(dt))`.
+
+# Examples
+
+```jldoctest
+julia> dt = DataTable(A = 1:3, B = 1:3)
+3×2 DataTables.DataTable
+│ Row │ A │ B │
+├─────┼───┼───┤
+│ 1   │ 1 │ 1 │
+│ 2   │ 2 │ 2 │
+│ 3   │ 3 │ 3 │
+
+julia> eltypes(dt)
+2-element Array{Type,1}:
+ Int64
+ Int64
+
+julia> eltypes(nullify(dt))
+2-element Array{Type,1}:
+ Nullable{Int64}
+ Nullable{Int64}
+
+julia> eltypes(dt)
+2-element Array{Type,1}:
+ Int64
+ Int64
+```
+
+See also [`nullify!`](@ref) and [`denullify`](@ref).
+"""
+function nullify(dt::AbstractDataTable)
+    nullify!(copy(dt))
+end
 
 ## Documentation for methods defined elsewhere
 

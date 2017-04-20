@@ -72,14 +72,14 @@ module TestCat
     dt[1:2, 1:2] = [3,2]
     dt[[true,false,false,true], 2:3] = [2,3]
 
-    vcat([])
-    vcat(null_dt)
-    vcat(null_dt, null_dt)
-    vcat(null_dt, dt)
-    vcat(dt, null_dt)
-    vcat(dt, dt)
-    vcat(dt, dt, dt)
-    @test vcat(DataTable[]) == DataTable()
+    @test vcat(null_dt) == DataTable()
+    @test vcat(null_dt, null_dt) == DataTable()
+    @test vcat(null_dt, dt) == dt
+    @test vcat(dt, null_dt) == dt
+    @test eltypes(vcat(dt, dt)) == [Float64, Float64, Int]
+    @test size(vcat(dt, dt)) == (size(dt,1)*2, size(dt,2))
+    @test eltypes(vcat(dt, dt, dt)) == [Float64, Float64, Int]
+    @test size(vcat(dt, dt, dt)) == (size(dt,1)*3, size(dt,2))
 
     alt_dt = deepcopy(dt)
     vcat(dt, alt_dt)
@@ -88,29 +88,14 @@ module TestCat
     dt[1] = zeros(Int, nrow(dt))
     vcat(dt, alt_dt)
 
-    # Don't fail on non-matching names
-    names!(alt_dt, [:A, :B, :C])
-    vcat(dt, alt_dt)
-
     dtr = vcat(dt4, dt4)
     @test size(dtr, 1) == 8
     @test names(dt4) == names(dtr)
     @test isequal(dtr, [dt4; dt4])
 
-    dtr = vcat(dt2, dt3)
-    @test size(dtr) == (8,2)
-    @test names(dt2) == names(dtr)
-    @test isnull(dtr[8,:x2])
-
     # Eltype promotion
-    # Fails on Julia 0.4 since promote_type(Nullable{Int}, Nullable{Float64}) gives Nullable{T}
-    if VERSION >= v"0.5.0-dev"
-        @test eltypes(vcat(DataTable(a = [1]), DataTable(a = [2.1]))) == [Nullable{Float64}]
-        @test eltypes(vcat(DataTable(a = NullableArray(Int, 1)), DataTable(a = [2.1]))) == [Nullable{Float64}]
-    else
-        @test eltypes(vcat(DataTable(a = [1]), DataTable(a = [2.1]))) == [Nullable{Any}]
-        @test eltypes(vcat(DataTable(a = NullableArray(Int, 1)), DataTable(a = [2.1]))) == [Nullable{Any}]
-    end
+    @test eltypes(vcat(DataTable(a = [1]), DataTable(a = [2.1]))) == [Float64]
+    @test eltypes(vcat(DataTable(a = NullableArray(Int, 1)), DataTable(a = [2.1]))) == [Nullable{Float64}]
 
     # Minimal container type promotion
     dta = DataTable(a = CategoricalArray([1, 2, 2]))
@@ -118,17 +103,11 @@ module TestCat
     dtc = DataTable(a = NullableArray([2, 3, 4]))
     dtd = DataTable(Any[2:4], [:a])
     dtab = vcat(dta, dtb)
-    dtac = vcat(dta, dtc)
-    @test isequal(dtab[:a], Nullable{Int}[1, 2, 2, 2, 3, 4])
-    @test isequal(dtac[:a], Nullable{Int}[1, 2, 2, 2, 3, 4])
-    @test isa(dtab[:a], NullableCategoricalVector{Int})
-    # Fails on Julia 0.4 since promote_type(Nullable{Int}, Nullable{Float64}) gives Nullable{T}
-    if VERSION >= v"0.5.0-dev"
-        @test isa(dtac[:a], NullableCategoricalVector{Int})
-    else
-        @test isa(dtac[:a], NullableCategoricalVector{Any})
-    end
-    # ^^ container may flip if container promotion happens in Base/DataArrays
+    @test isa(dtab[1], CategoricalArray)
+    dtac = vcat(nullify(dta), dtc)
+    @test isa(dtac[1], NullableCategoricalArray)
+    @test isequal(dtab[:a], [1, 2, 2, 2, 3, 4])
+    @test isa(dtab[:a], CategoricalVector{Int})
     dc = vcat(dtd, dtc)
     @test isequal(vcat(dtc, dtd), dc)
 
@@ -137,15 +116,75 @@ module TestCat
     @test isequal(vcat(dtd, dtc0, dtc), dc)
     @test eltypes(vcat(dtd, dtc0)) == eltypes(dc)
 
-    # Missing columns
-    rename!(dtd, :a, :b)
-    dtda = DataTable(b = NullableArray(Nullable{Int}[2, 3, 4, Nullable(), Nullable(), Nullable()]),
-                     a = NullableCategoricalVector(Nullable{Int}[Nullable(), Nullable(), Nullable(), 1, 2, 2]))
-    @test isequal(vcat(dtd, dta), dtda)
-
-    # Alignment
-    @test isequal(vcat(dtda, dtd, dta), vcat(dtda, dtda))
-
     # vcat should be able to concatenate different implementations of AbstractDataTable (PR #944)
     @test isequal(vcat(view(DataTable(A=1:3),2),DataTable(A=4:5)), DataTable(A=[2,4,5]))
+
+    @testset "vcat errors" begin
+        dt1 = DataTable(A = 1:3, B = 1:3)
+        dt2 = DataTable(A = 1:3)
+        # right missing 1 column
+        err = @test_throws ArgumentError vcat(dt1, dt2)
+        @test err.value.msg == "column(s) B are missing from argument(s) 2"
+        # left missing 1 column
+        err = @test_throws ArgumentError vcat(dt2, dt1)
+        @test err.value.msg == "column(s) B are missing from argument(s) 1"
+        # multiple missing 1 column
+        err = @test_throws ArgumentError vcat(dt1, dt2, dt2, dt2, dt2, dt2)
+        @test err.value.msg == "column(s) B are missing from argument(s) 2, 3, 4, 5 and 6"
+        # argument missing >1columns
+        dt1 = DataTable(A = 1:3, B = 1:3, C = 1:3, D = 1:3, E = 1:3)
+        err = @test_throws ArgumentError vcat(dt1, dt2)
+        @test err.value.msg == "column(s) B, C, D and E are missing from argument(s) 2"
+        # >1 arguments missing >1 columns
+        err = @test_throws ArgumentError vcat(dt1, dt2, dt2, dt2, dt2)
+        @test err.value.msg == "column(s) B, C, D and E are missing from argument(s) 2, 3, 4 and 5"
+        # out of order
+        dt2 = dt1[reverse(names(dt1))]
+        err = @test_throws ArgumentError vcat(dt1, dt2)
+        @test err.value.msg == "column order of argument(s) 1 != column order of argument(s) 2"
+        # left >1
+        err = @test_throws ArgumentError vcat(dt1, dt1, dt2)
+        @test err.value.msg == "column order of argument(s) 1 and 2 != column order of argument(s) 3"
+        # right >1
+        err = @test_throws ArgumentError vcat(dt1, dt2, dt2)
+        @test err.value.msg == "column order of argument(s) 1 != column order of argument(s) 2 and 3"
+        # left and right >1
+        err = @test_throws ArgumentError vcat(dt1, dt1, dt1, dt2, dt2, dt2)
+        @test err.value.msg == "column order of argument(s) 1, 2 and 3 != column order of argument(s) 4, 5 and 6"
+        # >2 groups out of order
+        srand(1)
+        dt3 = dt1[shuffle(names(dt1))]
+        err = @test_throws ArgumentError vcat(dt1, dt1, dt1, dt2, dt2, dt2, dt3, dt3, dt3, dt3)
+        @test err.value.msg == "column order of argument(s) 1, 2 and 3 != column order of argument(s) 4, 5 and 6 != column order of argument(s) 7, 8, 9 and 10"
+        # missing columns throws error before out of order columns
+        dt1 = DataTable(A = 1, B = 1)
+        dt2 = DataTable(A = 1)
+        dt3 = DataTable(B = 1, A = 1)
+        err = @test_throws ArgumentError vcat(dt1, dt2, dt3)
+        @test err.value.msg == "column(s) B are missing from argument(s) 2"
+        # unique columns for both sides
+        dt1 = DataTable(A = 1, B = 1, C = 1, D = 1)
+        dt2 = DataTable(A = 1, C = 1, D = 1, E = 1, F = 1)
+        err = @test_throws ArgumentError vcat(dt1, dt2)
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1, and column(s) B are missing from argument(s) 2"
+        err = @test_throws ArgumentError vcat(dt1, dt1, dt2, dt2)
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1 and 2, and column(s) B are missing from argument(s) 3 and 4"
+        dt3 = DataTable(A = 1, B = 1, C = 1, D = 1, E = 1)
+        err = @test_throws ArgumentError vcat(dt1, dt2, dt3)
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1, column(s) B are missing from argument(s) 2, and column(s) F are missing from argument(s) 3"
+        err = @test_throws ArgumentError vcat(dt1, dt1, dt2, dt2, dt3, dt3)
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1 and 2, column(s) B are missing from argument(s) 3 and 4, and column(s) F are missing from argument(s) 5 and 6"
+        err = @test_throws ArgumentError vcat(dt1, dt1, dt1, dt2, dt2, dt2, dt3, dt3, dt3)
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1, 2 and 3, column(s) B are missing from argument(s) 4, 5 and 6, and column(s) F are missing from argument(s) 7, 8 and 9"
+        # dt4 is a superset of names found in all other datatables and won't be shown in error
+        dt4 = DataTable(A = 1, B = 1, C = 1, D = 1, E = 1, F = 1)
+        err = @test_throws ArgumentError vcat(dt1, dt2, dt3, dt4)
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1, column(s) B are missing from argument(s) 2, and column(s) F are missing from argument(s) 3"
+        err = @test_throws ArgumentError vcat(dt1, dt1, dt2, dt2, dt3, dt3, dt4, dt4)
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1 and 2, column(s) B are missing from argument(s) 3 and 4, and column(s) F are missing from argument(s) 5 and 6"
+        err = @test_throws ArgumentError vcat(dt1, dt1, dt1, dt2, dt2, dt2, dt3, dt3, dt3, dt4, dt4, dt4)
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1, 2 and 3, column(s) B are missing from argument(s) 4, 5 and 6, and column(s) F are missing from argument(s) 7, 8 and 9"
+        err = @test_throws ArgumentError vcat(dt1, dt2, dt3, dt4, dt1, dt2, dt3, dt4, dt1, dt2, dt3, dt4)
+        @test err.value.msg == "column(s) E and F are missing from argument(s) 1, 5 and 9, column(s) B are missing from argument(s) 2, 6 and 10, and column(s) F are missing from argument(s) 3, 7 and 11"
+    end
 end

@@ -81,9 +81,9 @@ function stack(dt::AbstractDataTable, measure_vars::Vector{Int},
     cnames = names(dt)[id_vars]
     insert!(cnames, 1, value_name)
     insert!(cnames, 1, variable_name)
-    DataTable(Any[Compat.repeat(_names(dt)[measure_vars], inner=nrow(dt)),   # variable
-                  vcat([dt[c] for c in measure_vars]...),                    # value
-                  [Compat.repeat(dt[c], outer=N) for c in id_vars]...],      # id_var columns
+    DataTable(Any[repeat(_names(dt)[measure_vars], inner=nrow(dt)), # variable
+                  vcat([dt[c] for c in measure_vars]...),           # value
+                  [repeat(dt[c], outer=N) for c in id_vars]...],    # id_var columns
               cnames)
 end
 function stack(dt::AbstractDataTable, measure_var::Int, id_var::Int;
@@ -98,8 +98,8 @@ function stack(dt::AbstractDataTable, measure_vars::Vector{Int}, id_var::Int;
 end
 function stack(dt::AbstractDataTable, measure_var::Int, id_vars::Vector{Int};
                variable_name::Symbol=:variable, value_name::Symbol=:value)
-    stackdt(dt, [measure_var], id_vars;
-            variable_name=variable_name, value_name=value_name)
+    stack(dt, [measure_var], id_vars;
+          variable_name=variable_name, value_name=value_name)
 end
 function stack(dt::AbstractDataTable, measure_vars, id_vars;
                variable_name::Symbol=:variable, value_name::Symbol=:value)
@@ -198,12 +198,7 @@ function unstack(dt::AbstractDataTable, rowkey::Int, colkey::Int, value::Int)
     keycol = NullableCategoricalArray(dt[colkey])
     Nrow = length(refkeycol.pool)
     Ncol = length(keycol.pool)
-    T = eltype(valuecol)
-    if T <: Nullable
-        T = eltype(T)
-    end
-    payload = DataTable(Any[NullableArray(T, Nrow) for i in 1:Ncol],
-                        map(Symbol, levels(keycol)))
+    payload = DataTable(Any[similar_nullable(valuecol, Nrow) for i in 1:Ncol], map(Symbol, levels(keycol)))
     nowarning = true
     for k in 1:nrow(dt)
         j = Int(CategoricalArrays.order(keycol.pool)[keycol.refs[k]])
@@ -216,7 +211,9 @@ function unstack(dt::AbstractDataTable, rowkey::Int, colkey::Int, value::Int)
             payload[j][i]  = valuecol[k]
         end
     end
-    insert!(payload, 1, NullableArray(levels(refkeycol)), _names(dt)[rowkey])
+    levs = levels(refkeycol)
+    col = similar_nullable(dt[rowkey], length(levs))
+    insert!(payload, 1, copy!(col, levs), _names(dt)[rowkey])
 end
 unstack(dt::AbstractDataTable, rowkey, colkey, value) =
     unstack(dt, index(dt)[rowkey], index(dt)[colkey], index(dt)[value])
@@ -235,15 +232,10 @@ function unstack(dt::AbstractDataTable, colkey::Int, value::Int)
     end
     keycol = NullableCategoricalArray(dt[colkey])
     valuecol = dt[value]
-    dt1 = dt[g.idx[g.starts], g.cols]
+    dt1 = nullify!(dt[g.idx[g.starts], g.cols])
     Nrow = length(g)
     Ncol = length(levels(keycol))
-    T = eltype(valuecol)
-    if T <: Nullable
-        T = eltype(T)
-    end
-    dt2 = DataTable(Any[NullableArray(T, Nrow) for i in 1:Ncol],
-                    map(@compat(Symbol), levels(keycol)))
+    dt2 = DataTable(Any[similar_nullable(valuecol, Nrow) for i in 1:Ncol], map(Symbol, levels(keycol)))
     nowarning = true
     for k in 1:nrow(dt)
         j = Int(CategoricalArrays.order(keycol.pool)[keycol.refs[k]])

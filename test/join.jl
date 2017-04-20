@@ -2,8 +2,8 @@ module TestJoin
     using Base.Test
     using DataTables
 
-    name = DataTable(ID = [1, 2, 3], Name = ["John Doe", "Jane Doe", "Joe Blogs"])
-    job = DataTable(ID = [1, 2, 2, 4], Job = ["Lawyer", "Doctor", "Florist", "Farmer"])
+    name = DataTable(ID = NullableArray([1, 2, 3]), Name = NullableArray(["John Doe", "Jane Doe", "Joe Blogs"]))
+    job = DataTable(ID = NullableArray([1, 2, 2, 4]), Job = NullableArray(["Lawyer", "Doctor", "Florist", "Farmer"]))
 
     # Join on symbols or vectors of symbols
     join(name, job, on = :ID)
@@ -13,9 +13,9 @@ module TestJoin
     #@test_throws join(name, job)
 
     # Test output of various join types
-    outer = DataTable(ID = [1, 2, 2, 3, 4],
-                      Name = NullableArray(Nullable{String}["John Doe", "Jane Doe", "Jane Doe", "Joe Blogs", Nullable()]),
-                      Job = NullableArray(Nullable{String}["Lawyer", "Doctor", "Florist", Nullable(), "Farmer"]))
+    outer = DataTable(ID = NullableArray([1, 2, 2, 3, 4]),
+                      Name = NullableArray(["John Doe", "Jane Doe", "Jane Doe", "Joe Blogs", Nullable()]),
+                      Job = NullableArray(["Lawyer", "Doctor", "Florist", Nullable(), "Farmer"]))
 
     # (Tests use current column ordering but don't promote it)
     right = outer[Bool[!isnull(x) for x in outer[:Job]], [:ID, :Name, :Job]]
@@ -70,7 +70,7 @@ module TestJoin
     @test_throws ArgumentError join(dt1, dt2, on = :A, kind = :cross)
 
     # test empty inputs
-    simple_dt(len::Int, col=:A) = (dt = DataTable(); dt[col]=collect(1:len); dt)
+    simple_dt(len::Int, col=:A) = (dt = DataTable(); dt[col]=NullableArray(collect(1:len)); dt)
     @test isequal(join(simple_dt(0), simple_dt(0), on = :A, kind = :left),  simple_dt(0))
     @test isequal(join(simple_dt(2), simple_dt(0), on = :A, kind = :left),  simple_dt(2))
     @test isequal(join(simple_dt(0), simple_dt(2), on = :A, kind = :left),  simple_dt(0))
@@ -104,17 +104,73 @@ module TestJoin
     # Test that Array{Nullable} works when combined with NullableArray (#1088)
     dt = DataTable(Name = Nullable{String}["A", "B", "C"],
                    Mass = [1.5, 2.2, 1.1])
-    dt2 = DataTable(Name = ["A", "B", "C", "A"],
+    dt2 = DataTable(Name = Nullable{String}["A", "B", "C", "A"],
                     Quantity = [3, 3, 2, 4])
-    @test join(dt2, dt, on=:Name, kind=:left) == DataTable(Name = ["A", "B", "C", "A"],
-                                                           Quantity = [3, 3, 2, 4],
-                                                           Mass = [1.5, 2.2, 1.1, 1.5])
+    @test join(dt2, dt, on=:Name, kind=:left) == DataTable(Name = Nullable{String}["A", "B", "C", "A"],
+                                                           Quantity = Nullable{Int}[3, 3, 2, 4],
+                                                           Mass = Nullable{Float64}[1.5, 2.2, 1.1, 1.5])
 
     # Test that join works when mixing Array and NullableArray (#1151)
     dt = DataTable([collect(1:10), collect(2:11)], [:x, :y])
     dtnull = DataTable(x = 1:10, z = 3:12)
     @test join(dt, dtnull, on = :x) ==
-        DataTable([collect(1:10), collect(2:11), NullableArray(3:12)], [:x, :y, :z])
+        DataTable([collect(1:10), collect(2:11), collect(3:12)], [:x, :y, :z])
     @test join(dtnull, dt, on = :x) ==
-        DataTable([NullableArray(1:10), NullableArray(3:12), NullableArray(2:11)], [:x, :z, :y])
+        DataTable([collect(1:10), collect(3:12), collect(2:11)], [:x, :z, :y])
+
+    @testset "complete set of joins" begin
+        small = DataTable(id = [1, 3, 5], fid = [1.0, 3.0, 5.0])
+        large = DataTable(id = [0, 1, 2, 3, 4], fid = [0.0, 1.0, 2.0, 3.0, 4.0])
+        N = Nullable()
+
+        @test join(small, large, kind=:cross) == DataTable(id = repeat([1, 3, 5], inner=5),
+                                                           fid = repeat([1.0, 3.0, 5.0], inner=5),
+                                                           id_1 = repeat([0, 1, 2, 3, 4], outer=3),
+                                                           fid_1 = repeat([0.0, 1.0, 2.0, 3.0, 4.0], outer=3))
+        # id
+        @test join(small, large, on=:id, kind=:inner) == DataTable(id = [1, 3],
+                                                                   fid = [1.0, 3.0],
+                                                                   fid_1 = [1.0, 3.0])
+        @test join(small, large, on=:id, kind=:left) == nullify!(DataTable(id = [1, 3, 5],
+                                                                           fid = [1.0, 3.0, 5.0],
+                                                                           fid_1 = [1.0, 3.0, N]))
+        @test join(small, large, on=:id, kind=:right) == nullify!(DataTable(id = [1, 3, 0, 2, 4],
+                                                                            fid = [1.0, 3.0, N, N, N],
+                                                                            fid_1 = [1.0, 3.0, 0.0, 2.0, 4.0]))
+        @test join(small, large, on=:id, kind=:outer) == nullify!(DataTable(id = [1, 3, 5, 0, 2, 4],
+                                                                            fid = [1.0, 3.0, 5.0, N, N, N],
+                                                                            fid_1 = [1.0, 3.0, N, 0.0, 2.0, 4.0]))
+        @test join(small, large, on=:id, kind=:semi) == DataTable(id = [1, 3], fid = [1.0, 3.0])
+        @test join(small, large, on=:id, kind=:anti) == DataTable(id = 5, fid = 5.0)
+
+        # fid
+        @test join(small, large, on=:fid, kind=:inner) == DataTable(id = [1, 3],
+                                                                    fid = [1.0, 3.0],
+                                                                    id_1 = [1, 3])
+        @test join(small, large, on=:fid, kind=:left) == nullify!(DataTable(id = [1, 3, 5],
+                                                                            fid = [1.0, 3.0, 5.0],
+                                                                            id_1 = [1, 3, N]))
+        @test join(small, large, on=:fid, kind=:right) == nullify!(DataTable(id = [1, 3, N, N, N],
+                                                                             fid = [1.0, 3.0, 0.0, 2.0, 4.0],
+                                                                             id_1 = [1, 3, 0, 2, 4]))
+        @test join(small, large, on=:fid, kind=:outer) == nullify!(DataTable(id = [1, 3, 5, N, N, N],
+                                                                             fid = [1.0, 3.0, 5.0, 0.0, 2.0, 4.0],
+                                                                             id_1 = [1, 3, N, 0, 2, 4]))
+        @test join(small, large, on=:fid, kind=:semi) == DataTable(id = [1, 3], fid = [1.0, 3.0])
+        @test join(small, large, on=:fid, kind=:anti) == DataTable(id = 5, fid = 5.0)
+
+        # both
+        @test join(small, large, on=[:id, :fid], kind=:inner) == DataTable(id = [1, 3],
+                                                                           fid = [1.0, 3.0])
+        @test join(small, large, on=[:id, :fid], kind=:left) == nullify!(DataTable(id = [1, 3, 5],
+                                                                                   fid = [1.0, 3.0, 5.0]))
+        @test join(small, large, on=[:id, :fid], kind=:right) == nullify!(DataTable(id = [1, 3, 0, 2, 4],
+                                                                                    fid = [1.0, 3.0, 0.0, 2.0, 4.0]))
+        @test join(small, large, on=[:id, :fid], kind=:outer) == nullify!(DataTable(id = [1, 3, 5, 0, 2, 4],
+                                                                                    fid = [1.0, 3.0, 5.0, 0.0, 2.0, 4.0]))
+        @test join(small, large, on=[:id, :fid], kind=:semi) == DataTable(id = [1, 3],
+                                                                          fid = [1.0, 3.0])
+        @test join(small, large, on=[:id, :fid], kind=:anti) == DataTable(id = 5,
+                                                                          fid = 5.0)
+    end
 end
