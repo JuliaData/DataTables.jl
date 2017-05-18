@@ -55,13 +55,6 @@ module TestUtils
     pdata[1:end] = Nullable()
     @test DataTables.countnull(pdata) == 20
 
-    funs = [mean, sum, var, x -> sum(x)]
-    if string(funs[end]) == "(anonymous function)" # Julia < 0.5
-        @test DataTables._fnames(funs) == ["mean", "sum", "var", "λ1"]
-    else
-        @test DataTables._fnames(funs) == ["mean", "sum", "var", string(funs[end])]
-    end
-
     @testset "describe" begin
         io = IOBuffer()
         dt = DataTable(Any[collect(1:4), NullableArray(2:5),

@@ -175,19 +175,5 @@ function _setdiff{T}(a::AbstractVector{T}, b::T)
     diff
 end
 
-# Gets the name of a function. Used in groupedatatable/grouping.jl
-function _fnames{T<:Function}(fs::Vector{T})
-    λcounter = 0
-    names = map(fs) do f
-        name = string(f)
-        if name == "(anonymous function)" # Anonymous functions with Julia < 0.5
-            λcounter += 1
-            name = "λ$(λcounter)"
-        end
-        name
-    end
-    names
-end
-
 _isnull(x::Any) = false
 _isnull(x::Nullable) = isnull(x)
