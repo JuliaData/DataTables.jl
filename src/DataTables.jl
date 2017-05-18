@@ -11,13 +11,11 @@ module DataTables
 using Compat
 import Compat.String
 using Reexport
-@reexport using StatsBase
+using StatsBase
 import NullableArrays: dropnull, dropnull!
 @reexport using NullableArrays
 @reexport using CategoricalArrays
-using GZip
 using SortingAlgorithms
-
 using Base: Sort, Order
 import Base: ==, |>
 
@@ -74,7 +72,6 @@ export @~,
        tail,
 
        # Remove after deprecation period
-       read_rda,
        pool,
        pool!
 
