@@ -108,7 +108,7 @@ function stack(dt::AbstractDataTable, measure_vars, id_vars;
 end
 # no vars specified, by default select only numeric columns
 numeric_vars(dt::AbstractDataTable) =
-    [T <: AbstractFloat || (T <: Nullable && eltype(T) <: AbstractFloat)
+    [T <: AbstractFloat || (T >: Null && Nulls.T(T) <: AbstractFloat)
      for T in eltypes(dt)]
 
 function stack(dt::AbstractDataTable, measure_vars = numeric_vars(dt);

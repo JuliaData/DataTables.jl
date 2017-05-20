@@ -39,10 +39,6 @@ Base.convert(::Type{Array}, r::DataTableRow) = convert(Array, r.dt[r.row,:])
 
 # hash column element
 Base.@propagate_inbounds hash_colel(v::AbstractArray, i, h::UInt = zero(UInt)) = hash(v[i], h)
-Base.@propagate_inbounds hash_colel{T<:Nullable}(v::AbstractArray{T}, i, h::UInt = zero(UInt)) =
-    isnull(v[i]) ? h + Base.nullablehash_seed : hash(unsafe_get(v[i]), h)
-Base.@propagate_inbounds hash_colel{T}(v::NullableArray{T}, i, h::UInt = zero(UInt)) =
-    isnull(v, i) ? h + Base.nullablehash_seed : hash(v.values[i], h)
 Base.@propagate_inbounds hash_colel{T}(v::AbstractCategoricalArray{T}, i, h::UInt = zero(UInt)) =
     hash(CategoricalArrays.index(v.pool)[v.refs[i]], h)
 Base.@propagate_inbounds function hash_colel{T}(v::AbstractNullableCategoricalArray{T}, i, h::UInt = zero(UInt))
@@ -79,9 +75,6 @@ isequal_colel(col::AbstractArray, r1::Int, r2::Int) =
     (r1 == r2) || isequal(Base.unsafe_getindex(col, r1), Base.unsafe_getindex(col, r2))
 
 isequal_colel(a::Any, b::Any) = isequal(a, b)
-isequal_colel(a::Nullable, b::Any) = !isnull(a) & isequal(unsafe_get(a), b)
-isequal_colel(a::Any, b::Nullable) = isequal_colel(b, a)
-isequal_colel(a::Nullable, b::Nullable) = isequal(a, b)
 
 # table columns are passed as a tuple of vectors to ensure type specialization
 isequal_row(cols::Tuple{AbstractVector}, r1::Int, r2::Int) =
@@ -117,8 +110,8 @@ function Base.isless(r1::DataTableRow, r2::DataTableRow)
     @inbounds for i in 1:ncol(r1.dt)
         x = r1.dt[i][r1.row]
         y = r2.dt[i][r2.row]
-        isnullx = _isnull(x)
-        isnully = _isnull(y)
+        isnullx = isnull(x)
+        isnully = isnull(y)
         (isnullx != isnully) && return isnully # null > !null
         if !isnullx
             v1 = unsafe_get(x)

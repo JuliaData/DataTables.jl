@@ -1,23 +1,22 @@
 module TestData
     importall Base # so that we get warnings for conflicts
     using Base.Test
-    using DataTables
-    using Compat
+    using DataTables, Nulls
 
-    #test_group("NullableArray creation")
-    nvint = NullableArray(Nullable{Int}[1, 2, Nullable(), 4])
-    nvint2 = NullableArray(5:8)
-    nvint3 = NullableArray(5:8)
-    nvflt = NullableArray(Nullable{Float64}[1.0, 2.0, Nullable(), 4.0])
-    nvstr = NullableArray(Nullable{Compat.ASCIIString}["one", "two", Nullable(), "four"])
-    dvdict = NullableArray(Dict, 4)    # for issue #199
+    #test_group("Vector creation")
+    nvint = ?(Int)[1, 2, null, 4]
+    nvint2 = Vector(5:8)
+    nvint3 = Vector(5:8)
+    nvflt = ?(Float64)[1.0, 2.0, null, 4.0]
+    nvstr = ?(String)["one", "two", null, "four"]
+    dvdict = Vector{Dict}(4)    # for issue #199
 
     #test_group("constructors")
     dt1 = DataTable(Any[nvint, nvstr], [:Ints, :Strs])
     dt2 = DataTable(Any[nvint, nvstr])
     dt3 = DataTable(Any[nvint])
-    dt4 = DataTable(Any[NullableArray(1:4), NullableArray(1:4)])
-    dt5 = DataTable(Any[NullableArray([1,2,3,4]), nvstr])
+    dt4 = DataTable(Any[Vector(1:4), Vector(1:4)])
+    dt5 = DataTable(Any[Vector([1,2,3,4]), nvstr])
     dt6 = DataTable(Any[nvint, nvint, nvstr], [:A, :B, :C])
     dt7 = DataTable(x = nvint, y = nvstr)
     @test size(dt7) == (4, 2)
@@ -31,9 +30,9 @@ module TestData
     @test names(dt7) == [:x, :y]
 
     #test_group("ref")
-    @test isequal(dt6[2, 3], Nullable("two"))
+    @test isequal(dt6[2, 3], "two")
     @test isnull(dt6[3, 3])
-    @test isequal(dt6[2, :C], Nullable("two"))
+    @test isequal(dt6[2, :C], "two")
     @test isequal(dt6[:B], nvint)
     @test size(dt6[[2,3]], 2) == 2
     @test size(dt6[2,:], 1) == 1
@@ -43,12 +42,12 @@ module TestData
     # lots more to do
 
     #test_group("assign")
-    dt6[3] = NullableArray(["un", "deux", "troix", "quatre"])
-    @test isequal(dt6[1, 3], Nullable("un"))
-    dt6[:B] = NullableArray([4, 3, 2, 1])
-    @test isequal(dt6[1,2], Nullable(4))
-    dt6[:D] = NullableArray([true, false, true, false])
-    @test isequal(dt6[1,4], Nullable(true))
+    dt6[3] = Vector(["un", "deux", "troix", "quatre"])
+    @test isequal(dt6[1, 3], "un")
+    dt6[:B] = Vector([4, 3, 2, 1])
+    @test isequal(dt6[1,2], 4)
+    dt6[:D] = Vector([true, false, true, false])
+    @test isequal(dt6[1,4], true)
     delete!(dt6, :D)
     @test names(dt6) == [:A, :B, :C]
     @test size(dt6, 2) == 3
@@ -74,7 +73,7 @@ module TestData
     @test size(sdt6d) == (2,1)
 
     #test_group("ref")
-    @test isequal(sdt6a[1,2], Nullable(4))
+    @test isequal(sdt6a[1,2], 4)
 
     #test_context("Within")
     #test_group("Associative")
@@ -83,23 +82,23 @@ module TestData
     srand(1)
     N = 20
     #Cast to Int64 as rand() behavior differs between Int32/64
-    d1 = NullableArray(rand(map(Int64, 1:2), N))
-    d2 = NullableCategoricalArray(Nullable{String}["A", "B", Nullable()])[rand(map(Int64, 1:3), N)]
-    d3 = NullableArray(randn(N))
-    d4 = NullableArray(randn(N))
+    d1 = Vector(rand(map(Int64, 1:2), N))
+    d2 = NullableCategoricalArray(?(String)["A", "B", null])[rand(map(Int64, 1:3), N)]
+    d3 = Vector(randn(N))
+    d4 = Vector(randn(N))
     dt7 = DataTable(Any[d1, d2, d3], [:d1, :d2, :d3])
 
     #test_group("groupby")
     gd = groupby(dt7, :d1)
     @test length(gd) == 2
-    # @test isequal(gd[2]["d2"], CategoricalVector["A", "B", Nullable(), "A", Nullable(), Nullable(), Nullable(), Nullable()])
+    # @test isequal(gd[2]["d2"], CategoricalVector["A", "B", null, "A", null, null, null, null])
     @test isequal(sum(gd[2][:d3]), sum(dt7[:d3][Vector(dt7[:d1]) .== 2]))
 
     g1 = groupby(dt7, [:d1, :d2])
     g2 = groupby(dt7, [:d2, :d1])
     @test isequal(sum(g1[1][:d3]), sum(g2[1][:d3]))
 
-    res = Nullable(0.0)
+    res = 0.0
     for x in g1
         res += sum(x[:d1])
     end
@@ -143,11 +142,11 @@ module TestData
     @test ggd[2][1, :d4] == "d"
 
     #test_group("reshape")
-    d1 = DataTable(a = NullableArray(repeat([1:3;], inner = [4])),
-                   b = NullableArray(repeat([1:4;], inner = [3])),
-                   c = NullableArray(randn(12)),
-                   d = NullableArray(randn(12)),
-                   e = NullableArray(map(string, 'a':'l')))
+    d1 = DataTable(a = Vector(repeat([1:3;], inner = [4])),
+                   b = Vector(repeat([1:4;], inner = [3])),
+                   c = Vector(randn(12)),
+                   d = Vector(randn(12)),
+                   e = Vector(map(string, 'a':'l')))
 
     stack(d1, :a)
     d1s = stack(d1, [:a, :b])
@@ -186,8 +185,8 @@ module TestData
     d1m_named = meltdt(d1, [:c, :d, :e], variable_name=:letter, value_name=:someval)
     @test names(d1m_named) == [:letter, :someval, :c, :d, :e]
 
-    d1s[:id] = NullableArray([1:12; 1:12])
-    d1s2[:id] =  NullableArray([1:12; 1:12])
+    d1s[:id] = Vector([1:12; 1:12])
+    d1s2[:id] =  Vector([1:12; 1:12])
     d1us = unstack(d1s, :id, :variable, :value)
     d1us2 = unstack(d1s2)
     d1us3 = unstack(d1s2, :variable, :value)
@@ -195,98 +194,83 @@ module TestData
     @test isequal(d1us2[:d], d1[:d])
     @test isequal(d1us2[:3], d1[:d])
 
-
-
-    d2 = DataTable(id1 = [:a, :a, :a, :b],
-                   id2 = [:A, :B, :B, :B],
-                   id3 = [:t, :f, :t, :f],
-                   val = [.1, .2, .3, .4])
-
-
     #test_group("merge")
 
     srand(1)
-    dt1 = DataTable(a = shuffle!(NullableArray(1:10)),
-                    b = NullableArray(rand([:A,:B], 10)),
-                    v1 = NullableArray(randn(10)))
+    dt1 = DataTable(a = shuffle!(Vector(1:10)),
+                    b = Vector(rand([:A,:B], 10)),
+                    v1 = Vector(randn(10)))
 
-    dt2 = DataTable(a = shuffle!(NullableArray(1:5)),
-                    b2 = NullableArray(rand([:A,:B,:C], 5)),
-                    v2 = NullableArray(randn(5)))
+    dt2 = DataTable(a = shuffle!(Vector(1:5)),
+                    b2 = Vector(rand([:A,:B,:C], 5)),
+                    v2 = Vector(randn(5)))
 
     m1 = join(dt1, dt2, on = :a, kind=:inner)
-    @test isequal(m1[:a], dt1[:a][dt1[:a].values .<= 5]) # preserves dt1 order
+    @test isequal(m1[:a], dt1[:a][dt1[:a] .<= 5]) # preserves dt1 order
     m2 = join(dt1, dt2, on = :a, kind = :outer)
     @test isequal(m2[:a], dt1[:a]) # preserves dt1 order
     @test isequal(m2[:b], dt1[:b]) # preserves dt1 order
-    # TODO: Re-enable
     m2 = join(dt1, dt2, on = :a, kind = :outer)
-    # @test isequal(m2[:b2],
-    #               NullableArray(Nullable{String}["A", "B", "B", "B", "B",
-    #                                              Nullable(), Nullable(),
-    #                                              Nullable(), Nullable(), Nullable()]))
-    # @test isequal(m2[:b2],
-    #               NullableArray(Nullable{String}["B", "B", "B", "C", "B",
-    #                                              Nullable(), Nullable(),
-    #                                              Nullable(), Nullable(), Nullable()]))
+    @test isequal(m2[:b2],
+                  ?(Symbol)[null, :A, :A, null, :C, null, null, :B, null, :A])
 
-    dt1 = DataTable(a = NullableArray([1, 2, 3]),
-                    b = NullableArray(["America", "Europe", "Africa"]))
-    dt2 = DataTable(a = NullableArray([1, 2, 4]),
-                    c = NullableArray(["New World", "Old World", "New World"]))
+    dt1 = DataTable(a = Vector([1, 2, 3]),
+                    b = Vector(["America", "Europe", "Africa"]))
+    dt2 = DataTable(a = Vector([1, 2, 4]),
+                    c = Vector(["New World", "Old World", "New World"]))
 
     m1 = join(dt1, dt2, on = :a, kind = :inner)
-    @test isequal(m1[:a], NullableArray([1, 2]))
+    @test isequal(m1[:a], Vector([1, 2]))
 
     m2 = join(dt1, dt2, on = :a, kind = :left)
-    @test isequal(m2[:a], NullableArray([1, 2, 3]))
+    @test isequal(m2[:a], Vector([1, 2, 3]))
 
     m3 = join(dt1, dt2, on = :a, kind = :right)
-    @test isequal(m3[:a], NullableArray([1, 2, 4]))
+    @test isequal(m3[:a], Vector([1, 2, 4]))
 
     m4 = join(dt1, dt2, on = :a, kind = :outer)
-    @test isequal(m4[:a], NullableArray([1, 2, 3, 4]))
+    @test isequal(m4[:a], Vector([1, 2, 3, 4]))
 
     # test with nulls (issue #185)
     dt1 = DataTable()
-    dt1[:A] = NullableArray(["a", "b", "a", Nullable()])
-    dt1[:B] = NullableArray([1, 2, 1, 3])
+    dt1[:A] = Vector(["a", "b", "a", null])
+    dt1[:B] = Vector([1, 2, 1, 3])
 
     dt2 = DataTable()
-    dt2[:A] = NullableArray(["a", Nullable(), "c"])
-    dt2[:C] = NullableArray([1, 2, 4])
+    dt2[:A] = Vector(["a", null, "c"])
+    dt2[:C] = Vector([1, 2, 4])
 
     m1 = join(dt1, dt2, on = :A)
     @test size(m1) == (3,3)
-    @test isequal(m1[:A], NullableArray(["a","a", Nullable()]))
+    @test isequal(m1[:A], Vector(["a","a", null]))
 
     m2 = join(dt1, dt2, on = :A, kind = :outer)
     @test size(m2) == (5,3)
-    @test isequal(m2[:A], NullableArray(["a", "b", "a", Nullable(), "c"]))
+    @test isequal(m2[:A], Vector(["a", "b", "a", null, "c"]))
 
     srand(1)
     dt1 = DataTable(
-        a = NullableArray(rand([:x,:y], 10)),
-        b = NullableArray(rand([:A,:B], 10)),
-        v1 = NullableArray(randn(10))
+        a = Vector(rand([:x,:y], 10)),
+        b = Vector(rand([:A,:B], 10)),
+        v1 = Vector(randn(10))
     )
 
     dt2 = DataTable(
-        a = NullableArray([:x,:y][[1,2,1,1,2]]),
-        b = NullableArray([:A,:B,:C][[1,1,1,2,3]]),
-        v2 = NullableArray(randn(5))
+        a = Vector{?Symbol}([:x,:y][[1,2,1,1,2]]),
+        b = Vector([:A,:B,:C][[1,1,1,2,3]]),
+        v2 = Vector(randn(5))
     )
-    dt2[1,:a] = Nullable()
+    dt2[1,:a] = null
 
     # # TODO: Restore this functionality
     # m1 = join(dt1, dt2, on = [:a,:b])
-    # @test isequal(m1[:a], NullableArray(["x", "x", "y", "y", fill("x", 5)]))
+    # @test isequal(m1[:a], Vector(["x", "x", "y", "y", fill("x", 5)]))
     # m2 = join(dt1, dt2, on = ["a","b"], kind = :outer)
-    # @test isequal(m2[10,:v2], Nullable())
+    # @test isequal(m2[10,:v2], null)
     # @test isequal(m2[:a],
-    #               NullableArray(Nullable{String}["x", "x", "y", "y",
+    #               Vector(?(String)["x", "x", "y", "y",
     #                                              "x", "x", "x", "x", "x", "y",
-    #                                              Nullable(), "y"])
+    #                                              null, "y"])
 
     srand(1)
     function spltdt(d)
@@ -306,14 +290,14 @@ module TestData
     )
     dt2 = spltdt(dt2)
 
-    # m1 = join(dt1, dt2, on = :a)
-    # m2 = join(dt1, dt2, on = [:x1, :x2, :x3])
-    # @test isequal(sort(m1[:a]), sort(m2[:a]))
+    m1 = join(dt1, dt2, on = :a)
+    m2 = join(dt1, dt2, on = [:x1, :x2, :x3])
+    @test isequal(sort(m1[:a]), sort(m2[:a]))
 
     # test nonunique() with extra argument
-    dt1 = DataTable(a = NullableArray(["a", "b", "a", "b", "a", "b"]),
-                    b = NullableArray(1:6),
-                    c = NullableArray([1:3;1:3]))
+    dt1 = DataTable(a = Vector(["a", "b", "a", "b", "a", "b"]),
+                    b = Vector(1:6),
+                    c = Vector([1:3;1:3]))
     dt = vcat(dt1, dt1)
     @test find(nonunique(dt)) == collect(7:12)
     @test find(nonunique(dt, :)) == collect(7:12)

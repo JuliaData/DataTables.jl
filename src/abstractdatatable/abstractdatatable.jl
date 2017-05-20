@@ -227,7 +227,7 @@ Base.ndims(::AbstractDataTable) = 2
 ##############################################################################
 
 Base.similar(dt::AbstractDataTable, dims::Int) =
-    DataTable(Any[similar(x, dims) for x in columns(dt)], copy(index(dt)))
+    DataTable(Any[similar_nullable(x, dims) for x in columns(dt)], copy(index(dt)))
 
 ##############################################################################
 ##
@@ -387,13 +387,7 @@ end
 
 function _nonnull!(res, col)
     for (i, el) in enumerate(col)
-        res[i] &= !_isnull(el)
-    end
-end
-
-function _nonnull!(res, col::NullableArray)
-    for (i, el) in enumerate(col.isnull)
-        res[i] &= !el
+        res[i] &= !isnull(el)
     end
 end
 
@@ -502,7 +496,6 @@ function Base.convert(::Type{Array}, dt::AbstractDataTable)
 end
 function Base.convert(::Type{Matrix}, dt::AbstractDataTable)
     T = reduce(promote_type, eltypes(dt))
-    T <: Nullable && (T = eltype(T))
     convert(Matrix{T}, dt)
 end
 function Base.convert{T}(::Type{Array{T}}, dt::AbstractDataTable)
@@ -513,30 +506,8 @@ function Base.convert{T}(::Type{Matrix{T}}, dt::AbstractDataTable)
     res = Matrix{T}(n, p)
     idx = 1
     for (name, col) in zip(names(dt), columns(dt))
-        any(isnull, col) && error("cannot convert a DataTable containing null values to array (found for column $name)")
+        !(T >: Null) && any(isnull, col) && error("cannot convert a DataTable containing null values to array (found for column $name)")
         copy!(res, idx, convert(Vector{T}, col))
-        idx += n
-    end
-    return res
-end
-
-function Base.convert(::Type{NullableArray}, dt::AbstractDataTable)
-    convert(NullableMatrix, dt)
-end
-function Base.convert(::Type{NullableMatrix}, dt::AbstractDataTable)
-    T = reduce(promote_type, eltypes(dt))
-    T <: Nullable && (T = eltype(T))
-    convert(NullableMatrix{T}, dt)
-end
-function Base.convert{T}(::Type{NullableArray{T}}, dt::AbstractDataTable)
-    convert(NullableMatrix{T}, dt)
-end
-function Base.convert{T}(::Type{NullableMatrix{T}}, dt::AbstractDataTable)
-    n, p = size(dt)
-    res = NullableArray(T, n, p)
-    idx = 1
-    for col in columns(dt)
-        copy!(res, idx, col)
         idx += n
     end
     return res
@@ -671,24 +642,21 @@ Base.hcat(dt::AbstractDataTable, x, y...) = hcat!(hcat(dt, x), y...)
 Base.hcat(dt1::AbstractDataTable, dt2::AbstractDataTable, dtn::AbstractDataTable...) = hcat!(hcat(dt1, dt2), dtn...)
 
 @generated function promote_col_type(cols::AbstractVector...)
-    elty = Base.promote_eltype(cols...)
-    if elty <: Nullable
-        elty = eltype(elty)
+    T = promote_type(map(x-> eltype(x) >: Null ? Nulls.T(eltype(x)) : eltype(x), cols)...)
+    if T <: CategoricalValue
+        T = T.parameters[1]
     end
-    if elty <: CategoricalValue
-        elty = elty.parameters[1]
-    end
-    if any(col -> eltype(col) <: Nullable, cols)
+    if any(col -> Null <: eltype(col), cols)
         if any(col -> col <: Union{AbstractCategoricalArray, AbstractNullableCategoricalArray}, cols)
-            return :(NullableCategoricalVector{$elty})
+            return :(NullableCategoricalVector{$T})
         else
-            return :(NullableVector{$elty})
+            return :(Vector{$T})
         end
     else
         if any(col -> col <: Union{AbstractCategoricalArray, AbstractNullableCategoricalArray}, cols)
-            return :(CategoricalVector{$elty})
+            return :(CategoricalVector{$T})
         else
-            return :(Vector{$elty})
+            return :(Vector{$T})
         end
     end
 end

@@ -2,12 +2,12 @@
 ## Join / merge
 ##
 
-# Like similar, but returns a nullable array
+# Like similar, but returns a array that can have nulls
 similar_nullable{T}(dv::AbstractArray{T}, dims::Union{Int, Tuple{Vararg{Int}}}) =
-    NullableArray{T}(dims)
+    (v = Vector{?T}(dims); fill!(v, null); return v)
 
-similar_nullable{T<:Nullable}(dv::AbstractArray{T}, dims::Union{Int, Tuple{Vararg{Int}}}) =
-    NullableArray{eltype(T)}(dims)
+similar_nullable{T <: Union}(dv::AbstractArray{T}, dims::Union{Int, Tuple{Vararg{Int}}}) =
+    (v = Vector{?Nulls.T(T)}(dims); fill!(v, null); return v)
 
 similar_nullable{T}(dv::CategoricalArray{T}, dims::Union{Int, Tuple{Vararg{Int}}}) =
     NullableCategoricalArray{T}(dims)
@@ -23,9 +23,9 @@ immutable DataTableJoiner{DT1<:AbstractDataTable, DT2<:AbstractDataTable}
     dtr_on::DT2
     on_cols::Vector{Symbol}
 
-    function DataTableJoiner(dtl::DT1, dtr::DT2, on::Union{Symbol,Vector{Symbol}})
+    function DataTableJoiner{DT1, DT2}(dtl::DT1, dtr::DT2, on::Union{Symbol,Vector{Symbol}})
         on_cols = isa(on, Symbol) ? [on] : on
-        new(dtl, dtr, dtl[on_cols], dtr[on_cols], on_cols)
+        new{DT1, DT2}(dtl, dtr, dtl[on_cols], dtr[on_cols], on_cols)
     end
 end
 
