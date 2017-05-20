@@ -23,9 +23,9 @@ immutable DataTableJoiner{DT1<:AbstractDataTable, DT2<:AbstractDataTable}
     dtr_on::DT2
     on_cols::Vector{Symbol}
 
-    function DataTableJoiner{DT1, DT2}(dtl::DT1, dtr::DT2, on::Union{Symbol,Vector{Symbol}})
+    function DataTableJoiner{DT1, DT2}(dtl::DT1, dtr::DT2, on::Union{Symbol,Vector{Symbol}}) where {DT1, DT2}
         on_cols = isa(on, Symbol) ? [on] : on
-        new{DT1, DT2}(dtl, dtr, dtl[on_cols], dtr[on_cols], on_cols)
+        new(dtl, dtr, dtl[on_cols], dtr[on_cols], on_cols)
     end
 end
 
