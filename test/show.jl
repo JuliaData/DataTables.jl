@@ -1,8 +1,6 @@
 module TestShow
-    using DataTables
-    using Compat
-    using Base.Test
-    import Compat.String
+    using Base.Test, DataTables, Nulls
+
     dt = DataTable(A = 1:3, B = ["x", "y", "z"])
 
     io = IOBuffer()
@@ -38,16 +36,16 @@ module TestShow
     show(io, A)
 
     #Test show output for REPL and similar
-    dt = DataTable(Fish = ["Suzy", "Amir"], Mass = [1.5, Nullable()])
+    dt = DataTable(Fish = ["Suzy", "Amir"], Mass = [1.5, null])
     io = IOBuffer()
     show(io, dt)
     str = String(take!(io))
     @test str == """
     2×2 DataTables.DataTable
-    │ Row │ Fish │ Mass  │
-    ├─────┼──────┼───────┤
-    │ 1   │ Suzy │ 1.5   │
-    │ 2   │ Amir │ #NULL │"""
+    │ Row │ Fish │ Mass │
+    ├─────┼──────┼──────┤
+    │ 1   │ Suzy │ 1.5  │
+    │ 2   │ Amir │ null │"""
 
     # Test computing width for Array{String} columns
     dt = DataTable(Any[["a"]], [:x])

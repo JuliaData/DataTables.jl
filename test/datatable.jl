@@ -1,6 +1,5 @@
 module TestDataTable
-    using Base.Test
-    using DataTables, Nulls
+    using Base.Test, DataTables, Nulls
 
     #
     # Equality

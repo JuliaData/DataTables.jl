@@ -1,15 +1,11 @@
 module TestDataTableRow
-    using Base.Test
-    using DataTables, Compat
+    using Base.Test, DataTables, Nulls
 
-    dt = DataTable(a=NullableArray([1,   2,   3,   1,   2,   2 ]),
-                   b=NullableArray(Nullable{Float64}[2.0, Nullable(),
-                                                     1.2, 2.0,
-                                                     Nullable(), Nullable()]),
-                   c=NullableArray(Nullable{String}["A", "B", "C", "A", "B", Nullable()]),
-                   d=NullableCategoricalArray(Nullable{Symbol}[:A,  Nullable(),  :C,  :A,
-                                                           Nullable(),  :C]))
-    dt2 = DataTable(a = NullableArray([1, 2, 3]))
+    dt = DataTable(a=[1,   2,   3,   1,   2,   2 ],
+                   b=(?Float64)[2.0, null, 1.2, 2.0, null, null],
+                   c=(?String)["A", "B", "C", "A", "B", null],
+                   d=NullableCategoricalArray((?Symbol)[:A,  null,  :C,  :A, null,  :C]))
+    dt2 = DataTable(a = [1, 2, 3])
 
     #
     # Equality
@@ -22,9 +18,9 @@ module TestDataTableRow
     @test !isequal(DataTableRow(dt, 2), DataTableRow(dt, 6))
 
     # isless()
-    dt4 = DataTable(a=NullableArray([1, 1, 2, 2, 2, 2, Nullable(), Nullable()]),
-                    b=NullableArray([2.0, 3.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0]),
-                    c=NullableArray([:B, Nullable(), :A, :C, :D, :D, :A, :A]))
+    dt4 = DataTable(a=[1, 1, 2, 2, 2, 2, null, null],
+                    b=[2.0, 3.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0],
+                    c=[:B, null, :A, :C, :D, :D, :A, :A])
     @test isless(DataTableRow(dt4, 1), DataTableRow(dt4, 2))
     @test !isless(DataTableRow(dt4, 2), DataTableRow(dt4, 1))
     @test !isless(DataTableRow(dt4, 1), DataTableRow(dt4, 1))

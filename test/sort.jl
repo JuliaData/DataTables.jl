@@ -1,21 +1,20 @@
 module TestSort
-    using Base.Test
-    using DataTables
+    using Base.Test, DataTables, Nulls
 
-    dv1 = NullableArray(Nullable{Int}[9, 1, 8, Nullable(), 3, 3, 7, Nullable()])
-    dv2 = NullableArray(Nullable{Int}[9, 1, 8, Nullable(), 3, 3, 7, Nullable()])
-    dv3 = NullableArray(1:8)
+    dv1 = [9, 1, 8, null, 3, 3, 7, null]
+    dv2 = [9, 1, 8, null, 3, 3, 7, null]
+    dv3 = Vector{?Int}(1:8)
     cv1 = NullableCategoricalArray(dv1, ordered=true)
 
     d = DataTable(dv1 = dv1, dv2 = dv2, dv3 = dv3, cv1 = cv1)
 
     @test sortperm(d) == sortperm(dv1)
     @test sortperm(d[[:dv3, :dv1]]) == sortperm(dv3)
-    @test isequal(sort(d, cols=:dv1)[:dv3], NullableArray(sortperm(dv1)))
-    @test isequal(sort(d, cols=:dv2)[:dv3], NullableArray(sortperm(dv1)))
-    @test isequal(sort(d, cols=:cv1)[:dv3], NullableArray(sortperm(dv1)))
-    @test isequal(sort(d, cols=[:dv1, :cv1])[:dv3], NullableArray(sortperm(dv1)))
-    @test isequal(sort(d, cols=[:dv1, :dv3])[:dv3], NullableArray(sortperm(dv1)))
+    @test isequal(sort(d, cols=:dv1)[:dv3], sortperm(dv1))
+    @test isequal(sort(d, cols=:dv2)[:dv3], sortperm(dv1))
+    @test isequal(sort(d, cols=:cv1)[:dv3], sortperm(dv1))
+    @test isequal(sort(d, cols=[:dv1, :cv1])[:dv3], sortperm(dv1))
+    @test isequal(sort(d, cols=[:dv1, :dv3])[:dv3], sortperm(dv1))
 
     dt = DataTable(rank=rand(1:12, 1000),
                    chrom=rand(1:24, 1000),

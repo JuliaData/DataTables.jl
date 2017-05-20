@@ -64,7 +64,7 @@ end
 ourshowcompact(io::IO, x::Any) = showcompact(io, x) # -> Void
 ourshowcompact(io::IO, x::AbstractString) = print(io, x) # -> Void
 ourshowcompact(io::IO, x::Symbol) = print(io, x) # -> Void
-ourshowcompact(io::IO, x::Nullable{String}) = isnull(x) ? showcompact(io, x) : print(io, get(x)) # -> Void
+ourshowcompact(io::IO, x::(?String)) = isnull(x) ? showcompact(io, x) : print(io, x) # -> Void
 
 #' @description
 #'

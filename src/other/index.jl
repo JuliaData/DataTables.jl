@@ -110,12 +110,12 @@ function Base.insert!(x::Index, idx::Integer, nm::Symbol)
 end
 
 Base.getindex(x::Index, idx::Symbol) = x.lookup[idx]
-Base.getindex(x::AbstractIndex, idx::Real) = @compat Int(idx)
-Base.getindex(x::AbstractIndex, idx::AbstractVector{Nullable{Bool}}) =
-    getindex(x, convert(Vector{Bool}, idx, false))
-Base.getindex{T<:Nullable}(x::AbstractIndex, idx::AbstractVector{T}) =
-    getindex(x, dropnull(idx))
+Base.getindex(x::AbstractIndex, idx::Real) = Int(idx)
+Base.getindex(x::AbstractIndex, idx::AbstractVector{?Bool}) =
+    getindex(x, Bool[ifelse(isnull(x), false, x) for x in idx])
 Base.getindex(x::AbstractIndex, idx::AbstractVector{Bool}) = find(idx)
+Base.getindex{T >: Null}(x::AbstractIndex, idx::AbstractVector{T}) =
+    getindex(x, [x for x in idx if !isnull(x)])
 Base.getindex(x::AbstractIndex, idx::Range) = [idx;]
 Base.getindex{T <: Real}(x::AbstractIndex, idx::AbstractVector{T}) = convert(Vector{Int}, idx)
 Base.getindex(x::AbstractIndex, idx::AbstractVector{Symbol}) = [x.lookup[i] for i in idx]
