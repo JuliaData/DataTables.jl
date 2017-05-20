@@ -1,6 +1,6 @@
 module TestConstructors
     using Base.Test
-    using DataTables, DataTables.Index
+    using DataTables, DataTables.Index, Nulls
 
     #
     # DataTable
@@ -18,31 +18,31 @@ module TestConstructors
 
     @test isequal(dt, DataTable(Any[NullableCategoricalVector(zeros(3)),
                                     NullableCategoricalVector(ones(3))]))
-    @test isequal(dt, DataTable(x1 = NullableArray([0.0, 0.0, 0.0]),
-                                x2 = NullableArray([1.0, 1.0, 1.0])))
+    @test isequal(dt, DataTable(x1 = Vector([0.0, 0.0, 0.0]),
+                                x2 = Vector([1.0, 1.0, 1.0])))
 
-    dt2 = convert(DataTable, NullableArray([0.0 1.0;
+    dt2 = convert(DataTable, Matrix([0.0 1.0;
                                             0.0 1.0;
                                             0.0 1.0]))
     names!(dt2, [:x1, :x2])
-    @test isequal(dt[:x1], NullableArray(dt2[:x1]))
-    @test isequal(dt[:x2], NullableArray(dt2[:x2]))
+    @test isequal(dt[:x1], Vector(dt2[:x1]))
+    @test isequal(dt[:x2], Vector(dt2[:x2]))
 
-    @test isequal(dt, DataTable(x1 = NullableArray([0.0, 0.0, 0.0]),
-                                x2 = NullableArray([1.0, 1.0, 1.0])))
-    @test isequal(dt, DataTable(x1 = NullableArray([0.0, 0.0, 0.0]),
-                                x2 = NullableArray([1.0, 1.0, 1.0]),
-                                x3 = NullableArray([2.0, 2.0, 2.0]))[[:x1, :x2]])
+    @test isequal(dt, DataTable(x1 = Vector([0.0, 0.0, 0.0]),
+                                x2 = Vector([1.0, 1.0, 1.0])))
+    @test isequal(dt, DataTable(x1 = Vector([0.0, 0.0, 0.0]),
+                                x2 = Vector([1.0, 1.0, 1.0]),
+                                x3 = Vector([2.0, 2.0, 2.0]))[[:x1, :x2]])
 
-    dt = DataTable(Nullable{Int}, 2, 2)
+    dt = DataTable(?(Int), 2, 2)
     @test size(dt) == (2, 2)
-    @test eltypes(dt) == [Nullable{Int}, Nullable{Int}]
+    @test eltypes(dt) == [?(Int), ?(Int)]
 
-    dt = DataTable([Nullable{Int}, Nullable{Float64}], [:x1, :x2], 2)
+    dt = DataTable([?(Int), ?(Float64)], [:x1, :x2], 2)
     @test size(dt) == (2, 2)
-    @test eltypes(dt) == [Nullable{Int}, Nullable{Float64}]
+    @test eltypes(dt) == [?(Int), ?(Float64)]
 
-    @test isequal(dt, DataTable([Nullable{Int}, Nullable{Float64}], 2))
+    @test isequal(dt, DataTable([?(Int), ?(Float64)], 2))
 
     @test_throws BoundsError SubDataTable(DataTable(A=1), 0)
     @test_throws BoundsError SubDataTable(DataTable(A=1), 0)
@@ -75,8 +75,8 @@ module TestConstructors
         dt = DataTable(A = 1:3, B = 2:4, C = 3:5)
         answer = [Array{Int,1}, Array{Int,1}, Array{Int,1}]
         @test map(typeof, dt.columns) == answer
-        dt[:D] = NullableArray([4, 5, Nullable()])
-        push!(answer, NullableArray{Int,1})
+        dt[:D] = Vector([4, 5, null])
+        push!(answer, Vector{?Int})
         @test map(typeof, dt.columns) == answer
         dt[:E] = 'c'
         push!(answer, Array{Char,1})

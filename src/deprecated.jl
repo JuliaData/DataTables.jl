@@ -5,7 +5,7 @@ import Base: @deprecate
 @deprecate nullable!(colnames::Array{Symbol,1}, dt::AbstractDataTable) nullable!(dt, colnames)
 @deprecate nullable!(colnums::Array{Int,1}, dt::AbstractDataTable) nullable!(dt, colnums)
 
-import Base: keys, values, insert!
+import Base: keys, values, insert!, setindex!
 @deprecate keys(dt::AbstractDataTable) names(dt)
 @deprecate values(dt::AbstractDataTable) DataTables.columns(dt)
 @deprecate insert!(dt::DataTable, dt2::AbstractDataTable) merge!(dt, dt2)
@@ -20,3 +20,5 @@ import Base: keys, values, insert!
 
 @deprecate stackdf stackdt
 @deprecate meltdf meltdt
+
+@deprecate setindex!(dt::DataTable, x::Void, col_ind::Int) setindex!(dt, null, col_ind)
