@@ -1,8 +1,5 @@
 module TestUtils
-    using Base.Test
-    using DataTables
-    using Compat
-    using StatsBase
+    using Base.Test, DataTables, Nulls, StatsBase
     import DataTables: identifier
 
     @test identifier("%_B*_\tC*") == :_B_C_
@@ -41,18 +38,18 @@ module TestUtils
 
     @test DataTables.countnull([1:3;]) == 0
 
-    data = NullableArray(rand(20))
+    data = Vector{?Float64}(rand(20))
     @test DataTables.countnull(data) == 0
-    data[sample(1:20, 11, replace=false)] = Nullable()
+    data[sample(1:20, 11, replace=false)] = null
     @test DataTables.countnull(data) == 11
-    data[1:end] = Nullable()
+    data[1:end] = null
     @test DataTables.countnull(data) == 20
 
-    pdata = NullableArray(sample(1:5, 20))
+    pdata = Vector{?Int}(sample(1:5, 20))
     @test DataTables.countnull(pdata) == 0
-    pdata[sample(1:20, 11, replace=false)] = Nullable()
+    pdata[sample(1:20, 11, replace=false)] = null
     @test DataTables.countnull(pdata) == 11
-    pdata[1:end] = Nullable()
+    pdata[1:end] = null
     @test DataTables.countnull(pdata) == 20
 
     funs = [mean, sum, var, x -> sum(x)]

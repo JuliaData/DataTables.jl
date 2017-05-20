@@ -1,7 +1,6 @@
 module TestData
+    using Base.Test, DataTables, Nulls
     importall Base # so that we get warnings for conflicts
-    using Base.Test
-    using DataTables, Nulls
 
     #test_group("Vector creation")
     nvint = ?(Int)[1, 2, null, 4]

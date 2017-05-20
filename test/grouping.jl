@@ -1,11 +1,10 @@
 module TestGrouping
-    using Base.Test
-    using DataTables
+    using Base.Test, DataTables, Nulls
 
     srand(1)
-    dt = DataTable(a = NullableArray(repeat([1, 2, 3, 4], outer=[2])),
-                   b = NullableArray(repeat([2, 1], outer=[4])),
-                   c = NullableArray(randn(8)))
+    dt = DataTable(a = repeat([1, 2, 3, 4], outer=[2]),
+                   b = repeat([2, 1], outer=[4]),
+                   c = randn(8))
     #dt[6, :a] = Nullable()
     #dt[7, :b] = Nullable()
 
@@ -13,8 +12,8 @@ module TestGrouping
     @testset "colwise" begin
         @testset "::Function, ::AbstractDataTable" begin
             cw = colwise(sum, dt)
-            answer = NullableArray([20, 12, -0.4283098098931877])
-            @test isa(cw, NullableArray{Any, 1})
+            answer = [20, 12, -0.4283098098931877]
+            @test isa(cw, Vector{Real})
             @test size(cw) == (ncol(dt),)
             @test isequal(cw, answer)
 
@@ -32,8 +31,8 @@ module TestGrouping
 
         @testset "::Vector, ::AbstractDataTable" begin
             cw = colwise([sum], dt)
-            answer = NullableArray([20 12 -0.4283098098931877])
-            @test isa(cw, NullableArray{Any, 2})
+            answer = [20 12 -0.4283098098931877]
+            @test isa(cw, Array{Real, 2})
             @test size(cw) == (length([sum]),ncol(dt))
             @test isequal(cw, answer)
 
@@ -43,10 +42,10 @@ module TestGrouping
             @test size(cw) == (length([sum, minimum]), ncol(nullfree))
             @test cw == answer
 
-            cw = colwise([NullableArray], nullfree)
-            answer = reshape([NullableArray(1:10)], (1,1))
-            @test isa(cw, Array{NullableArray{Int,1},2})
-            @test size(cw) == (length([NullableArray]), ncol(nullfree))
+            cw = colwise([Vector{?Int}], nullfree)
+            answer = reshape([Vector{?Int}(1:10)], (1,1))
+            @test isa(cw, Array{Vector{?Int},2})
+            @test size(cw) == (1, ncol(nullfree))
             @test isequal(cw, answer)
 
             @test_throws MethodError colwise(["Bob", :Susie], DataTable(A = 1:10, B = 11:20))
@@ -59,8 +58,8 @@ module TestGrouping
 
         @testset "::Tuple, ::AbstractDataTable" begin
             cw = colwise((sum, length), dt)
-            answer = Any[Nullable(20) Nullable(12) Nullable(-0.4283098098931877); 8 8 8]
-            @test isa(cw, Array{Any, 2})
+            answer = Any[20 12 -0.4283098098931877; 8 8 8]
+            @test isa(cw, Array{Real, 2})
             @test size(cw) == (length((sum, length)), ncol(dt))
             @test isequal(cw, answer)
 
@@ -70,11 +69,11 @@ module TestGrouping
             @test size(cw) == (length((sum, length)), ncol(nullfree))
             @test cw == answer
 
-            cw = colwise((CategoricalArray, NullableArray), nullfree)
-            answer = reshape([CategoricalArray(1:10), NullableArray(1:10)],
-                             (length((CategoricalArray, NullableArray)), ncol(nullfree)))
+            cw = colwise((CategoricalArray, Vector{?Int}), nullfree)
+            answer = reshape([CategoricalArray(1:10), Vector{?Int}(1:10)],
+                             (2, ncol(nullfree)))
             @test typeof(cw) == Array{AbstractVector,2}
-            @test size(cw) == (length((CategoricalArray, NullableArray)), ncol(nullfree))
+            @test size(cw) == (2, ncol(nullfree))
             @test isequal(cw, answer)
 
             @test_throws MethodError colwise(("Bob", :Susie), DataTable(A = 1:10, B = 11:20))
@@ -87,11 +86,11 @@ module TestGrouping
 
         @testset "::Function" begin
             cw = map(colwise(sum), (nullfree, dt))
-            answer = ([55], NullableArray(Any[20, 12, -0.4283098098931877]))
+            answer = ([55], Real[20, 12, -0.4283098098931877])
             @test isequal(cw, answer)
 
             cw = map(colwise((sum, length)), (nullfree, dt))
-            answer = (reshape([55, 10], (2,1)), Any[Nullable(20) Nullable(12) Nullable(-0.4283098098931877); 8 8 8])
+            answer = (reshape([55, 10], (2,1)), Any[20 12 -0.4283098098931877; 8 8 8])
             @test isequal(cw, answer)
 
             cw = map(colwise([sum, length]), (nullfree, dt))
@@ -125,7 +124,7 @@ module TestGrouping
     ga = map(f, gd)
     @test sbdt == combine(ga)
 
-    g(dt) = DataTable(cmax1 = [get(c) + 1 for c in dt[:cmax]])
+    g(dt) = DataTable(cmax1 = [c + 1 for c in dt[:cmax]])
     h(dt) = g(f(dt))
 
     @test isequal(combine(map(h, gd)), combine(map(g, ga)))

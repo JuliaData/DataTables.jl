@@ -1,6 +1,5 @@
 module TestIndex
-using Base.Test
-using DataTables, DataTables.Index, Compat
+using Base.Test, DataTables, Nulls, DataTables.Index
 
 i = Index()
 push!(i, :A)
@@ -16,11 +15,11 @@ inds = Any[1,
            1:1,
            1.0:1.0,
            [:A],
-           NullableArray([true]),
-           NullableArray([1]),
-           NullableArray([1.0]),
-           NullableArray([:A]),
-           NullableArray([:A])]
+           ?[true],
+           ?[1],
+           ?[1.0],
+           ?[:A],
+           ?[:A]]
 
 for ind in inds
     if isequal(ind, :A) || ndims(ind) == 0
@@ -34,7 +33,7 @@ end
 @test names!(i, [:a,:a], allow_duplicates=true) == Index([:a,:a_1])
 @test_throws ArgumentError names!(i, [:a,:a])
 @test names!(i, [:a,:b]) == Index([:a,:b])
-@test rename(i, @compat(Dict(:a=>:A, :b=>:B))) == Index([:A,:B])
+@test rename(i, Dict(:a=>:A, :b=>:B)) == Index([:A,:B])
 @test rename(i, :a, :A) == Index([:A,:b])
 @test rename(i, :a, :a) == Index([:a,:b])
 @test rename(i, [:a], [:A]) == Index([:A,:b])

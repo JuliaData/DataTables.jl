@@ -1,6 +1,5 @@
 module TestConstructors
-    using Base.Test
-    using DataTables, DataTables.Index, Nulls
+    using Base.Test, DataTables, Nulls, DataTables.Index
 
     #
     # DataTable
