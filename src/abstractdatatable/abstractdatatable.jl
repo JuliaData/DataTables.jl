@@ -236,7 +236,7 @@ Base.similar(dt::AbstractDataTable, dims::Int) =
 ##############################################################################
 
 # Imported in DataTables.jl for compatibility across Julia 0.4 and 0.5
-@compat(Base.:(==))(dt1::AbstractDataTable, dt2::AbstractDataTable) = isequal(dt1, dt2)
+Base.:(==)(dt1::AbstractDataTable, dt2::AbstractDataTable) = isequal(dt1, dt2)
 
 function Base.isequal(dt1::AbstractDataTable, dt2::AbstractDataTable)
     size(dt1, 2) == size(dt2, 2) || return false
