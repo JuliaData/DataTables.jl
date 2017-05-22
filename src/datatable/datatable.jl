@@ -593,7 +593,7 @@ Base.setindex!(dt::DataTable, v, ::Colon, col_inds) =
     (dt[col_inds] = v; dt)
 
 # Special deletion assignment
-Base.setindex!(dt::DataTable, x::Null, col_ind::Int) = delete!(dt, col_ind)
+Base.setindex!(dt::DataTable, x::Void, col_ind::Int) = delete!(dt, col_ind)
 
 ##############################################################################
 ##

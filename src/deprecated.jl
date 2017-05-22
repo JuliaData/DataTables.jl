@@ -20,5 +20,3 @@ import Base: keys, values, insert!, setindex!
 
 @deprecate stackdf stackdt
 @deprecate meltdf meltdt
-
-@deprecate setindex!(dt::DataTable, x::Void, col_ind::Int) setindex!(dt, null, col_ind)
