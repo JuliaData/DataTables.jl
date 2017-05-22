@@ -105,15 +105,10 @@ function SubDataTable{T<:Integer}(sdt::SubDataTable, rowinds::Union{T, AbstractV
     return SubDataTable(sdt.parent, sdt.rows[rowinds])
 end
 
-function Base.view{T<:Nullable}(adt::AbstractDataTable, rowinds::AbstractVector{T})
-    # Vector{<:Nullable} need to be checked for nulls and the values lifted
+function Base.view(adt::AbstractDataTable, rowinds::AbstractVector{>:Null})
+    # Vector{>:Null} need to be checked for nulls and the values lifted
     any(isnull, rowinds) && throw(NullException())
-    return SubDataTable(adt, get.(rowinds))
-end
-
-function Base.view(adt::AbstractDataTable, rowinds::NullableVector)
-    # convert for NullableVectors will throw NullException if nulls present
-    return SubDataTable(adt, convert(Vector, rowinds))
+    return SubDataTable(adt, rowinds)
 end
 
 function Base.view(adt::AbstractDataTable, rowinds::Any)
