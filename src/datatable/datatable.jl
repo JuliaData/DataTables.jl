@@ -151,7 +151,11 @@ function DataTable{T<:Type}(column_eltypes::AbstractVector{T}, cnames::AbstractV
     updated_types = convert(Vector{Type}, column_eltypes)
     for i in eachindex(nominal)
         nominal[i] || continue
-        updated_types[i] = Union{CategoricalValue{Nulls.T{updated_types[i]}}, Null}
+        if updated_types[i] >: Null
+            updated_types[i] = Union{CategoricalValue{Nulls.T{updated_types[i]}}, Null}
+        else
+            updated_types[i] = CategoricalValue{updated_types[i]}
+        end
     end
     return DataTable(updated_types, cnames, nrows)
 end
