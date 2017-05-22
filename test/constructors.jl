@@ -33,9 +33,9 @@ module TestConstructors
                           x2 = (?Float64)[1.0, 1.0, 1.0],
                           x3 = (?Float64)[2.0, 2.0, 2.0])[[:x1, :x2]]
 
-    dt = DataTable((?Int), 2, 2)
+    dt = DataTable(?Int, 2, 2)
     @test size(dt) == (2, 2)
-    @test eltypes(dt) == [?(Int), ?(Int)]
+    @test eltypes(dt) == [?Int, ?Int]
 
     dt = DataTable([?Int, ?Float64], [:x1, :x2], 2)
     @test size(dt) == (2, 2)
