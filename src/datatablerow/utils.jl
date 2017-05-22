@@ -29,15 +29,6 @@ function hashrows_col!(h::Vector{UInt}, v::AbstractVector)
     h
 end
 
-function hashrows_col!{T >: Null}(h::Vector{UInt}, v::AbstractVector{T})
-    @inbounds for i in eachindex(h)
-        h[i] = isnull(v[i]) ?
-               hash(null, h[i]) :
-               hash(v[i], h[i])
-    end
-    h
-end
-
 # should give the same hash as AbstractVector{T}
 function hashrows_col!{T}(h::Vector{UInt}, v::AbstractCategoricalVector{T})
     # TODO is it possible to optimize by hashing the pool values once?

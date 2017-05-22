@@ -5,7 +5,7 @@ import Base: @deprecate
 @deprecate nullable!(colnames::Array{Symbol,1}, dt::AbstractDataTable) nullable!(dt, colnames)
 @deprecate nullable!(colnums::Array{Int,1}, dt::AbstractDataTable) nullable!(dt, colnums)
 
-import Base: keys, values, insert!, setindex!
+import Base: keys, values, insert!
 @deprecate keys(dt::AbstractDataTable) names(dt)
 @deprecate values(dt::AbstractDataTable) DataTables.columns(dt)
 @deprecate insert!(dt::DataTable, dt2::AbstractDataTable) merge!(dt, dt2)
