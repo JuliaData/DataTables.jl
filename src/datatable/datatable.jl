@@ -130,8 +130,7 @@ function DataTable{T<:Type}(column_eltypes::AbstractVector{T}, cnames::AbstractV
             if elty <: CategoricalValue
                 columns[j] = NullableCategoricalArray{Nulls.T(elty)}(nrows)
             else
-                columns[j] = Vector{elty}(nrows)
-                fill!(columns[j], null)
+                columns[j] = nulls(elty, nrows)
             end
         else
             if elty <: CategoricalValue
