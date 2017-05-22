@@ -16,8 +16,8 @@ module TestConversions
     @test isa(convert(Array{Float64}, dt), Matrix{Float64})
 
     dt = DataTable()
-    dt[:A] = 1.0:5.0
-    dt[:B] = 1.0:5.0
+    dt[:A] = collect(1.0:5.0)
+    dt[:B] = collect(1.0:5.0)
     a = convert(Array, dt)
     aa = convert(Array{Any}, dt)
     ai = convert(Array{Int}, dt)
@@ -35,11 +35,11 @@ module TestConversions
     naa = convert(Array{?Any}, dt)
     nai = convert(Array{?Int}, dt)
     @test isa(na, Matrix{?Float64})
-    @test isequal(na, convert(Matrix, dt))
+    @test na == convert(Matrix, dt)
     @test isa(naa, Matrix{?Any})
-    @test isequal(naa, convert(Matrix{?Any}, dt))
+    @test naa == convert(Matrix{?Any}, dt)
     @test isa(nai, Matrix{?Int})
-    @test isequal(nai, convert(Matrix{?Int}, dt))
+    @test nai == convert(Matrix{?Int}, dt)
 
     a = [1.0,2.0]
     b = [-0.1,3]

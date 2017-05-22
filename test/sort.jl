@@ -10,11 +10,11 @@ module TestSort
 
     @test sortperm(d) == sortperm(dv1)
     @test sortperm(d[[:dv3, :dv1]]) == sortperm(dv3)
-    @test isequal(sort(d, cols=:dv1)[:dv3], sortperm(dv1))
-    @test isequal(sort(d, cols=:dv2)[:dv3], sortperm(dv1))
-    @test isequal(sort(d, cols=:cv1)[:dv3], sortperm(dv1))
-    @test isequal(sort(d, cols=[:dv1, :cv1])[:dv3], sortperm(dv1))
-    @test isequal(sort(d, cols=[:dv1, :dv3])[:dv3], sortperm(dv1))
+    @test sort(d, cols=:dv1)[:dv3] == sortperm(dv1)
+    @test sort(d, cols=:dv2)[:dv3] == sortperm(dv1)
+    @test sort(d, cols=:cv1)[:dv3] == sortperm(dv1)
+    @test sort(d, cols=[:dv1, :cv1])[:dv3] == sortperm(dv1)
+    @test sort(d, cols=[:dv1, :dv3])[:dv3] == sortperm(dv1)
 
     dt = DataTable(rank=rand(1:12, 1000),
                    chrom=rand(1:24, 1000),
@@ -32,13 +32,13 @@ module TestSort
     @test issorted(ds2, cols=(order(:rank, rev=true), :chrom, :pos))
     @test issorted(ds2, rev=(true, false, false))
 
-    @test isequal(ds2, ds)
+    @test ds2 == ds
 
     sort!(dt, cols=(:rank, :chrom, :pos), rev=(true, false, false))
     @test issorted(dt, cols=(order(:rank, rev=true), :chrom, :pos))
     @test issorted(dt, rev=(true, false, false))
 
-    @test isequal(dt, ds)
+    @test dt == ds
 
     # Check that columns that shares the same underlying array are only permuted once PR#1072
     dt = DataTable(a=[2,1])

@@ -82,7 +82,7 @@ module TestData
     N = 20
     #Cast to Int64 as rand() behavior differs between Int32/64
     d1 = rand(map(Int64, 1:2), N)
-    d2 = NullableCategoricalArray(?(String)["A", "B", null])[rand(map(Int64, 1:3), N)]
+    d2 = NullableCategoricalArray(["A", "B", null])[rand(map(Int64, 1:3), N)]
     d3 = randn(N)
     d4 = randn(N)
     dt7 = DataTable(Any[d1, d2, d3], [:d1, :d2, :d3])
@@ -90,7 +90,7 @@ module TestData
     #test_group("groupby")
     gd = groupby(dt7, :d1)
     @test length(gd) == 2
-    # @test isequal(gd[2]["d2"], CategoricalVector["A", "B", null, "A", null, null, null, null])
+    # @test gd[2]["d2"] == CategoricalVector["A", "B", null, "A", null, null, null, null]
     @test sum(gd[2][:d3]) == sum(dt7[:d3][dt7[:d1] .== 2])
 
     g1 = groupby(dt7, [:d1, :d2])
@@ -262,13 +262,13 @@ module TestData
 
     # # TODO: Restore this functionality
     # m1 = join(dt1, dt2, on = [:a,:b])
-    # @test isequal(m1[:a], Vector(["x", "x", "y", "y", fill("x", 5)]))
+    # @test m1[:a] == Vector(["x", "x", "y", "y", fill("x", 5)]))
     # m2 = join(dt1, dt2, on = ["a","b"], kind = :outer)
-    # @test isequal(m2[10,:v2], null)
-    # @test isequal(m2[:a],
-    #               Vector(?(String)["x", "x", "y", "y",
-    #                                "x", "x", "x", "x", "x", "y",
-    #                                null, "y"])
+    # @test m2[10,:v2] == null
+    # @test m2[:a] ==
+    #               (?String)["x", "x", "y", "y",
+    #                         "x", "x", "x", "x", "x", "y",
+    #                         null, "y"]
 
     srand(1)
     function spltdt(d)
@@ -306,14 +306,14 @@ module TestData
     @test find(nonunique(dt, 1)) == collect(3:12)
 
     # Test unique() with extra argument
-    @test isequal(unique(dt), dt1)
-    @test isequal(unique(dt, :), dt1)
-    @test isequal(unique(dt, Colon()), dt1)
-    @test isequal(unique(dt, 2:3), dt1)
-    @test isequal(unique(dt, 3), dt1[1:3,:])
-    @test isequal(unique(dt, [1, 3]), dt1)
-    @test isequal(unique(dt, [:a, :c]), dt1)
-    @test isequal(unique(dt, :a), dt1[1:2,:])
+    @test unique(dt) == dt1
+    @test unique(dt, :) == dt1
+    @test unique(dt, Colon()) == dt1
+    @test unique(dt, 2:3) == dt1
+    @test unique(dt, 3) == dt1[1:3,:]
+    @test unique(dt, [1, 3]) == dt1
+    @test unique(dt, [:a, :c]) == dt1
+    @test unique(dt, :a) == dt1[1:2,:]
 
     #test unique!() with extra argument
     unique!(dt, [1, 3])

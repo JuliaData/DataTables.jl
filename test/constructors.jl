@@ -6,8 +6,8 @@ module TestConstructors
     #
 
     dt = DataTable()
-    @test isequal(dt.columns, Any[])
-    @test isequal(dt.colindex, Index())
+    @test dt.columns == Any[]
+    @test dt.colindex == Index()
 
     dt = DataTable(Any[NullableCategoricalVector(zeros(3)),
                        NullableCategoricalVector(ones(3))],
@@ -15,10 +15,10 @@ module TestConstructors
     @test size(dt, 1) == 3
     @test size(dt, 2) == 2
 
-    @test isequal(dt, DataTable(Any[NullableCategoricalVector(zeros(3)),
-                                    NullableCategoricalVector(ones(3))]))
-    @test isequal(dt, DataTable(x1 = [0.0, 0.0, 0.0],
-                                x2 = [1.0, 1.0, 1.0]))
+    @test dt == DataTable(Any[NullableCategoricalVector(zeros(3)),
+                              NullableCategoricalVector(ones(3))])
+    @test dt == DataTable(x1 = [0.0, 0.0, 0.0],
+                          x2 = [1.0, 1.0, 1.0])
 
     dt2 = convert(DataTable, Matrix([0.0 1.0;
                                      0.0 1.0;
@@ -27,28 +27,28 @@ module TestConstructors
     @test dt[:x1] == dt2[:x1]
     @test dt[:x2] == dt2[:x2]
 
-    @test isequal(dt, DataTable(x1 = (?Float64)[0.0, 0.0, 0.0],
-                                x2 = (?Float64)[1.0, 1.0, 1.0]))
-    @test isequal(dt, DataTable(x1 = (?Float64)[0.0, 0.0, 0.0],
-                                x2 = (?Float64)[1.0, 1.0, 1.0],
-                                x3 = (?Float64)[2.0, 2.0, 2.0])[[:x1, :x2]])
+    @test dt == DataTable(x1 = (?Float64)[0.0, 0.0, 0.0],
+                          x2 = (?Float64)[1.0, 1.0, 1.0])
+    @test dt == DataTable(x1 = (?Float64)[0.0, 0.0, 0.0],
+                          x2 = (?Float64)[1.0, 1.0, 1.0],
+                          x3 = (?Float64)[2.0, 2.0, 2.0])[[:x1, :x2]]
 
-    dt = DataTable(?(Int), 2, 2)
+    dt = DataTable((?Int), 2, 2)
     @test size(dt) == (2, 2)
     @test eltypes(dt) == [?(Int), ?(Int)]
 
-    dt = DataTable([?(Int), ?(Float64)], [:x1, :x2], 2)
+    dt = DataTable([?Int, ?Float64], [:x1, :x2], 2)
     @test size(dt) == (2, 2)
-    @test eltypes(dt) == [?(Int), ?(Float64)]
+    @test eltypes(dt) == [?Int, ?Float64]
 
-    @test isequal(dt, DataTable([?(Int), ?(Float64)], 2))
+    @test dt == DataTable([?Int, ?Float64], 2)
 
     @test_throws BoundsError SubDataTable(DataTable(A=1), 0)
     @test_throws BoundsError SubDataTable(DataTable(A=1), 0)
-    @test isequal(SubDataTable(DataTable(A=1), 1), DataTable(A=1))
-    @test isequal(SubDataTable(DataTable(A=1:10), 1:4), DataTable(A=1:4))
-    @test isequal(view(SubDataTable(DataTable(A=1:10), 1:4), 2), DataTable(A=2))
-    @test isequal(view(SubDataTable(DataTable(A=1:10), 1:4), [true, true, false, false]), DataTable(A=1:2))
+    @test SubDataTable(DataTable(A=1), 1) == DataTable(A=1)
+    @test SubDataTable(DataTable(A=1:10), 1:4) == DataTable(A=1:4)
+    @test view(SubDataTable(DataTable(A=1:10), 1:4), 2) == DataTable(A=2)
+    @test view(SubDataTable(DataTable(A=1:10), 1:4), [true, true, false, false]) == DataTable(A=1:2)
 
     @test DataTable(a=1, b=1:2) == DataTable(a=[1,1], b=[1,2])
 

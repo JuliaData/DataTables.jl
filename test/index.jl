@@ -22,8 +22,8 @@ inds = Any[1,
            ?[:A]]
 
 for ind in inds
-    if isequal(ind, :A) || ndims(ind) == 0
-        @test isequal(i[ind], 1)
+    if ind == :A || ndims(ind) == 0
+        @test i[ind] == 1
     else
         @test (i[ind] == [1])
     end

@@ -310,7 +310,7 @@ module TestDataTable
     @test dt2 == dt4
     @test typeof(dt2[:Fish]) <: NullableCategoricalArray{String,1,UInt32}
     # first column stays as CategoricalArray in dt3
-    # @test isequal(dt3[:, 2:3], dt4[2:3, 2:3])
+    # @test dt3[:, 2:3] == dt4[2:3, 2:3]
     #Make sure unstack works with NULLs at the start of the value column
     dt[1,:Value] = null
     dt2 = unstack(dt, :Fish, :Key, :Value)
