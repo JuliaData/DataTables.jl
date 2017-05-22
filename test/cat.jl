@@ -40,8 +40,8 @@ module TestCat
         dt = DataTable()
         DataTables.hcat!(dt, NullableCategoricalVector(1:10))
         @test isequal(dt[1], NullableCategoricalVector(1:10))
-        DataTables.hcat!(dt, Vector(1:10))
-        @test isequal(dt[2], Vector(1:10))
+        DataTables.hcat!(dt, 1:10)
+        @test isequal(dt[2], 1:10)
     end
 
     #
@@ -248,7 +248,7 @@ module TestCat
         err = @test_throws ArgumentError vcat(dt1, dt2, dt3, dt4, dt1, dt2, dt3, dt4, dt1, dt2, dt3, dt4)
         @test err.value.msg == "column(s) E and F are missing from argument(s) 1, 5 and 9, column(s) B are missing from argument(s) 2, 6 and 10, and column(s) F are missing from argument(s) 3, 7 and 11"
     end
-    x = view(DataTable(A = Vector(1:3)), 2)
-    y = DataTable(A = Vector(4:5))
+    x = view(DataTable(A = 1:3), 2)
+    y = DataTable(A = 4:5)
     @test isequal(vcat(x, y), DataTable(A = [2, 4, 5]))
 end

@@ -5,14 +5,14 @@ module TestDataTable
     # Equality
     #
 
-    @test isequal(DataTable(a=[1, 2, 3], b=[4, 5, 6]), DataTable(a=[1, 2, 3], b=[4, 5, 6]))
-    @test !isequal(DataTable(a=[1, 2], b=[4, 5]), DataTable(a=[1, 2, 3], b=[4, 5, 6]))
-    @test !isequal(DataTable(a=[1, 2, 3], b=[4, 5, 6]), DataTable(a=[1, 2, 3]))
-    @test !isequal(DataTable(a=[1, 2, 3], b=[4, 5, 6]), DataTable(a=[1, 2, 3], c=[4, 5, 6]))
-    @test !isequal(DataTable(a=[1, 2, 3], b=[4, 5, 6]), DataTable(b=[4, 5, 6], a=[1, 2, 3]))
-    @test !isequal(DataTable(a=[1, 2, 2], b=[4, 5, 6]), DataTable(a=[1, 2, 3], b=[4, 5, 6]))
-    @test isequal(DataTable(a=[1, 2, null], b=[4, 5, 6]),
-                  DataTable(a=[1, 2, null], b=[4, 5, 6]))
+    @test DataTable(a=[1, 2, 3], b=[4, 5, 6]) == DataTable(a=[1, 2, 3], b=[4, 5, 6])
+    @test DataTable(a=[1, 2], b=[4, 5]) != DataTable(a=[1, 2, 3], b=[4, 5, 6])
+    @test DataTable(a=[1, 2, 3], b=[4, 5, 6]) != DataTable(a=[1, 2, 3])
+    @test DataTable(a=[1, 2, 3], b=[4, 5, 6]) != DataTable(a=[1, 2, 3], c=[4, 5, 6])
+    @test DataTable(a=[1, 2, 3], b=[4, 5, 6]) != DataTable(b=[4, 5, 6], a=[1, 2, 3])
+    @test DataTable(a=[1, 2, 2], b=[4, 5, 6]) != DataTable(a=[1, 2, 3], b=[4, 5, 6])
+    @test DataTable(a=[1, 2, null], b=[4, 5, 6]) ==
+                  DataTable(a=[1, 2, null], b=[4, 5, 6])
 
     @test DataTable(a=[1, 2, 3], b=[4, 5, 6]) == DataTable(a=[1, 2, 3], b=[4, 5, 6])
     @test DataTable(a=[1, 2], b=[4, 5]) != DataTable(a=[1, 2, 3], b=[4, 5, 6])
@@ -67,23 +67,23 @@ module TestDataTable
 
     # Insert single value
     x[:d] = 3
-    @test isequal(x[:d], [3, 3, 3])
+    @test x[:d] == [3, 3, 3]
 
     x0[:d] = 3
     @test x0[:d] == Int[]
 
     # similar / nulls
-    dt = DataTable(a = ?[1],
-                   b = ?["b"],
+    dt = DataTable(a = (?Int)[1],
+                   b = (?String)["b"],
                    c = NullableCategoricalArray([3.3]))
     nulldt = DataTable(a = nulls(Int, 2),
                        b = nulls(String, 2),
                        c = NullableCategoricalArray{Float64}(2))
-    @test isequal(nulldt, similar(dt, 2))
+    @test nulldt == similar(dt, 2)
 
     # Associative methods
 
-    dt = DataTable(a=[1, 2], b=[3., 4.])
+    dt = DataTable(a=[1, 2], b=[3.0, 4.0])
     @test haskey(dt, :a)
     @test !haskey(dt, :c)
     @test get(dt, :a, -1) === dt.columns[1]
@@ -94,19 +94,19 @@ module TestDataTable
     @test isempty(dt.columns)
     @test isempty(dt)
 
-    dt = DataTable(a=(?Int)[1, 2], b=(?Float64)[3., 4.])
+    dt = DataTable(a=(?Int)[1, 2], b=(?Float64)[3.0, 4.0])
     @test_throws BoundsError insert!(dt, 5, ["a", "b"], :newcol)
     @test_throws ErrorException insert!(dt, 1, ["a"], :newcol)
-    @test isequal(insert!(dt, 1, ["a", "b"], :newcol), dt)
+    @test insert!(dt, 1, ["a", "b"], :newcol) == dt
     @test names(dt) == [:newcol, :a, :b]
-    @test isequal(dt[:a], (?Int)[1, 2])
-    @test isequal(dt[:b], (?Float64)[3., 4.])
-    @test isequal(dt[:newcol], ["a", "b"])
+    @test dt[:a] == [1, 2]
+    @test dt[:b] == [3.0, 4.0]
+    @test dt[:newcol] == ["a", "b"]
 
-    dt = DataTable(a=[1, 2], b=[3., 4.])
+    dt = DataTable(a=[1, 2], b=[3.0, 4.0])
     dt2 = DataTable(b=["a", "b"], c=[:c, :d])
-    @test isequal(merge!(dt, dt2), dt)
-    @test isequal(dt, DataTable(a=[1, 2], b=["a", "b"], c=[:c, :d]))
+    @test merge!(dt, dt2) == dt
+    @test dt == DataTable(a=[1, 2], b=["a", "b"], c=[:c, :d])
 
     #test_group("Empty DataTable constructors")
     dt = DataTable(?Int, 10, 3)
@@ -191,11 +191,11 @@ module TestDataTable
 
     dtb= DataTable( first=[1,2], second=["apple","orange"] )
     push!(dtb, Any[3,"pear"])
-    @test isequal(dt, dtb)
+    @test dt == dtb
 
     dtb= DataTable( first=[1,2], second=["apple","orange"] )
     push!(dtb, (3,"pear"))
-    @test isequal(dt, dtb)
+    @test dt == dtb
 
     dtb= DataTable( first=[1,2], second=["apple","orange"] )
     @test_throws ArgumentError push!(dtb, (33.33,"pear"))
@@ -205,22 +205,22 @@ module TestDataTable
 
     dtb= DataTable( first=[1,2], second=["apple","orange"] )
     push!(dtb, Dict(:first=>3, :second=>"pear"))
-    @test isequal(dt, dtb)
+    @test dt == dtb
 
     dt=DataTable( first=[1,2,3], second=["apple","orange","banana"] )
     dtb= DataTable( first=[1,2], second=["apple","orange"] )
     push!(dtb, Dict("first"=>3, "second"=>"banana"))
-    @test isequal(dt, dtb)
+    @test dt == dtb
 
     dt0= DataTable( first=[1,2], second=["apple","orange"] )
     dtb= DataTable( first=[1,2], second=["apple","orange"] )
     @test_throws ArgumentError push!(dtb, Dict(:first=>true, :second=>false))
-    @test isequal(dt0, dtb)
+    @test dt0 == dtb
 
     dt0= DataTable( first=[1,2], second=["apple","orange"] )
     dtb= DataTable( first=[1,2], second=["apple","orange"] )
     @test_throws ArgumentError push!(dtb, Dict("first"=>"chicken", "second"=>"stuff"))
-    @test isequal(dt0, dtb)
+    @test dt0 == dtb
 
     # delete!
     dt = DataTable(a=1, b=2, c=3, d=4, e=5)
@@ -232,46 +232,46 @@ module TestDataTable
     delete!(d, [:a, :e, :c])
     @test names(d) == [:b, :d]
     delete!(d, :b)
-    @test isequal(d, DataTable(d=4))
+    @test d == DataTable(d=4)
 
     d = copy(dt)
     delete!(d, [2, 5, 3])
     @test names(d) == [:a, :d]
     delete!(d, 2)
-    @test isequal(d, DataTable(a=1))
+    @test d == DataTable(a=1)
 
     # deleterows!
-    dt = DataTable(a=[1, 2], b=[3., 4.])
+    dt = DataTable(a=[1, 2], b=[3.0, 4.0])
     @test deleterows!(dt, 1) === dt
-    @test isequal(dt, DataTable(a=[2], b=[4.]))
+    @test dt == DataTable(a=[2], b=[4.0])
 
-    dt = DataTable(a=[1, 2], b=[3., 4.])
+    dt = DataTable(a=[1, 2], b=[3.0, 4.0])
     @test deleterows!(dt, 2) === dt
-    @test isequal(dt, DataTable(a=[1], b=[3.]))
+    @test dt == DataTable(a=[1], b=[3.0])
 
-    dt = DataTable(a=[1, 2, 3], b=[3., 4., 5.])
+    dt = DataTable(a=[1, 2, 3], b=[3.0, 4.0, 5.0])
     @test deleterows!(dt, 2:3) === dt
-    @test isequal(dt, DataTable(a=[1], b=[3.]))
+    @test dt == DataTable(a=[1], b=[3.0])
 
-    dt = DataTable(a=[1, 2, 3], b=[3., 4., 5.])
+    dt = DataTable(a=[1, 2, 3], b=[3.0, 4.0, 5.0])
     @test deleterows!(dt, [2, 3]) === dt
-    @test isequal(dt, DataTable(a=[1], b=[3.]))
+    @test dt == DataTable(a=[1], b=[3.0])
 
-    dt = DataTable(a=[1, 2], b=[3., 4.])
+    dt = DataTable(a=[1, 2], b=[3.0, 4.0])
     @test deleterows!(dt, 1) === dt
-    @test isequal(dt, DataTable(a=[2], b=[4.]))
+    @test dt == DataTable(a=[2], b=[4.0])
 
-    dt = DataTable(a=[1, 2], b=[3., 4.])
+    dt = DataTable(a=[1, 2], b=[3.0, 4.0])
     @test deleterows!(dt, 2) === dt
-    @test isequal(dt, DataTable(a=[1], b=[3.]))
+    @test dt == DataTable(a=[1], b=[3.0])
 
-    dt = DataTable(a=[1, 2, 3], b=[3., 4., 5.])
+    dt = DataTable(a=[1, 2, 3], b=[3.0, 4.0, 5.0])
     @test deleterows!(dt, 2:3) === dt
-    @test isequal(dt, DataTable(a=[1], b=[3.]))
+    @test dt == DataTable(a=[1], b=[3.0])
 
-    dt = DataTable(a=[1, 2, 3], b=[3., 4., 5.])
+    dt = DataTable(a=[1, 2, 3], b=[3.0, 4.0, 5.0])
     @test deleterows!(dt, [2, 3]) === dt
-    @test isequal(dt, DataTable(a=[1], b=[3.]))
+    @test dt == DataTable(a=[1], b=[3.0])
 
     # describe
     #suppress output and test that describe() does not throw
@@ -280,16 +280,16 @@ module TestDataTable
         @test nothing == describe(f, DataTable(a=[1, 2], b=Any["3", null]))
         @test nothing ==
               describe(f, DataTable(a=[1, 2],
-                                    b=(?String)["3", null]))
+                                    b=["3", null]))
         @test nothing ==
               describe(f, DataTable(a=CategoricalArray([1, 2]),
-                                    b=NullableCategoricalArray((?String)["3", null])))
+                                    b=NullableCategoricalArray(["3", null])))
         @test nothing == describe(f, [1, 2, 3])
         @test nothing == describe(f, [1, 2, 3])
         @test nothing == describe(f, CategoricalArray([1, 2, 3]))
         @test nothing == describe(f, Any["1", "2", null])
-        @test nothing == describe(f, (?String)["1", "2", null])
-        @test nothing == describe(f, NullableCategoricalArray((?String)["1", "2", null]))
+        @test nothing == describe(f, ["1", "2", null])
+        @test nothing == describe(f, NullableCategoricalArray(["1", "2", null]))
     end
 
     #Check the output of unstack
@@ -301,13 +301,13 @@ module TestDataTable
     #Unstack specifying a row column
     dt2 = unstack(dt, :Fish, :Key, :Value)
     #Unstack without specifying a row column
-    #FIXME
+    #FIXME: categoricalarrays
     # dt3 = unstack(dt, :Key, :Value)
     #The expected output
     dt4 = DataTable(Fish = (?String)["XXX", "Bob", "Batman"],
                     Color = (?String)[null, "Red", "Grey"],
                     Mass = (?String)[null, "12 g", "18 g"])
-    @test isequal(dt2, dt4)
+    @test dt2 == dt4
     @test typeof(dt2[:Fish]) <: NullableCategoricalArray{String,1,UInt32}
     # first column stays as CategoricalArray in dt3
     # @test isequal(dt3[:, 2:3], dt4[2:3, 2:3])
@@ -316,7 +316,7 @@ module TestDataTable
     dt2 = unstack(dt, :Fish, :Key, :Value)
     #This changes the expected result
     dt4[2,:Mass] = null
-    @test isequal(dt2, dt4)
+    @test dt2 == dt4
 
     dt = DataTable(A = 1:10, B = 'A':'J')
     @test !(dt[:,:] === dt)
