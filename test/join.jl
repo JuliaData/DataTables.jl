@@ -25,13 +25,13 @@ module TestJoin
     semi = unique(inner[:, [:ID, :Name]])
     anti = left[Bool[isnull(x) for x in left[:Job]], [:ID, :Name]]
 
-    @test isequal(join(name, job, on = :ID), inner)
-    @test isequal(join(name, job, on = :ID, kind = :inner), inner)
-    @test isequal(join(name, job, on = :ID, kind = :outer), outer)
-    @test isequal(join(name, job, on = :ID, kind = :left), left)
-    @test isequal(join(name, job, on = :ID, kind = :right), right)
-    @test isequal(join(name, job, on = :ID, kind = :semi), semi)
-    @test isequal(join(name, job, on = :ID, kind = :anti), anti)
+    @test join(name, job, on = :ID) == inner
+    @test join(name, job, on = :ID, kind = :inner) == inner
+    @test join(name, job, on = :ID, kind = :outer) == outer
+    @test join(name, job, on = :ID, kind = :left) == left
+    @test join(name, job, on = :ID, kind = :right) == right
+    @test join(name, job, on = :ID, kind = :semi) == semi
+    @test join(name, job, on = :ID, kind = :anti) == anti
     @test_throws ArgumentError join(name, job)
     @test_throws ArgumentError join(name, job, on=:ID, kind=:other)
 
@@ -40,13 +40,13 @@ module TestJoin
     nameid = name[on]
     jobid = job[on]
 
-    @test isequal(join(nameid, jobid, on = :ID), inner[on])
-    @test isequal(join(nameid, jobid, on = :ID, kind = :inner), inner[on])
-    @test isequal(join(nameid, jobid, on = :ID, kind = :outer), outer[on])
-    @test isequal(join(nameid, jobid, on = :ID, kind = :left), left[on])
-    @test isequal(join(nameid, jobid, on = :ID, kind = :right), right[on])
-    @test isequal(join(nameid, jobid, on = :ID, kind = :semi), semi[on])
-    @test isequal(join(nameid, jobid, on = :ID, kind = :anti), anti[on])
+    @test join(nameid, jobid, on = :ID) == inner[on]
+    @test join(nameid, jobid, on = :ID, kind = :inner) == inner[on]
+    @test join(nameid, jobid, on = :ID, kind = :outer) == outer[on]
+    @test join(nameid, jobid, on = :ID, kind = :left) == left[on]
+    @test join(nameid, jobid, on = :ID, kind = :right) == right[on]
+    @test join(nameid, jobid, on = :ID, kind = :semi) == semi[on]
+    @test join(nameid, jobid, on = :ID, kind = :anti) == anti[on]
 
     # Join on multiple keys
     dt1 = DataTable(A = 1, B = 2, C = 3)
@@ -62,7 +62,7 @@ module TestJoin
                       B = ['a', 'a', 'a', 'b', 'b', 'b'],
                       C = [3, 4, 5, 3, 4, 5])
 
-    @test isequal(join(dt1, dt2[[:C]], kind = :cross), cross)
+    @test join(dt1, dt2[[:C]], kind = :cross) == cross
 
     # Cross joins handle naming collisions
     @test size(join(dt1, dt1, kind = :cross)) == (4, 4)
@@ -72,27 +72,27 @@ module TestJoin
 
     # test empty inputs
     simple_dt(len::Int, col=:A) = (dt = DataTable(); dt[col]=collect(1:len); dt)
-    @test isequal(join(simple_dt(0), simple_dt(0), on = :A, kind = :left),  simple_dt(0))
-    @test isequal(join(simple_dt(2), simple_dt(0), on = :A, kind = :left),  simple_dt(2))
-    @test isequal(join(simple_dt(0), simple_dt(2), on = :A, kind = :left),  simple_dt(0))
-    @test isequal(join(simple_dt(0), simple_dt(0), on = :A, kind = :right), simple_dt(0))
-    @test isequal(join(simple_dt(0), simple_dt(2), on = :A, kind = :right), simple_dt(2))
-    @test isequal(join(simple_dt(2), simple_dt(0), on = :A, kind = :right), simple_dt(0))
-    @test isequal(join(simple_dt(0), simple_dt(0), on = :A, kind = :inner), simple_dt(0))
-    @test isequal(join(simple_dt(0), simple_dt(2), on = :A, kind = :inner), simple_dt(0))
-    @test isequal(join(simple_dt(2), simple_dt(0), on = :A, kind = :inner), simple_dt(0))
-    @test isequal(join(simple_dt(0), simple_dt(0), on = :A, kind = :outer), simple_dt(0))
-    @test isequal(join(simple_dt(0), simple_dt(2), on = :A, kind = :outer), simple_dt(2))
-    @test isequal(join(simple_dt(2), simple_dt(0), on = :A, kind = :outer), simple_dt(2))
-    @test isequal(join(simple_dt(0), simple_dt(0), on = :A, kind = :semi),  simple_dt(0))
-    @test isequal(join(simple_dt(2), simple_dt(0), on = :A, kind = :semi),  simple_dt(0))
-    @test isequal(join(simple_dt(0), simple_dt(2), on = :A, kind = :semi),  simple_dt(0))
-    @test isequal(join(simple_dt(0), simple_dt(0), on = :A, kind = :anti),  simple_dt(0))
-    @test isequal(join(simple_dt(2), simple_dt(0), on = :A, kind = :anti),  simple_dt(2))
-    @test isequal(join(simple_dt(0), simple_dt(2), on = :A, kind = :anti),  simple_dt(0))
-    @test isequal(join(simple_dt(0), simple_dt(0, :B), kind = :cross), DataTable(A=Int[], B=Int[]))
-    @test isequal(join(simple_dt(0), simple_dt(2, :B), kind = :cross), DataTable(A=Int[], B=Int[]))
-    @test isequal(join(simple_dt(2), simple_dt(0, :B), kind = :cross), DataTable(A=Int[], B=Int[]))
+    @test join(simple_dt(0), simple_dt(0), on = :A, kind = :left) == simple_dt(0)
+    @test join(simple_dt(2), simple_dt(0), on = :A, kind = :left) == simple_dt(2)
+    @test join(simple_dt(0), simple_dt(2), on = :A, kind = :left) == simple_dt(0)
+    @test join(simple_dt(0), simple_dt(0), on = :A, kind = :right) == simple_dt(0)
+    @test join(simple_dt(0), simple_dt(2), on = :A, kind = :right) == simple_dt(2)
+    @test join(simple_dt(2), simple_dt(0), on = :A, kind = :right) == simple_dt(0)
+    @test join(simple_dt(0), simple_dt(0), on = :A, kind = :inner) == simple_dt(0)
+    @test join(simple_dt(0), simple_dt(2), on = :A, kind = :inner) == simple_dt(0)
+    @test join(simple_dt(2), simple_dt(0), on = :A, kind = :inner) == simple_dt(0)
+    @test join(simple_dt(0), simple_dt(0), on = :A, kind = :outer) == simple_dt(0)
+    @test join(simple_dt(0), simple_dt(2), on = :A, kind = :outer) == simple_dt(2)
+    @test join(simple_dt(2), simple_dt(0), on = :A, kind = :outer) == simple_dt(2)
+    @test join(simple_dt(0), simple_dt(0), on = :A, kind = :semi) == simple_dt(0)
+    @test join(simple_dt(2), simple_dt(0), on = :A, kind = :semi) == simple_dt(0)
+    @test join(simple_dt(0), simple_dt(2), on = :A, kind = :semi) == simple_dt(0)
+    @test join(simple_dt(0), simple_dt(0), on = :A, kind = :anti) == simple_dt(0)
+    @test join(simple_dt(2), simple_dt(0), on = :A, kind = :anti) == simple_dt(2)
+    @test join(simple_dt(0), simple_dt(2), on = :A, kind = :anti) == simple_dt(0)
+    @test join(simple_dt(0), simple_dt(0, :B), kind = :cross) == DataTable(A=Int[], B=Int[])
+    @test join(simple_dt(0), simple_dt(2, :B), kind = :cross) == DataTable(A=Int[], B=Int[])
+    @test join(simple_dt(2), simple_dt(0, :B), kind = :cross) == DataTable(A=Int[], B=Int[])
 
     # issue #960
     dt1 = DataTable(A = 1:50,

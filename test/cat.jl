@@ -16,16 +16,16 @@ module TestCat
     dth = hcat(dt3, dt4)
     @test size(dth, 2) == 3
     @test names(dth) == [:x1, :x1_1, :x2]
-    @test isequal(dth[:x1], dt3[:x1])
-    @test isequal(dth, [dt3 dt4])
-    @test isequal(dth, DataTables.hcat!(DataTable(), dt3, dt4))
+    @test dth[:x1] == dt3[:x1]
+    @test dth == [dt3 dt4]
+    @test dth == DataTables.hcat!(DataTable(), dt3, dt4)
 
     dth3 = hcat(dt3, dt4, dt5)
     @test names(dth3) == [:x1, :x1_1, :x2, :x1_2, :x2_1]
-    @test isequal(dth3, hcat(dth, dt5))
-    @test isequal(dth3, DataTables.hcat!(DataTable(), dt3, dt4, dt5))
+    @test dth3 == hcat(dth, dt5)
+    @test dth3 == DataTables.hcat!(DataTable(), dt3, dt4, dt5)
 
-    @test isequal(dt2, DataTables.hcat!(dt2))
+    @test dt2 == DataTables.hcat!(dt2)
 
     @testset "hcat ::AbstractDataTable" begin
         dt = DataTable(A = repeat('A':'C', inner=4), B = 1:12)
@@ -39,9 +39,9 @@ module TestCat
     @testset "hcat ::Vectors" begin
         dt = DataTable()
         DataTables.hcat!(dt, NullableCategoricalVector(1:10))
-        @test isequal(dt[1], NullableCategoricalVector(1:10))
+        @test dt[1] == NullableCategoricalVector(1:10)
         DataTables.hcat!(dt, 1:10)
-        @test isequal(dt[2], 1:10)
+        @test dt[2] == collect(1:10)
     end
 
     #
@@ -107,7 +107,7 @@ module TestCat
     dtr = vcat(dt4, dt4)
     @test size(dtr, 1) == 8
     @test names(dt4) == names(dtr)
-    @test isequal(dtr, [dt4; dt4])
+    @test dtr == [dt4; dt4]
 
     @test eltypes(vcat(DataTable(a = [1]), DataTable(a = [2.1]))) == Type[Float64]
     @test eltypes(vcat(DataTable(a = nulls(?Int, 1)), DataTable(a = (?Float64)[2.1]))) == Type[?Float64]
@@ -119,21 +119,21 @@ module TestCat
     dtd = DataTable(Any[2:4], [:a])
     dtab = vcat(dta, dtb)
     dtac = vcat(dta, dtc)
-    @test isequal(dtab[:a], ?(Int)[1, 2, 2, 2, 3, 4])
-    @test isequal(dtac[:a], ?(Int)[1, 2, 2, 2, 3, 4])
+    @test dtab[:a] == [1, 2, 2, 2, 3, 4]
+    @test dtac[:a] == [1, 2, 2, 2, 3, 4]
     @test isa(dtab[:a], NullableCategoricalVector{Int})
     @test isa(dtac[:a], NullableCategoricalVector{Int})
     # ^^ container may flip if container promotion happens in Base/DataArrays
     dc = vcat(dtd, dtc)
-    @test isequal(vcat(dtc, dtd), dc)
+    @test vcat(dtc, dtd) == dc
 
     # Zero-row DataTables
     dtc0 = similar(dtc, 0)
-    @test isequal(vcat(dtd, dtc0, dtc), dc)
+    @test vcat(dtd, dtc0, dtc) == dc
     @test eltypes(vcat(dtd, dtc0)) == eltypes(dc)
 
     # vcat should be able to concatenate different implementations of AbstractDataTable (PR #944)
-    @test isequal(vcat(view(DataTable(A=1:3),2),DataTable(A=4:5)), DataTable(A=[2,4,5]))
+    @test vcat(view(DataTable(A=1:3),2),DataTable(A=4:5)) == DataTable(A=[2,4,5])
 
     @testset "vcat >2 args" begin
         @test vcat(DataTable(), DataTable(), DataTable()) == DataTable()
@@ -250,5 +250,5 @@ module TestCat
     end
     x = view(DataTable(A = 1:3), 2)
     y = DataTable(A = 4:5)
-    @test isequal(vcat(x, y), DataTable(A = [2, 4, 5]))
+    @test vcat(x, y) == DataTable(A = [2, 4, 5])
 end

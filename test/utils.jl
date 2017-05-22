@@ -61,7 +61,7 @@ module TestUtils
 
     @testset "describe" begin
         io = IOBuffer()
-        dt = DataTable(Any[collect(1:4), NullableArray(2:5),
+        dt = DataTable(Any[collect(1:4), Vector{?Int}(2:5),
                            CategoricalArray(3:6),
                            NullableCategoricalArray(4:7)],
                        [:arr, :nullarr, :cat, :nullcat])
@@ -77,34 +77,25 @@ module TestUtils
             3rd Quartile:   3.250000
             Maximum:        4.000000
             Length:         4
-            Type:           $Int
+            Type:           Int64
 
             nullarr
             Summary Stats:
-            Mean:           3.500000
-            Minimum:        2.000000
-            1st Quartile:   2.750000
-            Median:         3.500000
-            3rd Quartile:   4.250000
-            Maximum:        5.000000
             Length:         4
-            Type:           $Int
-            Number Missing: 0
-            % Missing:      0.000000
+            Type:           Union{Int64, Nulls.Null}
+            Number Unique:  4
 
             cat
             Summary Stats:
             Length:         4
-            Type:           CategoricalArrays.CategoricalValue{$Int,$(CategoricalArrays.DefaultRefType)}
+            Type:           CategoricalArrays.CategoricalValue{Int64,UInt32}
             Number Unique:  4
 
             nullcat
             Summary Stats:
             Length:         4
-            Type:           Nullable{CategoricalArrays.CategoricalValue{$Int,$(CategoricalArrays.DefaultRefType)}}
+            Type:           Union{CategoricalArrays.CategoricalValue{Int64,UInt32}, Nulls.Null}
             Number Unique:  4
-            Number Missing: 0
-            % Missing:      0.000000
 
             """
     end

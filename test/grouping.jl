@@ -15,7 +15,7 @@ module TestGrouping
             answer = [20, 12, -0.4283098098931877]
             @test isa(cw, Vector{Real})
             @test size(cw) == (ncol(dt),)
-            @test isequal(cw, answer)
+            @test cw == answer
 
             cw = colwise(sum, nullfree)
             answer = [55]
@@ -34,7 +34,7 @@ module TestGrouping
             answer = [20 12 -0.4283098098931877]
             @test isa(cw, Array{Real, 2})
             @test size(cw) == (length([sum]),ncol(dt))
-            @test isequal(cw, answer)
+            @test cw == answer
 
             cw = colwise([sum, minimum], nullfree)
             answer = reshape([55, 1], (2,1))
@@ -46,7 +46,7 @@ module TestGrouping
             answer = reshape([Vector{?Int}(1:10)], (1,1))
             @test isa(cw, Array{Vector{?Int},2})
             @test size(cw) == (1, ncol(nullfree))
-            @test isequal(cw, answer)
+            @test cw == answer
 
             @test_throws MethodError colwise(["Bob", :Susie], DataTable(A = 1:10, B = 11:20))
         end
@@ -61,7 +61,7 @@ module TestGrouping
             answer = Any[20 12 -0.4283098098931877; 8 8 8]
             @test isa(cw, Array{Real, 2})
             @test size(cw) == (length((sum, length)), ncol(dt))
-            @test isequal(cw, answer)
+            @test cw == answer
 
             cw = colwise((sum, length), nullfree)
             answer = reshape([55, 10], (2,1))
@@ -74,7 +74,7 @@ module TestGrouping
                              (2, ncol(nullfree)))
             @test typeof(cw) == Array{AbstractVector,2}
             @test size(cw) == (2, ncol(nullfree))
-            @test isequal(cw, answer)
+            @test cw == answer
 
             @test_throws MethodError colwise(("Bob", :Susie), DataTable(A = 1:10, B = 11:20))
         end
@@ -87,14 +87,14 @@ module TestGrouping
         @testset "::Function" begin
             cw = map(colwise(sum), (nullfree, dt))
             answer = ([55], Real[20, 12, -0.4283098098931877])
-            @test isequal(cw, answer)
+            @test cw == answer
 
             cw = map(colwise((sum, length)), (nullfree, dt))
             answer = (reshape([55, 10], (2,1)), Any[20 12 -0.4283098098931877; 8 8 8])
-            @test isequal(cw, answer)
+            @test cw == answer
 
             cw = map(colwise([sum, length]), (nullfree, dt))
-            @test isequal(cw, answer)
+            @test cw == answer
         end
     end
 
@@ -117,7 +117,7 @@ module TestGrouping
     gd = groupby(dt, cols)
     ga = map(f, gd)
 
-    @test isequal(bdt, combine(ga))
+    @test bdt == combine(ga)
 
     # groupby() with groups sorting
     gd = groupby(dt, cols, sort=true)
@@ -127,7 +127,7 @@ module TestGrouping
     g(dt) = DataTable(cmax1 = [c + 1 for c in dt[:cmax]])
     h(dt) = g(f(dt))
 
-    @test isequal(combine(map(h, gd)), combine(map(g, ga)))
+    @test combine(map(h, gd)) == combine(map(g, ga))
 
     # testing pool overflow
     dt2 = DataTable(v1 = categorical(collect(1:1000)), v2 = categorical(fill(1, 1000)))
@@ -146,29 +146,29 @@ module TestGrouping
 
     dt2 = by(e->1, DataTable(x=Int64[]), :x)
     @test size(dt2) == (0,2)
-    @test isequal(sum(dt2[:x]), 0)
+    @test sum(dt2[:x]) == 0
 
     # Check that reordering levels does not confuse groupby
     dt = DataTable(Key1 = CategoricalArray(["A", "A", "B", "B"]),
                    Key2 = CategoricalArray(["A", "B", "A", "B"]),
                    Value = 1:4)
     gd = groupby(dt, :Key1)
-    @test isequal(gd[1], DataTable(Key1=["A", "A"], Key2=["A", "B"], Value=1:2))
-    @test isequal(gd[2], DataTable(Key1=["B", "B"], Key2=["A", "B"], Value=3:4))
+    @test gd[1] == DataTable(Key1=["A", "A"], Key2=["A", "B"], Value=1:2)
+    @test gd[2] == DataTable(Key1=["B", "B"], Key2=["A", "B"], Value=3:4)
     gd = groupby(dt, [:Key1, :Key2])
-    @test isequal(gd[1], DataTable(Key1="A", Key2="A", Value=1))
-    @test isequal(gd[2], DataTable(Key1="A", Key2="B", Value=2))
-    @test isequal(gd[3], DataTable(Key1="B", Key2="A", Value=3))
-    @test isequal(gd[4], DataTable(Key1="B", Key2="B", Value=4))
+    @test gd[1] == DataTable(Key1="A", Key2="A", Value=1)
+    @test gd[2] == DataTable(Key1="A", Key2="B", Value=2)
+    @test gd[3] == DataTable(Key1="B", Key2="A", Value=3)
+    @test gd[4] == DataTable(Key1="B", Key2="B", Value=4)
     # Reorder levels, add unused level
     levels!(dt[:Key1], ["Z", "B", "A"])
     levels!(dt[:Key2], ["Z", "B", "A"])
     gd = groupby(dt, :Key1)
-    @test isequal(gd[1], DataTable(Key1=["A", "A"], Key2=["A", "B"], Value=1:2))
-    @test isequal(gd[2], DataTable(Key1=["B", "B"], Key2=["A", "B"], Value=3:4))
+    @test gd[1] == DataTable(Key1=["A", "A"], Key2=["A", "B"], Value=1:2)
+    @test gd[2] == DataTable(Key1=["B", "B"], Key2=["A", "B"], Value=3:4)
     gd = groupby(dt, [:Key1, :Key2])
-    @test isequal(gd[1], DataTable(Key1="A", Key2="A", Value=1))
-    @test isequal(gd[2], DataTable(Key1="A", Key2="B", Value=2))
-    @test isequal(gd[3], DataTable(Key1="B", Key2="A", Value=3))
-    @test isequal(gd[4], DataTable(Key1="B", Key2="B", Value=4))
+    @test gd[1] == DataTable(Key1="A", Key2="A", Value=1)
+    @test gd[2] == DataTable(Key1="A", Key2="B", Value=2)
+    @test gd[3] == DataTable(Key1="B", Key2="A", Value=3)
+    @test gd[4] == DataTable(Key1="B", Key2="B", Value=4)
 end
