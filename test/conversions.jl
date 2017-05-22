@@ -1,6 +1,5 @@
 module TestConversions
-    using Base.Test
-    using DataTables, Nulls
+    using Base.Test, DataTables, Nulls
     using DataStructures: OrderedDict, SortedDict
 
     dt = DataTable()

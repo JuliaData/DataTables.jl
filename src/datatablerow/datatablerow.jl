@@ -43,7 +43,7 @@ Base.@propagate_inbounds hash_colel{T}(v::AbstractCategoricalArray{T}, i, h::UIn
     hash(CategoricalArrays.index(v.pool)[v.refs[i]], h)
 Base.@propagate_inbounds function hash_colel{T}(v::AbstractNullableCategoricalArray{T}, i, h::UInt = zero(UInt))
     ref = v.refs[i]
-    ref == 0 ? h + Base.nullablehash_seed : hash(CategoricalArrays.index(v.pool)[ref], h)
+    ref == 0 ? hash(null, h) : hash(CategoricalArrays.index(v.pool)[ref], h)
 end
 
 # hash of DataTable rows based on its values
@@ -62,7 +62,7 @@ Base.hash(r::DataTableRow, h::UInt = zero(UInt)) = rowhash(r.dt, r.row, h)
 # rows are equal if they have the same values (while the row indices could differ)
 # returns Nullable{Bool}
 # if all non-null values are equal, but there are nulls, returns null
-@compat(Base.:(==))(r1::DataTableRow, r2::DataTableRow) = isequal(r1, r2)
+Base.:(==)(r1::DataTableRow, r2::DataTableRow) = isequal(r1, r2)
 
 function Base.isequal(r1::DataTableRow, r2::DataTableRow)
     isequal_row(r1.dt, r1.row, r2.dt, r2.row)
@@ -71,8 +71,6 @@ end
 # internal method for comparing the elements of the same data table column
 isequal_colel(col::AbstractArray, r1::Int, r2::Int) =
     (r1 == r2) || isequal(Base.unsafe_getindex(col, r1), Base.unsafe_getindex(col, r2))
-
-isequal_colel(a::Any, b::Any) = isequal(a, b)
 
 function isequal_row(dt1::AbstractDataTable, r1::Int, dt2::AbstractDataTable, r2::Int)
     if dt1 === dt2
@@ -83,7 +81,7 @@ function isequal_row(dt1::AbstractDataTable, r1::Int, dt2::AbstractDataTable, r2
         throw(ArgumentError("Rows of the tables that have different number of columns cannot be compared. Got $(ncol(dt1)) and $(ncol(dt2)) columns"))
     end
     @inbounds for (col1, col2) in zip(columns(dt1), columns(dt2))
-        isequal_colel(col1[r1], col2[r2]) || return false
+        isequal(col1[r1], col2[r2]) || return false
     end
     return true
 end

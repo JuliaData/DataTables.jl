@@ -5,13 +5,13 @@ module TestCat
     # hcat
     #
 
-    nvint = Vector(?(Int)[1, 2, null, 4])
-    nvstr = Vector(?(String)["one", "two", null, "four"])
+    nvint = [1, 2, null, 4]
+    nvstr = ["one", "two", null, "four"]
 
     dt2 = DataTable(Any[nvint, nvstr])
     dt3 = DataTable(Any[nvint])
     dt4 = convert(DataTable, [1:4 1:4])
-    dt5 = DataTable(Any[Vector([1,2,3,4]), nvstr])
+    dt5 = DataTable(Any[(?Int)[1,2,3,4], nvstr])
 
     dth = hcat(dt3, dt4)
     @test size(dth, 2) == 3
@@ -110,12 +110,12 @@ module TestCat
     @test isequal(dtr, [dt4; dt4])
 
     @test eltypes(vcat(DataTable(a = [1]), DataTable(a = [2.1]))) == Type[Float64]
-    @test eltypes(vcat(DataTable(a = Vector{Int}(1)), DataTable(a = [2.1]))) == Type[Float64]
+    @test eltypes(vcat(DataTable(a = nulls(?Int, 1)), DataTable(a = (?Float64)[2.1]))) == Type[?Float64]
 
     # Minimal container type promotion
     dta = DataTable(a = NullableCategoricalArray([1, 2, 2]))
     dtb = DataTable(a = NullableCategoricalArray([2, 3, 4]))
-    dtc = DataTable(a = Vector([2, 3, 4]))
+    dtc = DataTable(a = (?Int)[2, 3, 4])
     dtd = DataTable(Any[2:4], [:a])
     dtab = vcat(dta, dtb)
     dtac = vcat(dta, dtc)
@@ -149,23 +149,23 @@ module TestCat
         dt = vcat(DataTable([[1]], [:x]), DataTable([["1"]], [:x]))
         @test dt == DataTable([[1, "1"]], [:x])
         @test typeof.(dt.columns) == [Vector{Any}]
-        dt = vcat(DataTable([Vector([1])], [:x]), DataTable([[1]], [:x]))
-        @test dt == DataTable([Vector([1, 1])], [:x])
+        dt = vcat(DataTable([[1]], [:x]), DataTable([[1]], [:x]))
+        @test dt == DataTable([[1, 1]], [:x])
         @test typeof.(dt.columns) == [Vector{Int}]
         dt = vcat(DataTable([CategoricalArray([1])], [:x]), DataTable([[1]], [:x]))
         @test dt == DataTable([CategoricalArray([1, 1])], [:x])
         @test typeof.(dt.columns) == [CategoricalVector{Int, drf}]
         dt = vcat(DataTable([CategoricalArray([1])], [:x]),
-                  DataTable([Vector([1])], [:x]))
+                  DataTable([[1]], [:x]))
         @test dt == DataTable([CategoricalArray([1, 1])], [:x])
         @test typeof.(dt.columns) == [CategoricalVector{Int, drf}]
         dt = vcat(DataTable([CategoricalArray([1])], [:x]),
                   DataTable([NullableCategoricalArray([1])], [:x]))
         @test dt == DataTable([NullableCategoricalArray([1, 1])], [:x])
         @test typeof.(dt.columns) == [NullableCategoricalVector{Int, drf}]
-        dt = vcat(DataTable([Vector([1])], [:x]),
-                  DataTable([Vector(["1"])], [:x]))
-        @test dt == DataTable([Vector([1, "1"])], [:x])
+        dt = vcat(DataTable([[1]], [:x]),
+                  DataTable([["1"]], [:x]))
+        @test dt == DataTable([[1, "1"]], [:x])
         @test typeof.(dt.columns) == [Vector{Any}]
         dt = vcat(DataTable([CategoricalArray([1])], [:x]),
                   DataTable([CategoricalArray(["1"])], [:x]))
@@ -250,5 +250,5 @@ module TestCat
     end
     x = view(DataTable(A = Vector(1:3)), 2)
     y = DataTable(A = Vector(4:5))
-    @test isequal(vcat(x, y), DataTable(A = Vector([2, 4, 5])))
+    @test isequal(vcat(x, y), DataTable(A = [2, 4, 5]))
 end

@@ -21,17 +21,17 @@ module TestConstructors
                                 x2 = Vector([1.0, 1.0, 1.0])))
 
     dt2 = convert(DataTable, Matrix([0.0 1.0;
-                                            0.0 1.0;
-                                            0.0 1.0]))
+                                     0.0 1.0;
+                                     0.0 1.0]))
     names!(dt2, [:x1, :x2])
     @test isequal(dt[:x1], Vector(dt2[:x1]))
     @test isequal(dt[:x2], Vector(dt2[:x2]))
 
-    @test isequal(dt, DataTable(x1 = Vector([0.0, 0.0, 0.0]),
-                                x2 = Vector([1.0, 1.0, 1.0])))
-    @test isequal(dt, DataTable(x1 = Vector([0.0, 0.0, 0.0]),
-                                x2 = Vector([1.0, 1.0, 1.0]),
-                                x3 = Vector([2.0, 2.0, 2.0]))[[:x1, :x2]])
+    @test isequal(dt, DataTable(x1 = (?Float64)[0.0, 0.0, 0.0],
+                                x2 = (?Float64)[1.0, 1.0, 1.0]))
+    @test isequal(dt, DataTable(x1 = (?Float64)[0.0, 0.0, 0.0],
+                                x2 = (?Float64)[1.0, 1.0, 1.0],
+                                x3 = (?Float64)[2.0, 2.0, 2.0])[[:x1, :x2]])
 
     dt = DataTable(?(Int), 2, 2)
     @test size(dt) == (2, 2)
