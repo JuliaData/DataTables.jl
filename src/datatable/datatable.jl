@@ -87,7 +87,6 @@ type DataTable <: AbstractDataTable
             # recycle scalars
             for i in 1:length(columns)
                 isa(columns[i], AbstractArray) && continue
-                #TODO: should we make this a Vector{?T} by default? depending on other columns?
                 columns[i] = fill(columns[i], maxlen)
                 lengths[i] = maxlen
             end
@@ -153,7 +152,7 @@ function DataTable{T<:Type}(column_eltypes::AbstractVector{T}, cnames::AbstractV
     updated_types = convert(Vector{Type}, column_eltypes)
     for i in eachindex(nominal)
         nominal[i] || continue
-        updated_types[i] = CategoricalValue{updated_types[i]}
+        updated_types[i] = Union{CategoricalValue{Nulls.T{updated_types[i]}}, Null}
     end
     return DataTable(updated_types, cnames, nrows)
 end
@@ -212,8 +211,8 @@ function Base.getindex(dt::DataTable, col_ind::ColumnIndex)
 end
 
 # dt[MultiColumnIndex] => DataTable
-function Base.getindex{T <: ?ColumnIndex}(dt::DataTable,
-                                          col_inds::AbstractVector{T})
+function Base.getindex(dt::DataTable,
+                       col_inds::AbstractVector{<:?ColumnIndex})
     selected_columns = index(dt)[col_inds]
     new_columns = dt.columns[selected_columns]
     return DataTable(new_columns, Index(_names(dt)[selected_columns]))
@@ -229,26 +228,26 @@ function Base.getindex(dt::DataTable, row_ind::Real, col_ind::ColumnIndex)
 end
 
 # dt[SingleRowIndex, MultiColumnIndex] => DataTable
-function Base.getindex{T <: ?ColumnIndex}(dt::DataTable,
-                                          row_ind::Real,
-                                          col_inds::AbstractVector{T})
+function Base.getindex(dt::DataTable,
+                       row_ind::Real,
+                       col_inds::AbstractVector{<:?ColumnIndex})
     selected_columns = index(dt)[col_inds]
     new_columns = Any[dv[[row_ind]] for dv in dt.columns[selected_columns]]
     return DataTable(new_columns, Index(_names(dt)[selected_columns]))
 end
 
 # dt[MultiRowIndex, SingleColumnIndex] => AbstractVector
-function Base.getindex{T <: ?Real}(dt::DataTable,
-                                   row_inds::AbstractVector{T},
-                                   col_ind::ColumnIndex)
+function Base.getindex(dt::DataTable,
+                       row_inds::AbstractVector{<:?Real},
+                       col_ind::ColumnIndex)
     selected_column = index(dt)[col_ind]
     return dt.columns[selected_column][row_inds]
 end
 
 # dt[MultiRowIndex, MultiColumnIndex] => DataTable
-function Base.getindex{R <: ?Real, T <: ?ColumnIndex}(dt::DataTable,
-                                                      row_inds::AbstractVector{R},
-                                                      col_inds::AbstractVector{T})
+function Base.getindex(dt::DataTable,
+                       row_inds::AbstractVector{<:?Real},
+                       col_inds::AbstractVector{<:?ColumnIndex})
     selected_columns = index(dt)[col_inds]
     new_columns = Any[dv[row_inds] for dv in dt.columns[selected_columns]]
     return DataTable(new_columns, Index(_names(dt)[selected_columns]))
@@ -265,9 +264,9 @@ Base.getindex{T <: ?ColumnIndex}(dt::DataTable,
 Base.getindex(dt::DataTable, row_ind::Real, col_inds::Colon) = dt[[row_ind], col_inds]
 
 # dt[MultiRowIndex, :] => DataTable
-function Base.getindex{R <: ?Real}(dt::DataTable,
-                                   row_inds::AbstractVector{R},
-                                   col_inds::Colon)
+function Base.getindex(dt::DataTable,
+                       row_inds::AbstractVector{<:?Real},
+                       col_inds::Colon)
     new_columns = Any[dv[row_inds] for dv in dt.columns]
     return DataTable(new_columns, copy(index(dt)))
 end
@@ -283,11 +282,11 @@ Base.getindex(dt::DataTable, ::Colon, ::Colon) = copy(dt)
 
 isnextcol(dt::DataTable, col_ind::Symbol) = true
 function isnextcol(dt::DataTable, col_ind::Real)
-    return ncol(dt) + 1 == @compat Int(col_ind)
+    return ncol(dt) + 1 == Int(col_ind)
 end
 
 function nextcolname(dt::DataTable)
-    return @compat(Symbol(string("x", ncol(dt) + 1)))
+    return Symbol(string("x", ncol(dt) + 1))
 end
 
 # Will automatically add a new column if needed
@@ -666,7 +665,7 @@ Base.delete!(dt::DataTable, c::Int) = delete!(dt, [c])
 Base.delete!(dt::DataTable, c::Any) = delete!(dt, index(dt)[c])
 
 # deleterows!()
-function deleterows!(dt::DataTable, ind::@compat(Union{Integer, UnitRange{Int}}))
+function deleterows!(dt::DataTable, ind::Union{Integer, UnitRange{Int}})
     for i in 1:ncol(dt)
         dt.columns[i] = deleteat!(dt.columns[i], ind)
     end

@@ -41,7 +41,7 @@ module TestData
     # lots more to do
 
     #test_group("assign")
-    dt6[3] = Vector(["un", "deux", "troix", "quatre"])
+    dt6[3] = Vector(["un", "deux", "trois", "quatre"])
     @test isequal(dt6[1, 3], "un")
     dt6[:B] = Vector([4, 3, 2, 1])
     @test isequal(dt6[1,2], 4)
@@ -268,8 +268,8 @@ module TestData
     # @test isequal(m2[10,:v2], null)
     # @test isequal(m2[:a],
     #               Vector(?(String)["x", "x", "y", "y",
-    #                                              "x", "x", "x", "x", "x", "y",
-    #                                              null, "y"])
+    #                                "x", "x", "x", "x", "x", "y",
+    #                                null, "y"])
 
     srand(1)
     function spltdt(d)

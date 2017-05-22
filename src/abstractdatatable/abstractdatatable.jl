@@ -170,10 +170,10 @@ rename(f::Function, dt::AbstractDataTable)
 
 ```julia
 dt = DataTable(i = 1:10, x = rand(10), y = rand(["a", "b", "c"], 10))
-rename(x -> @compat(Symbol)(uppercase(string(x))), dt)
-rename(dt, @compat(Dict(:i=>:A, :x=>:X)))
+rename(x -> Symbol(uppercase(string(x))), dt)
+rename(dt, Dict(:i=>:A, :x=>:X))
 rename(dt, :y, :Y)
-rename!(dt, @compat(Dict(:i=>:A, :x=>:X)))
+rename!(dt, Dict(:i=>:A, :x=>:X))
 ```
 
 """
@@ -646,11 +646,11 @@ Base.hcat(dt1::AbstractDataTable, dt2::AbstractDataTable, dtn::AbstractDataTable
     if T <: CategoricalValue
         T = T.parameters[1]
     end
-    if any(col -> Null <: eltype(col), cols)
+    if any(col -> eltype(col) >: Null, cols)
         if any(col -> col <: Union{AbstractCategoricalArray, AbstractNullableCategoricalArray}, cols)
             return :(NullableCategoricalVector{$T})
         else
-            return :(Vector{$T})
+            return :(Vector{?($T)})
         end
     else
         if any(col -> col <: Union{AbstractCategoricalArray, AbstractNullableCategoricalArray}, cols)
@@ -744,7 +744,7 @@ function Base.hash(dt::AbstractDataTable)
     for i in 1:size(dt, 2)
         h = hash(dt[i], h)
     end
-    return @compat UInt(h)
+    return UInt(h)
 end
 
 

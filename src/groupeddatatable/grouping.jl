@@ -238,15 +238,10 @@ colwise(sum, groupby(dt, :a))
 ```
 
 """
-function colwise(f, d::AbstractDataTable)
-    x = [f(d[i]) for i in 1:ncol(d)]
-    return x
-end
+colwise(f, d::AbstractDataTable) = [f(d[i]) for i in 1:ncol(d)]
+
 # apply several functions to each column in a DataTable
-function colwise(fns::Union{AbstractVector, Tuple}, d::AbstractDataTable)
-    x = [f(d[i]) for f in fns, i in 1:ncol(d)]
-    return x
-end
+colwise(fns::Union{AbstractVector, Tuple}, d::AbstractDataTable) = [f(d[i]) for f in fns, i in 1:ncol(d)]
 colwise(f, gd::GroupedDataTable) = [colwise(f, g) for g in gd]
 colwise(f) = x -> colwise(f, x)
 
