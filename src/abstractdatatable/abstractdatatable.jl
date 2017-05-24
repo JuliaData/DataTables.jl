@@ -378,6 +378,32 @@ function StatsBase.describe(io, dt::AbstractDataTable)
         println(io, )
     end
 end
+function StatsBase.describe{T <: Real}(io::IO, X::Vector{Union{T, Null}})
+    nullcount = count(isnull, X)
+    pnull = 100 * nullcount/length(X)
+    if pnull != 100 # describe will fail if dropnull returns an empty vector
+        describe(io, collect(Nulls.skip(X)))
+    else
+        println(io, "Summary Stats:")
+        println(io, "Length:         $(length(X))")
+        println(io, "Type:           $T")
+    end
+    println(io, "Number Missing: $(nullcount)")
+    @printf(io, "%% Missing:      %.6f\n", pnull)
+    return
+end
+
+function StatsBase.describe{T}(io::IO, X::Vector{Union{T, Null}})
+    nullcount = count(isnull, X)
+    pnull = 100 * nullcount/length(X)
+    println(io, "Summary Stats:")
+    println(io, "Length:         $(length(X))")
+    println(io, "Type:           $T")
+    println(io, "Number Unique:  $(length(unique(X)))")
+    println(io, "Number Missing: $(nullcount)")
+    @printf(io, "%% Missing:      %.6f\n", pnull)
+    return
+end
 
 ##############################################################################
 ##
