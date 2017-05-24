@@ -172,4 +172,39 @@ module TestGrouping
     @test isequal(gd[2], DataTable(Key1="A", Key2="B", Value=2))
     @test isequal(gd[3], DataTable(Key1="B", Key2="A", Value=3))
     @test isequal(gd[4], DataTable(Key1="B", Key2="B", Value=4))
+
+    @testset "aggregate" begin
+        # test converting functions to valid column names
+        @test Symbol.([mean, sum]) == [:mean, :sum]
+        @test ismatch(r"#\d+", string(Symbol(x -> reduce(^, x))))
+
+        dt = DataTable(group = repeat('c':-1:'a', inner = 4), x = 12:-1:1)
+
+        @test aggregate(groupby(dt, :group), sum) ==
+              aggregate(dt, :group, sum)  ==
+            DataTable(group = 'c':-1:'a', x_sum = [42, 26, 10])
+
+        @test aggregate(groupby(dt, :group), sum, sort = true) ==
+              aggregate(dt, :group, sum, sort = true)  ==
+            DataTable(group = 'a':'c', x_sum = [10, 26, 42])
+
+        @test aggregate(dt, length) == DataTable(group_length = 12, x_length = 12)
+        anonfuncdt = aggregate(dt, x -> length(x))
+        @test anonfuncdt[1, 1] == 12 && anonfuncdt[1, 2] == 12
+
+        dt = DataTable(year  = repeat(1:4, inner = 12), month = repeat(1:12, outer = 4),
+                       a = 1:48, b = fill(24.5, 48))
+        @test aggregate(dt, [sum, length]) ==
+            DataTable(year_sum = 120, month_sum = 312, a_sum = 1176, b_sum = 1176,
+                      year_length = 48, month_length = 48, a_length = 48, b_length = 48)
+        @test aggregate(dt, [:year], [sum, length]) ==
+            DataTable(year = 1:4, month_sum = fill(78, 4), a_sum = [78, 222, 366, 510],
+                      b_sum = fill(294, 4), month_length = fill(12, 4),
+                      a_length = fill(12, 4), b_length = fill(12, 4))
+
+        @test aggregate(dt, [:month], [sum, length]) ==
+            DataTable(month = 1:12, year_sum = fill(10, 12), a_sum = collect(76:4:120),
+                      b_sum = fill(98, 12), year_length = fill(4, 12),
+                      a_length = fill(4, 12), b_length = fill(4, 12))
+    end
 end

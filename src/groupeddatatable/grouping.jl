@@ -355,16 +355,23 @@ dt |> groupby(:a) |> [sum, x->mean(dropnull(x))]   # equivalent
 """
 aggregate(d::AbstractDataTable, fs::Function; sort::Bool=false) = aggregate(d, [fs], sort=sort)
 function aggregate{T<:Function}(d::AbstractDataTable, fs::Vector{T}; sort::Bool=false)
-    headers = _makeheaders(fs, _names(d))
-    _aggregate(d, fs, headers, sort)
+    headers = [Symbol(c, "_", f) for f in fs for c in names(d)]
+    res = DataTable(Any[f(d[c]) for f in fs for c in names(d)], headers)
+    sort && sort!(res, cols=headers)
+    res
 end
 
 # Applies aggregate to non-key cols of each SubDataTable of a GroupedDataTable
 aggregate(gd::GroupedDataTable, f::Function; sort::Bool=false) = aggregate(gd, [f], sort=sort)
 function aggregate{T<:Function}(gd::GroupedDataTable, fs::Vector{T}; sort::Bool=false)
-    headers = _makeheaders(fs, _setdiff(_names(gd), gd.cols))
-    res = combine(map(x -> _aggregate(without(x, gd.cols), fs, headers), gd))
-    sort && sort!(res, cols=headers)
+    res = gd.parent[gd.idx[gd.starts], gd.cols]
+    cols = setdiff(names(gd.parent), gd.cols)
+    for f in fs
+        for c in cols
+            res[Symbol(c, "_", f)] = [f(g[c]) for g in gd]
+        end
+    end
+    sort && sort!(res, cols = setdiff(names(res), gd.cols))
     res
 end
 
@@ -377,15 +384,4 @@ function aggregate{S<:ColumnIndex, T <:Function}(d::AbstractDataTable,
                                                  fs::Union{T, Vector{T}};
                                                  sort::Bool=false)
     aggregate(groupby(d, cols, sort=sort), fs)
-end
-
-function _makeheaders{T<:Function}(fs::Vector{T}, cn::Vector{Symbol})
-    fnames = _fnames(fs) # see other/utils.jl
-    [Symbol(colname,'_',fname) for fname in fnames for colname in cn]
-end
-
-function _aggregate{T<:Function}(d::AbstractDataTable, fs::Vector{T}, headers::Vector{Symbol}, sort::Bool=false)
-    res = DataTable(Any[vcat(f(d[i])) for f in fs for i in 1:size(d, 2)], headers)
-    sort && sort!(res, cols=headers)
-    res
 end
