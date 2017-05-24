@@ -232,7 +232,7 @@ function unstack(dt::AbstractDataTable, colkey::Int, value::Int)
     end
     keycol = NullableCategoricalArray(dt[colkey])
     valuecol = dt[value]
-    dt1 = nullable!(dt[g.idx[g.starts], g.cols], g.cols)
+    dt1 = nullable!(dt[g.idx[g.starts], g.cols])
     Nrow = length(g)
     Ncol = length(levels(keycol))
     dt2 = DataTable(Any[similar_nullable(valuecol, Nrow) for i in 1:Ncol], map(Symbol, levels(keycol)))

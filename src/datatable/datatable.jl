@@ -749,14 +749,25 @@ Base.hcat(dt1::DataTable, dt2::AbstractDataTable, dtn::AbstractDataTable...) = h
 ##############################################################################
 
 function nullable!(dt::DataTable, col::ColumnIndex)
-    dt[col] = NullableArray(dt[col])
+    dt[col] = copy!(similar_nullable(dt[col]), dt[col])
     dt
 end
-function nullable!{T <: ColumnIndex}(dt::DataTable, cols::Vector{T})
+function nullable!{T <: ColumnIndex}(dt::DataTable, cols::Vector{T} = names(dt))
     for col in cols
         nullable!(dt, col)
     end
     dt
+end
+
+function nullable(dt::DataTable, col::ColumnIndex)
+    nullable!(copy(dt), col)
+end
+function nullable{T <: ColumnIndex}(dt::DataTable, cols::Vector{T} = names(dt))
+    res = copy(dt)
+    for col in cols
+        nullable!(res, col)
+    end
+    res
 end
 
 ##############################################################################
