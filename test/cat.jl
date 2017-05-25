@@ -3,7 +3,7 @@ module TestCat
     using DataTables
 
     #
-    # hcat
+    # merge
     #
 
     nvint = NullableArray(Nullable{Int}[1, 2, Nullable(), 4])
@@ -14,35 +14,39 @@ module TestCat
     dt4 = convert(DataTable, [1:4 1:4])
     dt5 = DataTable(Any[NullableArray([1,2,3,4]), nvstr])
 
-    dth = hcat(dt3, dt4)
+    dth = merge(dt3, dt4)
     @test size(dth, 2) == 3
     @test names(dth) == [:x1, :x1_1, :x2]
     @test isequal(dth[:x1], dt3[:x1])
-    @test isequal(dth, [dt3 dt4])
-    @test isequal(dth, DataTables.hcat!(DataTable(), dt3, dt4))
+    @test isequal(dth, merge(dt3, dt4))
+    @test isequal(dth, merge!(DataTable(), dt3, dt4))
 
-    dth3 = hcat(dt3, dt4, dt5)
+    dth3 = merge(dt3, dt4, dt5)
     @test names(dth3) == [:x1, :x1_1, :x2, :x1_2, :x2_1]
-    @test isequal(dth3, hcat(dth, dt5))
-    @test isequal(dth3, DataTables.hcat!(DataTable(), dt3, dt4, dt5))
+    @test isequal(dth3, merge(dth, dt5))
+    @test isequal(dth3, merge!(DataTable(), dt3, dt4, dt5))
 
-    @test isequal(dt2, DataTables.hcat!(dt2))
+    @test isequal(dt2, merge!(dt2))
 
-    @testset "hcat ::AbstractDataTable" begin
+    @testset "merge ::AbstractDataTable" begin
         dt = DataTable(A = repeat('A':'C', inner=4), B = 1:12)
         gd = groupby(dt, :A)
         answer = DataTable(A = fill('A', 4), B = 1:4, A_1 = 'B', B_1 = 5:8, A_2 = 'C', B_2 = 9:12)
-        @test hcat(gd...) == answer
+        @test merge(gd...) == answer
         answer = answer[1:4]
-        @test hcat(gd[1], gd[2]) == answer
+        @test merge(gd[1], gd[2]) == answer
     end
 
-    @testset "hcat ::Vectors" begin
+    @testset "append ::Vectors" begin
         dt = DataTable()
-        DataTables.hcat!(dt, NullableCategoricalVector(1:10))
+        append!(dt, NullableCategoricalVector(1:10))
         @test isequal(dt[1], NullableCategoricalVector(1:10))
-        DataTables.hcat!(dt, NullableArray(1:10))
+        append!(dt, NullableArray(1:10))
         @test isequal(dt[2], NullableArray(1:10))
+        dt2 = append(dt, collect(1:10))
+        @test isequal(dt2[3], collect(1:10))
+        @test ncol(dt) == 2
+        @test ncol(dt2) == 3
     end
 
     #

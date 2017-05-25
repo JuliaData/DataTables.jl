@@ -63,8 +63,8 @@ dt1[:, [1,3]]
 dt1[1:4, :]
 dt1[1:4, :C]
 dt1[1:4, :C] = 40. * dt1[1:4, :C]
-[dt1; dt2]  # vcat
-[dt1  dt2]  # hcat
+vcat(dt1, dt2)
+merge(dt1, dt2)
 size(dt1)
 ```
 
@@ -635,15 +635,6 @@ function Base.insert!(dt::DataTable, col_ind::Int, item, name::Symbol)
     insert!(dt, col_ind, upgrade_scalar(dt, item), name)
 end
 
-function Base.merge!(dt::DataTable, others::AbstractDataTable...)
-    for other in others
-        for n in _names(other)
-            dt[n] = other[n]
-        end
-    end
-    return dt
-end
-
 ##############################################################################
 ##
 ## Copying
@@ -719,31 +710,6 @@ end
 
 ##############################################################################
 ##
-## Hcat specialization
-##
-##############################################################################
-
-# hcat! for 2 arguments
-function hcat!(dt1::DataTable, dt2::AbstractDataTable)
-    u = add_names(index(dt1), index(dt2))
-    for i in 1:length(u)
-        dt1[u[i]] = dt2[i]
-    end
-    return dt1
-end
-hcat!(dt::DataTable, x::AbstractVector) = hcat!(dt, DataTable(Any[x]))
-
-# hcat! for 1-n arguments
-hcat!(dt::DataTable) = dt
-hcat!(a::DataTable, b, c...) = hcat!(hcat!(a, b), c...)
-
-# hcat
-Base.hcat(dt::DataTable, x) = hcat!(copy(dt), x)
-Base.hcat(dt1::DataTable, dt2::AbstractDataTable) = hcat!(copy(dt1), dt2)
-Base.hcat(dt1::DataTable, dt2::AbstractDataTable, dtn::AbstractDataTable...) = hcat!(hcat(dt1, dt2), dtn...)
-
-##############################################################################
-##
 ## Nullability
 ##
 ##############################################################################
@@ -785,17 +751,6 @@ function categorical!(dt::DataTable, compact::Bool=true)
         end
     end
     dt
-end
-
-function Base.append!(dt1::DataTable, dt2::AbstractDataTable)
-   _names(dt1) == _names(dt2) || error("Column names do not match")
-   eltypes(dt1) == eltypes(dt2) || error("Column eltypes do not match")
-   ncols = size(dt1, 2)
-   # TODO: This needs to be a sort of transaction to be 100% safe
-   for j in 1:ncols
-       append!(dt1[j], dt2[j])
-   end
-   return dt1
 end
 
 function Base.convert(::Type{DataTable}, A::AbstractMatrix)

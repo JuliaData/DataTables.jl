@@ -123,9 +123,11 @@ Base.getindex(x::AbstractIndex, idx::AbstractVector{Symbol}) = [x.lookup[i] for 
 # Helpers
 
 function add_names(ind::Index, add_ind::Index)
-    u = names(add_ind)
+    add_names(_names(ind), names(add_ind))
+end
 
-    seen = Set(_names(ind))
+function add_names(a::Vector{Symbol}, u::Vector{Symbol})
+    seen = Set(a)
     dups = Int[]
 
     for i in 1:length(u)
