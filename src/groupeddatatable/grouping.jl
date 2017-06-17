@@ -26,18 +26,111 @@ end
 # Split
 #
 
+function groupsort_indexer(x::AbstractVector, ngroups::Integer, null_last::Bool=false)
+    # translated from Wes McKinney's groupsort_indexer in pandas (file: src/groupby.pyx).
+
+    # count group sizes, location 0 for NULL
+    n = length(x)
+    # counts = x.pool
+    counts = fill(0, ngroups + 1)
+    for i = 1:n
+        counts[x[i] + 1] += 1
+    end
+
+    # mark the start of each contiguous group of like-indexed data
+    where = fill(1, ngroups + 1)
+    if null_last
+        for i = 3:ngroups+1
+            where[i] = where[i - 1] + counts[i - 1]
+        end
+        where[1] = where[end] + counts[end]
+    else
+        for i = 2:ngroups+1
+            where[i] = where[i - 1] + counts[i - 1]
+        end
+    end
+
+    # this is our indexer
+    result = fill(0, n)
+    for i = 1:n
+        label = x[i] + 1
+        result[where[label]] = i
+        where[label] += 1
+    end
+    result, where, counts
+end
+
+# Assign an integer code to each level of x, and combine these codes with existing vector
+function combine_col!{T}(x::AbstractVector, col::AbstractVector{T},
+                         ngroups::Integer, sort::Bool)
+    d = Dict{T, UInt32}()
+    y = Vector{UInt32}(length(x))
+    n = 0
+    # Note: using get! instead of triggers lots of allocations
+    @inbounds for i in eachindex(x)
+        v = col[i]
+        index = Base.ht_keyindex(d, v)
+        if index < 0 # new level
+            @inbounds y[i] = d[v] = n
+            n += 1
+        else
+            y[i] = d.vals[index]
+        end
+    end
+
+    if sort
+        # compute mapping from unsorted to sorted codes
+        tmp = sortperm(collect(keys(d)))
+        perm = ipermute!(collect(0:(n-1)), tmp)
+        refperm = sortperm!(tmp, collect(values(d)))
+        permute!(perm, tmp)
+
+        @inbounds for i in eachindex(x)
+            x[i] += perm[y[i] + 1] * ngroups
+        end
+    else
+        @inbounds for i in eachindex(x)
+            x[i] += y[i] * ngroups
+        end
+    end
+
+    n
+end
+
+# More efficient method which can use the references directly
+# Levels are always sorted
+function combine_col!(x::AbstractVector,
+                      col::Union{AbstractCategoricalVector, AbstractNullableCategoricalVector},
+                      ngroups::Integer, sort::Bool)
+    nlevels = length(levels(col))
+    order = CategoricalArrays.order(col.pool)
+    codes = similar(order, length(order)+1)
+    codes[1] = nlevels # Sort nulls last, only used if present
+    codes[2:end] .= order .- 1
+    anynulls = false
+    @inbounds for i in eachindex(x)
+        ref = col.refs[i]
+        x[i] += codes[ref + 1] * ngroups
+        if eltype(col) <: Nullable
+            anynulls |= (ref == 0)
+        end
+    end
+    nlevels + anynulls
+end
+
 """
 A view of an AbstractDataTable split into row groups
 
 ```julia
-groupby(d::AbstractDataTable, cols)
-groupby(cols)
+groupby(d::AbstractDataTable, cols; sort = true)
+groupby(cols; sort = true)
 ```
 
 ### Arguments
 
 * `d` : an AbstractDataTable to split (optional, see [Returns](#returns))
 * `cols` : data table columns to group by
+* `sort`: whether to sort row groups; disable sorting for maximum performance
 
 ### Returns
 
@@ -79,17 +172,25 @@ dt |> groupby([:a, :b]) |> [sum, length]
 ```
 
 """
-function groupby{T}(dt::AbstractDataTable, cols::Vector{T}; sort::Bool = false)
-    sdt = dt[cols]
-    dt_groups = group_rows(sdt)
-    # sort the groups
-    if sort
-        group_perm = sortperm(view(sdt, dt_groups.rperm[dt_groups.starts]))
-        permute!(dt_groups.starts, group_perm)
-        Base.permute!!(dt_groups.stops, group_perm)
+function groupby{T}(d::AbstractDataTable, cols::Vector{T}; sort::Bool = true)
+    ## a subset of Wes McKinney's algorithm here:
+    ##     http://wesmckinney.com/blog/?p=489
+    ##     https://slideshare.net/wesm/a-look-at-pandas-design-and-development
+
+    x = ones(UInt32, nrow(d))
+    ngroups = 1
+    for j in length(cols):-1:1
+        # also compute the number of groups, which is the product of the set lengths
+        ngroups *= combine_col!(x, d[cols[j]], ngroups, sort)
+        # TODO if ngroups is really big, shrink it
     end
-    GroupedDataTable(dt, cols, dt_groups.rperm,
-                     dt_groups.starts, dt_groups.stops)
+    (idx, starts) = groupsort_indexer(x, ngroups)
+    # Remove zero-length groupings
+    starts = _groupedunique!(starts)
+    ends = starts[2:end]
+    ends .-= 1
+    pop!(starts)
+    GroupedDataTable(d, cols, idx, starts, ends)
 end
 groupby(d::AbstractDataTable, cols; sort::Bool = false) = groupby(d, [cols], sort = sort)
 
@@ -263,8 +364,8 @@ Split-apply-combine in one step; apply `f` to each grouping in `d`
 based on columns `col`
 
 ```julia
-by(d::AbstractDataTable, cols, f::Function; sort::Bool = false)
-by(f::Function, d::AbstractDataTable, cols; sort::Bool = false)
+by(d::AbstractDataTable, cols, f::Function; sort::Bool = true)
+by(f::Function, d::AbstractDataTable, cols; sort::Bool = true)
 ```
 
 ### Arguments
@@ -273,7 +374,7 @@ by(f::Function, d::AbstractDataTable, cols; sort::Bool = false)
 * `cols` : a column indicator (Symbol, Int, Vector{Symbol}, etc.)
 * `f` : a function to be applied to groups; expects each argument to
   be an AbstractDataTable
-* `sort`: sort row groups (no sorting by default)
+* `sort`: whether to sort row groups; disable sorting for maximum performance
 
 `f` can return a value, a vector, or a DataTable. For a value or
 vector, these are merged into a column along with the `cols` keys. For
@@ -321,8 +422,8 @@ Split-apply-combine that applies a set of functions over columns of an
 AbstractDataTable or GroupedDataTable
 
 ```julia
-aggregate(d::AbstractDataTable, cols, fs)
-aggregate(gd::GroupedDataTable, fs)
+aggregate(d::AbstractDataTable, cols, fs; sort::Bool=true)
+aggregate(gd::GroupedDataTable, fs; sort::Bool=true)
 ```
 
 ### Arguments
@@ -332,6 +433,7 @@ aggregate(gd::GroupedDataTable, fs)
 * `cols` : a column indicator (Symbol, Int, Vector{Symbol}, etc.)
 * `fs` : a function or vector of functions to be applied to vectors
   within groups; expects each argument to be a column vector
+* `sort`: whether to sort row groups; disable sorting for maximum performance
 
 Each `fs` should return a value or vector. All returns must be the
 same length.
@@ -353,15 +455,17 @@ dt |> groupby(:a) |> [sum, x->mean(dropnull(x))]   # equivalent
 ```
 
 """
-aggregate(d::AbstractDataTable, fs::Function; sort::Bool=false) = aggregate(d, [fs], sort=sort)
-function aggregate{T<:Function}(d::AbstractDataTable, fs::Vector{T}; sort::Bool=false)
+aggregate(d::AbstractDataTable, fs::Function; sort::Bool=true) =
+    aggregate(d, [fs], sort=sort)
+function aggregate{T<:Function}(d::AbstractDataTable, fs::Vector{T}; sort::Bool=true)
     headers = _makeheaders(fs, _names(d))
     _aggregate(d, fs, headers, sort)
 end
 
 # Applies aggregate to non-key cols of each SubDataTable of a GroupedDataTable
-aggregate(gd::GroupedDataTable, f::Function; sort::Bool=false) = aggregate(gd, [f], sort=sort)
-function aggregate{T<:Function}(gd::GroupedDataTable, fs::Vector{T}; sort::Bool=false)
+aggregate(gd::GroupedDataTable, f::Function; sort::Bool=true) =
+    aggregate(gd, [f], sort=sort)
+function aggregate{T<:Function}(gd::GroupedDataTable, fs::Vector{T}; sort::Bool=true)
     headers = _makeheaders(fs, setdiff(_names(gd), gd.cols))
     res = combine(map(x -> _aggregate(without(x, gd.cols), fs, headers), gd))
     sort && sort!(res, cols=headers)
@@ -375,7 +479,7 @@ end
 function aggregate{S<:ColumnIndex, T <:Function}(d::AbstractDataTable,
                                                  cols::Union{S, AbstractVector{S}},
                                                  fs::Union{T, Vector{T}};
-                                                 sort::Bool=false)
+                                                 sort::Bool=true)
     aggregate(groupby(d, cols, sort=sort), fs)
 end
 
@@ -384,7 +488,8 @@ function _makeheaders{T<:Function}(fs::Vector{T}, cn::Vector{Symbol})
     [Symbol(colname,'_',fname) for fname in fnames for colname in cn]
 end
 
-function _aggregate{T<:Function}(d::AbstractDataTable, fs::Vector{T}, headers::Vector{Symbol}, sort::Bool=false)
+function _aggregate{T<:Function}(d::AbstractDataTable, fs::Vector{T},
+                                 headers::Vector{Symbol}, sort::Bool=true)
     res = DataTable(Any[vcat(f(d[i])) for f in fs for i in 1:size(d, 2)], headers)
     sort && sort!(res, cols=headers)
     res

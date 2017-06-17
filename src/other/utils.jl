@@ -155,6 +155,26 @@ function countnull(a::CategoricalArray)
     return res
 end
 
+if !isdefined(Base, :unique!) # Julia < 0.7
+    function _groupedunique!(A::AbstractVector)
+        isempty(A) && return A
+        idxs = eachindex(A)
+        y = first(A)
+        state = start(idxs)
+        i, state = next(idxs, state)
+        for x in A
+            if !isequal(x, y)
+                i, state = next(idxs, state)
+                y = A[i] = x
+            end
+        end
+        resize!(A, i - first(idxs) + 1)
+    end
+else
+    # unique!() includes a fast path for sorted vectors
+    _groupedunique!(A::AbstractVector) = unique!(A)
+end
+
 # Gets the name of a function. Used in groupedatatable/grouping.jl
 function _fnames{T<:Function}(fs::Vector{T})
     λcounter = 0

@@ -165,11 +165,34 @@ module TestGrouping
     levels!(dt[:Key1], ["Z", "B", "A"])
     levels!(dt[:Key2], ["Z", "B", "A"])
     gd = groupby(dt, :Key1)
-    @test isequal(gd[1], DataTable(Key1=["A", "A"], Key2=["A", "B"], Value=1:2))
-    @test isequal(gd[2], DataTable(Key1=["B", "B"], Key2=["A", "B"], Value=3:4))
+    @test isequal(gd[1], DataTable(Key1=["B", "B"], Key2=["A", "B"], Value=3:4))
+    @test isequal(gd[2], DataTable(Key1=["A", "A"], Key2=["A", "B"], Value=1:2))
     gd = groupby(dt, [:Key1, :Key2])
-    @test isequal(gd[1], DataTable(Key1="A", Key2="A", Value=1))
-    @test isequal(gd[2], DataTable(Key1="A", Key2="B", Value=2))
-    @test isequal(gd[3], DataTable(Key1="B", Key2="A", Value=3))
-    @test isequal(gd[4], DataTable(Key1="B", Key2="B", Value=4))
+    @test isequal(gd[1], DataTable(Key1="B", Key2="B", Value=4))
+    @test isequal(gd[2], DataTable(Key1="B", Key2="A", Value=3))
+    @test isequal(gd[3], DataTable(Key1="A", Key2="B", Value=2))
+    @test isequal(gd[4], DataTable(Key1="A", Key2="A", Value=1))
+
+    # test NullableArray and NullableCategoricalArray with nulls
+    for (S, T) in ((NullableArray, NullableArray),
+                   (NullableCategoricalArray, NullableCategoricalArray),
+                   (NullableArray, NullableCategoricalArray),
+                   (NullableCategoricalArray, NullableArray))
+        dt = DataTable(Key1 = S(["A", "A", "B", Nullable(), Nullable()]),
+                       Key2 = T(["A", "B", "A", Nullable(), "A"]),
+                       Value = 1:5)
+        gd = groupby(dt, :Key1)
+        @test isequal(gd[1], DataTable(Key1=Nullable{String}["A", "A"],
+                                       Key2=Nullable{String}["A", "B"], Value=1:2))
+        @test isequal(gd[2], DataTable(Key1=Nullable{String}["B"],
+                                       Key2=Nullable{String}["A"], Value=3))
+        @test isequal(gd[3], DataTable(Key1=[Nullable(), Nullable()],
+                                       Key2=Nullable{String}[Nullable(), "A"], Value=4:5))
+        gd = groupby(dt, [:Key1, :Key2])
+        @test isequal(gd[1], DataTable(Key1=Nullable("A"), Key2=Nullable("A"), Value=1))
+        @test isequal(gd[2], DataTable(Key1=Nullable("A"), Key2=Nullable("B"), Value=2))
+        @test isequal(gd[3], DataTable(Key1=Nullable("B"), Key2=Nullable("A"), Value=3))
+        @test isequal(gd[4], DataTable(Key1=Nullable(), Key2=Nullable("A"), Value=5))
+        @test isequal(gd[5], DataTable(Key1=Nullable(), Key2=Nullable(), Value=4))
+    end
 end
