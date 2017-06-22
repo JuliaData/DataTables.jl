@@ -301,7 +301,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Utilities",
     "title": "NullableArrays.dropnull",
     "category": "Function",
-    "text": "Remove rows with null values.\n\ndropnull(dt::AbstractDataTable)\n\nArguments\n\ndt : the AbstractDataTable\n\nResult\n\n::AbstractDataTable : the updated copy\n\nSee also completecases and dropnull!.\n\nExamples\n\ndt = DataTable(i = 1:10, x = rand(10), y = rand([\"a\", \"b\", \"c\"], 10))\ndt[[1,4,5], :x] = Nullable()\ndt[[9,10], :y] = Nullable()\ndropnull(dt)\n\n\n\ndropnull(X::AbstractVector)\n\nReturn a vector containing only the non-null entries of X, unwrapping Nullable entries. A copy is always returned, even when X does not contain any null values.\n\n\n\n"
+    "text": "dropnull(X::AbstractVector)\n\nReturn a vector containing only the non-null entries of X, unwrapping Nullable entries. A copy is always returned, even when X does not contain any null values.\n\n\n\nRemove rows with null values.\n\ndropnull(dt::AbstractDataTable)\n\nArguments\n\ndt : the AbstractDataTable\n\nResult\n\n::AbstractDataTable : the updated copy\n\nSee also completecases and dropnull!.\n\nExamples\n\ndt = DataTable(i = 1:10, x = rand(10), y = rand([\"a\", \"b\", \"c\"], 10))\ndt[[1,4,5], :x] = Nullable()\ndt[[9,10], :y] = Nullable()\ndropnull(dt)\n\n\n\n"
 },
 
 {
@@ -309,7 +309,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Utilities",
     "title": "NullableArrays.dropnull!",
     "category": "Function",
-    "text": "Remove rows with null values in-place.\n\ndropnull!(dt::AbstractDataTable)\n\nArguments\n\ndt : the AbstractDataTable\n\nResult\n\n::AbstractDataTable : the updated version\n\nSee also dropnull and completecases.\n\nExamples\n\ndt = DataTable(i = 1:10, x = rand(10), y = rand([\"a\", \"b\", \"c\"], 10))\ndt[[1,4,5], :x] = Nullable()\ndt[[9,10], :y] = Nullable()\ndropnull!(dt)\n\n\n\ndropnull!(X::AbstractVector)\n\nRemove null entries of X in-place and return a Vector view of the unwrapped Nullable entries. If no nulls are present, this is a no-op and X is returned.\n\n\n\ndropnull!(X::NullableVector)\n\nRemove null entries of X in-place and return a Vector view of the unwrapped Nullable entries.\n\n\n\n"
+    "text": "dropnull!(X::AbstractVector)\n\nRemove null entries of X in-place and return a Vector view of the unwrapped Nullable entries. If no nulls are present, this is a no-op and X is returned.\n\n\n\ndropnull!(X::NullableVector)\n\nRemove null entries of X in-place and return a Vector view of the unwrapped Nullable entries.\n\n\n\nRemove rows with null values in-place.\n\ndropnull!(dt::AbstractDataTable)\n\nArguments\n\ndt : the AbstractDataTable\n\nResult\n\n::AbstractDataTable : the updated version\n\nSee also dropnull and completecases.\n\nExamples\n\ndt = DataTable(i = 1:10, x = rand(10), y = rand([\"a\", \"b\", \"c\"], 10))\ndt[[1,4,5], :x] = Nullable()\ndt[[9,10], :y] = Nullable()\ndropnull!(dt)\n\n\n\n"
 },
 
 {
@@ -369,9 +369,9 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "lib/utilities.html#DataTables.unique!",
+    "location": "lib/utilities.html#Base.unique!",
     "page": "Utilities",
-    "title": "DataTables.unique!",
+    "title": "Base.unique!",
     "category": "Function",
     "text": "Delete duplicate rows\n\nunique(dt::AbstractDataTable)\nunique(dt::AbstractDataTable, cols)\nunique!(dt::AbstractDataTable)\nunique!(dt::AbstractDataTable, cols)\n\nArguments\n\ndt : the AbstractDataTable\ncols :  column indicator (Symbol, Int, Vector{Symbol}, etc.)\n\nspecifying the column(s) to compare.\n\nResult\n\n::AbstractDataTable : the updated version of dt with unique rows.\n\nWhen cols is specified, the return DataTable contains complete rows, retaining in each case the first instance for which dt[cols] is unique.\n\nSee also nonunique.\n\nExamples\n\ndt = DataTable(i = 1:10, x = rand(10), y = rand([\"a\", \"b\", \"c\"], 10))\ndt = vcat(dt, dt)\nunique(dt)   # doesn't modify dt\nunique(dt, 1)\nunique!(dt)  # modifies dt\n\n\n\n"
 },
