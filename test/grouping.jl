@@ -140,6 +140,12 @@ module TestGrouping
     # grouping single row
     @test groupby(DataTable(A=Int[1]), :A).starts == Int[1]
 
+    # grouping table with non-sortable column:
+    # check that order of appearance is respected when sort=true
+    gd = groupby(DataTable(A = ["A", 1, 1, "A"], B = 1:4), :A)
+    @test isequal(gd[1], DataTable(A = ["A", "A"], B = [1, 4]))
+    @test isequal(gd[2], DataTable(A = [1, 1], B = [2, 3]))
+
     # issue #960
     x = CategoricalArray(collect(1:20))
     dt = DataTable(v1=x, v2=x)
@@ -195,4 +201,14 @@ module TestGrouping
         @test isequal(gd[4], DataTable(Key1=Nullable(), Key2=Nullable("A"), Value=5))
         @test isequal(gd[5], DataTable(Key1=Nullable(), Key2=Nullable(), Value=4))
     end
+
+    # check that group indices are compressed when cartesian product would overflow
+    x = CategoricalArray([1, 2, 2, 1])
+    levels!(x, collect(1:10_000))
+    dt = DataTable(A = x, B = x, C = x, D = x, E = x, Value = 1:4)
+    gd = groupby(dt, [:A, :B, :C, :D, :E])
+    @test isequal(gd[1], DataTable(A = [1, 1], B = [1, 1], C = [1, 1],
+                                   D = [1, 1], E = [1, 1], Value = [1, 4]))
+    @test isequal(gd[2], DataTable(A = [2, 2], B = [2, 2], C = [2, 2],
+                                   D = [2, 2], E = [2, 2], Value = [2, 3]))
 end

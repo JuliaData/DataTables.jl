@@ -31,28 +31,27 @@ function groupsort_indexer(x::AbstractVector, ngroups::Integer, null_last::Bool=
 
     # count group sizes, location 0 for NULL
     n = length(x)
-    # counts = x.pool
-    counts = fill(0, ngroups + 1)
-    for i = 1:n
-        counts[x[i] + 1] += 1
+    counts = zeros(Int, ngroups + 1)
+    @inbounds for v in x
+        counts[v + 1] += 1
     end
 
     # mark the start of each contiguous group of like-indexed data
-    where = fill(1, ngroups + 1)
+    where = ones(Int, ngroups + 1)
     if null_last
-        for i = 3:ngroups+1
+        @inbounds for i in 3:ngroups+1
             where[i] = where[i - 1] + counts[i - 1]
         end
         where[1] = where[end] + counts[end]
     else
-        for i = 2:ngroups+1
+        @inbounds for i in 2:ngroups+1
             where[i] = where[i - 1] + counts[i - 1]
         end
     end
 
     # this is our indexer
-    result = fill(0, n)
-    for i = 1:n
+    result = zeros(Int, n)
+    @inbounds for i in 1:n
         label = x[i] + 1
         result[where[label]] = i
         where[label] += 1
@@ -60,13 +59,28 @@ function groupsort_indexer(x::AbstractVector, ngroups::Integer, null_last::Bool=
     result, where, counts
 end
 
-# Assign an integer code to each level of x, and combine these codes with existing vector
-function combine_col!{T}(x::AbstractVector, col::AbstractVector{T},
-                         ngroups::Integer, sort::Bool)
-    d = Dict{T, UInt32}()
-    y = Vector{UInt32}(length(x))
+# Check whether combining x with new column with ngroups levels using cartesian product
+# can overflow: if so, compress the codes to the 1:length(unique(x)) range,
+# preserving their ordering
+function compress_group_indices!(x::AbstractVector, ngroups::Integer, ngroups_new::Integer)
+    if ngroups_new > typemax(eltype(x)) # Shouldn't happen in practice, but better be safe
+        throw(OverflowError())
+    elseif Int128(ngroups) * Int128(ngroups_new) > typemax(eltype(x))
+        ngroups = group_indices!(x, x, 1, true)
+    end
+    ngroups
+end
+
+# Assign an integer code ("group label") to each level of x, and combine
+# these codes with existing vector to build group indices (cartesian product)
+function group_indices!{T}(x::AbstractVector, col::AbstractVector{T},
+                           ngroups::Integer, sort::Bool)
+    # Factorize levels into integer codes ("labels")
+    d = Dict{T, UInt}()
+    # For first (or single) column, we can overwrite x
+    y = ngroups == 1 ? x : Vector{UInt}(length(x))
     n = 0
-    # Note: using get! instead of triggers lots of allocations
+    # Note: using get! instead triggers lots of allocations
     @inbounds for i in eachindex(x)
         v = col[i]
         index = Base.ht_keyindex(d, v)
@@ -78,44 +92,77 @@ function combine_col!{T}(x::AbstractVector, col::AbstractVector{T},
         end
     end
 
-    if sort
+    ngroups = compress_group_indices!(x, ngroups, length(d))
+
+    # Compute cartesian product ("group indices")
+    # Sort groups if possible, else use order of appearance
+    if sort && method_exists(isless, Tuple{T, T})
         # compute mapping from unsorted to sorted codes
-        tmp = sortperm(collect(keys(d)))
+        tmp = Vector{Int}(n)
+        try
+            tmp = sortperm!(tmp, collect(keys(d)))
+        catch
+            @goto unsorted
+        end
         perm = ipermute!(collect(0:(n-1)), tmp)
         refperm = sortperm!(tmp, collect(values(d)))
         permute!(perm, tmp)
 
-        @inbounds for i in eachindex(x)
-            x[i] += perm[y[i] + 1] * ngroups
+        if ngroups == 1 # First (or single) column
+            @inbounds for i in eachindex(x)
+                x[i] = perm[y[i] + 1] + 1
+            end
+        else
+            @inbounds for i in eachindex(x)
+                x[i] += perm[y[i] + 1] * ngroups
+            end
         end
-    else
-        @inbounds for i in eachindex(x)
-            x[i] += y[i] * ngroups
-        end
+
+        return ngroups * n
     end
 
-    n
+    @label unsorted
+
+    if ngroups == 1 # First (or single) column
+        x .= y .+ 1
+    else
+        x .+= y .* ngroups
+    end
+
+    return ngroups * n
 end
 
 # More efficient method which can use the references directly
 # Levels are always sorted
-function combine_col!(x::AbstractVector,
-                      col::Union{AbstractCategoricalVector, AbstractNullableCategoricalVector},
-                      ngroups::Integer, sort::Bool)
+function group_indices!(x::AbstractVector,
+                        col::Union{AbstractCategoricalVector, AbstractNullableCategoricalVector},
+                        ngroups::Integer, sort::Bool)
     nlevels = length(levels(col))
+    compress_group_indices!(x, ngroups, nlevels)
+
     order = CategoricalArrays.order(col.pool)
     codes = similar(order, length(order)+1)
     codes[1] = nlevels # Sort nulls last, only used if present
     codes[2:end] .= order .- 1
     anynulls = false
-    @inbounds for i in eachindex(x)
-        ref = col.refs[i]
-        x[i] += codes[ref + 1] * ngroups
-        if eltype(col) <: Nullable
-            anynulls |= (ref == 0)
+    if ngroups == 1
+        @inbounds for i in eachindex(x)
+            ref = col.refs[i]
+            x[i] = codes[ref + 1] * ngroups + 1
+            if eltype(col) <: Nullable
+                anynulls |= (ref == 0)
+            end
+        end
+    else
+        @inbounds for i in eachindex(x)
+            ref = col.refs[i]
+            x[i] += codes[ref + 1] * ngroups
+            if eltype(col) <: Nullable
+                anynulls |= (ref == 0)
+            end
         end
     end
-    nlevels + anynulls
+    ngroups * (nlevels + anynulls)
 end
 
 """
@@ -130,7 +177,8 @@ groupby(cols; sort = true)
 
 * `d` : an AbstractDataTable to split (optional, see [Returns](#returns))
 * `cols` : data table columns to group by
-* `sort`: whether to sort row groups; disable sorting for maximum performance
+* `sort`: whether to sort row groups; if `false`, levels of each
+  grouping column are sorted in their order of appearance
 
 ### Returns
 
@@ -174,15 +222,18 @@ dt |> groupby([:a, :b]) |> [sum, length]
 """
 function groupby{T}(d::AbstractDataTable, cols::Vector{T}; sort::Bool = true)
     ## a subset of Wes McKinney's algorithm here:
-    ##     http://wesmckinney.com/blog/?p=489
+    ##     http://wesmckinney.com/blog/mastering-high-performance-data-algorithms-i-group-by/
     ##     https://slideshare.net/wesm/a-look-at-pandas-design-and-development
 
-    x = ones(UInt32, nrow(d))
+    x = Vector{UInt}(nrow(d))
     ngroups = 1
     for j in length(cols):-1:1
-        # also compute the number of groups, which is the product of the set lengths
-        ngroups *= combine_col!(x, d[cols[j]], ngroups, sort)
-        # TODO if ngroups is really big, shrink it
+        ngroups = group_indices!(x, d[cols[j]], ngroups, sort)
+    end
+    # Compress group indices to the 1:ngroups range to limit size of vector to allocate
+    # (indices are already compressed for single keys)
+    if length(cols) > 1
+        ngroups = group_indices!(x, x, 1, true)
     end
     (idx, starts) = groupsort_indexer(x, ngroups)
     # Remove zero-length groupings
@@ -374,7 +425,8 @@ by(f::Function, d::AbstractDataTable, cols; sort::Bool = true)
 * `cols` : a column indicator (Symbol, Int, Vector{Symbol}, etc.)
 * `f` : a function to be applied to groups; expects each argument to
   be an AbstractDataTable
-* `sort`: whether to sort row groups; disable sorting for maximum performance
+* `sort`: whether to sort row groups; if `false`, levels of each
+  grouping column are sorted in their order of appearance
 
 `f` can return a value, a vector, or a DataTable. For a value or
 vector, these are merged into a column along with the `cols` keys. For
@@ -433,7 +485,8 @@ aggregate(gd::GroupedDataTable, fs; sort::Bool=true)
 * `cols` : a column indicator (Symbol, Int, Vector{Symbol}, etc.)
 * `fs` : a function or vector of functions to be applied to vectors
   within groups; expects each argument to be a column vector
-* `sort`: whether to sort row groups; disable sorting for maximum performance
+* `sort`: whether to sort row groups; if `false`, levels of each
+  grouping column are sorted in their order of appearance
 
 Each `fs` should return a value or vector. All returns must be the
 same length.
