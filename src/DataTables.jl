@@ -18,6 +18,7 @@ import NullableArrays: dropnull, dropnull!
 using SortingAlgorithms
 using Base: Sort, Order
 import Base: ==, |>
+using Nulls
 
 ##############################################################################
 ##
