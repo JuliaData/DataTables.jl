@@ -38,9 +38,9 @@ function hashrows_col!{T}(h::Vector{UInt}, v::AbstractCategoricalVector{T})
     h
 end
 
-# should give the same hash as AbstractNullableVector{T}
+# should give the same hash as AbstractVector{T}
 # enables efficient sequential memory access pattern
-function hashrows_col!{T}(h::Vector{UInt}, v::AbstractNullableCategoricalVector{T})
+function hashrows_col!(h::Vector{UInt}, v::AbstractCategoricalVector{>: Null})
     # TODO is it possible to optimize by hashing the pool values once?
     @inbounds for (i, ref) in enumerate(v.refs)
         h[i] = ref == 0 ?

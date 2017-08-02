@@ -39,9 +39,9 @@ Base.convert(::Type{Array}, r::DataTableRow) = convert(Array, r.dt[r.row,:])
 
 # hash column element
 Base.@propagate_inbounds hash_colel(v::AbstractArray, i, h::UInt = zero(UInt)) = hash(v[i], h)
-Base.@propagate_inbounds hash_colel{T}(v::AbstractCategoricalArray{T}, i, h::UInt = zero(UInt)) =
+Base.@propagate_inbounds hash_colel(v::AbstractCategoricalArray, i, h::UInt = zero(UInt)) =
     hash(CategoricalArrays.index(v.pool)[v.refs[i]], h)
-Base.@propagate_inbounds function hash_colel{T}(v::AbstractNullableCategoricalArray{T}, i, h::UInt = zero(UInt))
+Base.@propagate_inbounds function hash_colel(v::AbstractCategoricalArray{>: Null}, i, h::UInt = zero(UInt))
     ref = v.refs[i]
     ref == 0 ? hash(null, h) : hash(CategoricalArrays.index(v.pool)[ref], h)
 end
@@ -60,7 +60,6 @@ Base.hash(r::DataTableRow, h::UInt = zero(UInt)) = rowhash(r.dt, r.row, h)
 # comparison of DataTable rows
 # only the rows of the same DataTable could be compared
 # rows are equal if they have the same values (while the row indices could differ)
-# returns Nullable{Bool}
 # if all non-null values are equal, but there are nulls, returns null
 Base.:(==)(r1::DataTableRow, r2::DataTableRow) = isequal(r1, r2)
 

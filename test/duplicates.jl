@@ -1,5 +1,5 @@
 module TestDuplicates
-    using Base.Test, DataTables, Nulls
+    using Base.Test, DataTables
 
     dt = DataTable(a = [1, 2, 3, 3, 4])
     udt = DataTable(a = [1, 2, 3, 4])
@@ -8,10 +8,10 @@ module TestDuplicates
     unique!(dt)
     @test dt == udt
 
-    pdt = DataTable(a = NullableCategoricalArray(["a", "a", null, null, "b", null, "a", null]),
-                    b = NullableCategoricalArray(["a", "b", null, null, "b", "a", "a", "a"]))
-    updt = DataTable(a = NullableCategoricalArray(["a", "a", null, "b", null]),
-                     b = NullableCategoricalArray(["a", "b", null, "b", "a"]))
+    pdt = DataTable(a = CategoricalArray(["a", "a", null, null, "b", null, "a", null]),
+                    b = CategoricalArray(["a", "b", null, null, "b", "a", "a", "a"]))
+    updt = DataTable(a = CategoricalArray(["a", "a", null, "b", null]),
+                     b = CategoricalArray(["a", "b", null, "b", "a"]))
     @test nonunique(pdt) == [false, false, false, true, false, false, true, true]
     @test nonunique(updt) == falses(5)
     @test updt == unique(pdt)

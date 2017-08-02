@@ -1,5 +1,5 @@
 module TestConstructors
-    using Base.Test, DataTables, Nulls, DataTables.Index
+    using Base.Test, DataTables, DataTables.Index
 
     #
     # DataTable
@@ -9,14 +9,14 @@ module TestConstructors
     @test dt.columns == Any[]
     @test dt.colindex == Index()
 
-    dt = DataTable(Any[NullableCategoricalVector(zeros(3)),
-                       NullableCategoricalVector(ones(3))],
+    dt = DataTable(Any[CategoricalVector{Union{Float64, Null}}(zeros(3)),
+                       CategoricalVector{Union{Float64, Null}}(ones(3))],
                    Index([:x1, :x2]))
     @test size(dt, 1) == 3
     @test size(dt, 2) == 2
 
-    @test dt == DataTable(Any[NullableCategoricalVector(zeros(3)),
-                              NullableCategoricalVector(ones(3))])
+    @test dt == DataTable(Any[CategoricalVector{Union{Float64, Null}}(zeros(3)),
+                              CategoricalVector{Union{Float64, Null}}(ones(3))])
     @test dt == DataTable(x1 = [0.0, 0.0, 0.0],
                           x2 = [1.0, 1.0, 1.0])
 
@@ -27,21 +27,21 @@ module TestConstructors
     @test dt[:x1] == dt2[:x1]
     @test dt[:x2] == dt2[:x2]
 
-    @test dt == DataTable(x1 = (?Float64)[0.0, 0.0, 0.0],
-                          x2 = (?Float64)[1.0, 1.0, 1.0])
-    @test dt == DataTable(x1 = (?Float64)[0.0, 0.0, 0.0],
-                          x2 = (?Float64)[1.0, 1.0, 1.0],
-                          x3 = (?Float64)[2.0, 2.0, 2.0])[[:x1, :x2]]
+    @test dt == DataTable(x1 = Union{Float64, Null}[0.0, 0.0, 0.0],
+                          x2 = Union{Float64, Null}[1.0, 1.0, 1.0])
+    @test dt == DataTable(x1 = Union{Float64, Null}[0.0, 0.0, 0.0],
+                          x2 = Union{Float64, Null}[1.0, 1.0, 1.0],
+                          x3 = Union{Float64, Null}[2.0, 2.0, 2.0])[[:x1, :x2]]
 
-    dt = DataTable(?Int, 2, 2)
+    dt = DataTable(Union{Int, Null}, 2, 2)
     @test size(dt) == (2, 2)
-    @test eltypes(dt) == [?Int, ?Int]
+    @test eltypes(dt) == [Union{Int, Null}, Union{Int, Null}]
 
-    dt = DataTable([?Int, ?Float64], [:x1, :x2], 2)
+    dt = DataTable([Union{Int, Null}, Union{Float64, Null}], [:x1, :x2], 2)
     @test size(dt) == (2, 2)
-    @test eltypes(dt) == [?Int, ?Float64]
+    @test eltypes(dt) == [Union{Int, Null}, Union{Float64, Null}]
 
-    @test dt == DataTable([?Int, ?Float64], 2)
+    @test dt == DataTable([Union{Int, Null}, Union{Float64, Null}], 2)
 
     @test_throws BoundsError SubDataTable(DataTable(A=1), 0)
     @test_throws BoundsError SubDataTable(DataTable(A=1), 0)
@@ -75,7 +75,7 @@ module TestConstructors
         answer = [Array{Int,1}, Array{Int,1}, Array{Int,1}]
         @test map(typeof, dt.columns) == answer
         dt[:D] = [4, 5, null]
-        push!(answer, Vector{?Int})
+        push!(answer, Vector{Union{Int, Null}})
         @test map(typeof, dt.columns) == answer
         dt[:E] = 'c'
         push!(answer, Vector{Char})

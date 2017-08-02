@@ -1,5 +1,5 @@
 module TestData
-    using Base.Test, DataTables, Nulls
+    using Base.Test, DataTables
     importall Base # so that we get warnings for conflicts
 
     #test_group("Vector creation")
@@ -82,7 +82,7 @@ module TestData
     N = 20
     #Cast to Int64 as rand() behavior differs between Int32/64
     d1 = rand(map(Int64, 1:2), N)
-    d2 = NullableCategoricalArray(["A", "B", null])[rand(map(Int64, 1:3), N)]
+    d2 = CategoricalArray(["A", "B", null])[rand(map(Int64, 1:3), N)]
     d3 = randn(N)
     d4 = randn(N)
     dt7 = DataTable(Any[d1, d2, d3], [:d1, :d2, :d3])
@@ -109,7 +109,7 @@ module TestData
     @test dt8[1, :d1_sum] == sum(dt7[:d1])
 
     dt8 = aggregate(dt7, :d2, [sum, length], sort=true)
-    @test dt8[1:2, :d2] == NullableCategoricalArray(["A", "B"])
+    @test dt8[1:2, :d2] == CategoricalArray{Union{String, Null}}(["A", "B"])
     @test size(dt8, 1) == 3
     @test size(dt8, 2) == 5
     @test sum(dt8[:d1_length]) == N
@@ -254,7 +254,7 @@ module TestData
     )
 
     dt2 = DataTable(
-        a = Vector{?Symbol}([:x,:y][[1,2,1,1,2]]),
+        a = Vector{Union{Symbol, Null}}([:x,:y][[1,2,1,1,2]]),
         b = [:A,:B,:C][[1,1,1,2,3]],
         v2 = randn(5)
     )
@@ -266,9 +266,9 @@ module TestData
     # m2 = join(dt1, dt2, on = ["a","b"], kind = :outer)
     # @test m2[10,:v2] == null
     # @test m2[:a] ==
-    #               (?String)["x", "x", "y", "y",
-    #                         "x", "x", "x", "x", "x", "y",
-    #                         null, "y"]
+    #               Union{String, Null}["x", "x", "y", "y",
+    #                                   "x", "x", "x", "x", "x", "y",
+    #                                   null, "y"]
 
     srand(1)
     function spltdt(d)

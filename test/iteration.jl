@@ -1,5 +1,5 @@
 module TestIteration
-    using Base.Test, DataTables, Nulls
+    using Base.Test, DataTables
 
     dv = [1, 2, null]
     dm = [1 2; 3 4]

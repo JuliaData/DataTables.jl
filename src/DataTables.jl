@@ -8,9 +8,8 @@ module DataTables
 ##
 ##############################################################################
 
-using Compat, Reexport
-using StatsBase, SortingAlgorithms, Nulls
-@reexport using CategoricalArrays
+using Compat, Reexport, StatsBase, SortingAlgorithms
+@reexport using CategoricalArrays, Nulls
 
 using Base: Sort, Order
 import Base: ==, |>

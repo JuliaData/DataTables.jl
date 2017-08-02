@@ -1,5 +1,5 @@
 module TestConversions
-    using Base.Test, DataTables, Nulls
+    using Base.Test, DataTables
     using DataStructures: OrderedDict, SortedDict
 
     dt = DataTable()
@@ -29,17 +29,17 @@ module TestConversions
     @test ai == convert(Matrix{Int}, dt)
 
     @test_throws MethodError dt[1,1] = null
-    dt[:A] = Vector{?Float64}(1.0:5.0)
+    dt[:A] = Vector{Union{Float64, Null}}(1.0:5.0)
     dt[1, 1] = null
-    na = convert(Array{?Float64}, dt)
-    naa = convert(Array{?Any}, dt)
-    nai = convert(Array{?Int}, dt)
-    @test isa(na, Matrix{?Float64})
+    na = convert(Array{Union{Float64, Null}}, dt)
+    naa = convert(Array{Union{Any, Null}}, dt)
+    nai = convert(Array{Union{Int, Null}}, dt)
+    @test isa(na, Matrix{Union{Float64, Null}})
     @test na == convert(Matrix, dt)
-    @test isa(naa, Matrix{?Any})
-    @test naa == convert(Matrix{?Any}, dt)
-    @test isa(nai, Matrix{?Int})
-    @test nai == convert(Matrix{?Int}, dt)
+    @test isa(naa, Matrix{Union{Any, Null}})
+    @test naa == convert(Matrix{Union{Any, Null}}, dt)
+    @test isa(nai, Matrix{Union{Int, Null}})
+    @test nai == convert(Matrix{Union{Int, Null}}, dt)
 
     a = [1.0,2.0]
     b = [-0.1,3]

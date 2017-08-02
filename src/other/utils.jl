@@ -124,7 +124,7 @@ end
 
 #' @description
 #'
-#' Count the number of missing values in a NullableCategoricalArray.
+#' Count the number of missing values in a CategoricalArray.
 #'
 #' @field na::CategoricalArray The CategoricalArray whose missing values
 #'        are to be counted.

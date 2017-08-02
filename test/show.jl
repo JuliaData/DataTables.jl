@@ -1,5 +1,5 @@
 module TestShow
-    using Base.Test, DataTables, Nulls
+    using Base.Test, DataTables
 
     dt = DataTable(A = 1:3, B = ["x", "y", "z"])
 

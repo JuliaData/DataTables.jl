@@ -72,8 +72,8 @@ vcat([g[:b] for g in gd]...)
 for g in gd
     println(g)
 end
-map(d -> mean(dropnull(d[:c])), gd)   # returns a GroupApplied object
-combine(map(d -> mean(dropnull(d[:c])), gd))
+map(d -> mean(Nulls.skip(d[:c])), gd)   # returns a GroupApplied object
+combine(map(d -> mean(Nulls.skip(d[:c])), gd))
 dt |> groupby(:a) |> [sum, length]
 dt |> groupby([:a, :b]) |> [sum, length]
 ```
@@ -187,7 +187,7 @@ combine(ga::GroupApplied)
 dt = DataTable(a = repeat([1, 2, 3, 4], outer=[2]),
                b = repeat([2, 1], outer=[4]),
                c = randn(8))
-combine(map(d -> mean(dropnull(d[:c])), gd))
+combine(map(d -> mean(Nulls.skip(d[:c])), gd))
 ```
 
 """
@@ -284,11 +284,11 @@ dt = DataTable(a = repeat([1, 2, 3, 4], outer=[2]),
                b = repeat([2, 1], outer=[4]),
                c = randn(8))
 by(dt, :a, d -> sum(d[:c]))
-by(dt, :a, d -> 2 * dropnull(d[:c]))
-by(dt, :a, d -> DataTable(c_sum = sum(d[:c]), c_mean = mean(dropnull(d[:c]))))
-by(dt, :a, d -> DataTable(c = d[:c], c_mean = mean(dropnull(d[:c]))))
+by(dt, :a, d -> 2 * Nulls.skip(d[:c]))
+by(dt, :a, d -> DataTable(c_sum = sum(d[:c]), c_mean = mean(Nulls.skip(d[:c]))))
+by(dt, :a, d -> DataTable(c = d[:c], c_mean = mean(Nulls.skip(d[:c]))))
 by(dt, [:a, :b]) do d
-    DataTable(m = mean(dropnull(d[:c])), v = var(dropnull(d[:c])))
+    DataTable(m = mean(Nulls.skip(d[:c])), v = var(Nulls.skip(d[:c])))
 end
 ```
 
@@ -334,9 +334,9 @@ dt = DataTable(a = repeat([1, 2, 3, 4], outer=[2]),
                b = repeat([2, 1], outer=[4]),
                c = randn(8))
 aggregate(dt, :a, sum)
-aggregate(dt, :a, [sum, x->mean(dropnull(x))])
-aggregate(groupby(dt, :a), [sum, x->mean(dropnull(x))])
-dt |> groupby(:a) |> [sum, x->mean(dropnull(x))]   # equivalent
+aggregate(dt, :a, [sum, x->mean(Nulls.skip(x))])
+aggregate(groupby(dt, :a), [sum, x->mean(Nulls.skip(x))])
+dt |> groupby(:a) |> [sum, x->mean(Nulls.skip(x))]   # equivalent
 ```
 
 """

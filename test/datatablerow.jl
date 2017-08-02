@@ -1,10 +1,10 @@
 module TestDataTableRow
-    using Base.Test, DataTables, Nulls
+    using Base.Test, DataTables
 
     dt = DataTable(a=[1,   2,   3,   1,   2,   2 ],
                    b=[2.0, null, 1.2, 2.0, null, null],
                    c=["A", "B", "C", "A", "B", null],
-                   d=NullableCategoricalArray([:A,  null,  :C,  :A, null,  :C]))
+                   d=CategoricalArray([:A,  null,  :C,  :A, null,  :C]))
     dt2 = DataTable(a = [1, 2, 3])
 
     #

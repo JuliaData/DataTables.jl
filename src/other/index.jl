@@ -111,7 +111,7 @@ end
 
 Base.getindex(x::Index, idx::Symbol) = x.lookup[idx]
 Base.getindex(x::AbstractIndex, idx::Real) = Int(idx)
-Base.getindex(x::AbstractIndex, idx::AbstractVector{?Bool}) =
+Base.getindex(x::AbstractIndex, idx::AbstractVector{Union{Bool, Null}}) =
     getindex(x, collect(Nulls.replace(idx, false)))
 Base.getindex(x::AbstractIndex, idx::AbstractVector{Bool}) = find(idx)
 Base.getindex{T >: Null}(x::AbstractIndex, idx::AbstractVector{T}) =

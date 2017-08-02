@@ -24,7 +24,6 @@ The following are normally implemented for AbstractDataTables:
 * [`head`](@ref) : first `n` rows
 * [`tail`](@ref) : last `n` rows
 * `convert` : convert to an array
-* `NullableArray` : convert to a NullableArray
 * [`completecases`](@ref) : boolean vector of complete cases (rows with no nulls)
 * [`dropnull`](@ref) : remove rows with null values
 * [`dropnull!`](@ref) : remove rows with null values in-place
@@ -379,6 +378,22 @@ function StatsBase.describe(io, dt::AbstractDataTable)
     end
 end
 
+function StatsBase.describe{T}(io::IO, X::AbstractVector{Union{T, Null}})
+    nullcount = count(isnull, X)
+    pnull = 100 * nullcount/length(X)
+    if pnull != 100 && T <: Real
+        show(io, StatsBase.summarystats(collect(Nulls.skip(X))))
+    else
+        println(io, "Summary Stats:")
+    end
+    println(io, "Length:         $(length(X))")
+    println(io, "Type:           $(eltype(X))")
+    !(T <: Real) && println(io, "Number Unique:  $(length(unique(X)))")
+    println(io, "Number Missing: $(nullcount)")
+    @printf(io, "%% Missing:      %.6f\n", pnull)
+    return
+end
+
 ##############################################################################
 ##
 ## Miscellaneous
@@ -391,7 +406,7 @@ function _nonnull!(res, col)
     end
 end
 
-function _nonnull!(res, col::NullableCategoricalArray)
+function _nonnull!(res, col::CategoricalArray{>: Null})
     for (i, el) in enumerate(col.refs)
         res[i] &= el > 0
     end
@@ -418,9 +433,11 @@ See also [`dropnull`](@ref) and [`dropnull!`](@ref).
 **Examples**
 
 ```julia
-dt = DataTable(i = 1:10, x = rand(10), y = rand(["a", "b", "c"], 10))
-dt[[1,4,5], :x] = Nullable()
-dt[[9,10], :y] = Nullable()
+dt = DataTable(i = 1:10,
+               x = Vector{Union{Null, Float64}}(rand(10)),
+               y = Vector{Union{Null, String}}(rand(["a", "b", "c"], 10)))
+dt[[1,4,5], :x] = null
+dt[[9,10], :y] = null
 completecases(dt)
 ```
 
@@ -453,9 +470,11 @@ See also [`completecases`](@ref) and [`dropnull!`](@ref).
 **Examples**
 
 ```julia
-dt = DataTable(i = 1:10, x = rand(10), y = rand(["a", "b", "c"], 10))
-dt[[1,4,5], :x] = Nullable()
-dt[[9,10], :y] = Nullable()
+dt = DataTable(i = 1:10,
+               x = Vector{Union{Null, Float64}}(rand(10)),
+               y = Vector{Union{Null, String}}(rand(["a", "b", "c"], 10)))
+dt[[1,4,5], :x] = null
+dt[[9,10], :y] = null
 dropnull(dt)
 ```
 
@@ -482,9 +501,11 @@ See also [`dropnull`](@ref) and [`completecases`](@ref).
 **Examples**
 
 ```julia
-dt = DataTable(i = 1:10, x = rand(10), y = rand(["a", "b", "c"], 10))
-dt[[1,4,5], :x] = Nullable()
-dt[[9,10], :y] = Nullable()
+dt = DataTable(i = 1:10,
+               x = Vector{Union{Null, Float64}}(rand(10)),
+               y = Vector{Union{Null, String}}(rand(["a", "b", "c"], 10)))
+dt[[1,4,5], :x] = null
+dt[[9,10], :y] = null
 dropnull!(dt)
 ```
 
@@ -557,6 +578,10 @@ end
 nonunique(dt::AbstractDataTable, cols::Union{Real, Symbol}) = nonunique(dt[[cols]])
 nonunique(dt::AbstractDataTable, cols::Any) = nonunique(dt[cols])
 
+if isdefined(:unique!)
+    import Base.unique!
+end
+
 unique!(dt::AbstractDataTable) = deleterows!(dt, find(nonunique(dt)))
 unique!(dt::AbstractDataTable, cols::Any) = deleterows!(dt, find(nonunique(dt, cols)))
 
@@ -625,7 +650,7 @@ without(dt::AbstractDataTable, c::Any) = without(dt, index(dt)[c])
 ##############################################################################
 
 # hcat's first argument must be an AbstractDataTable
-# Trailing arguments (currently) may also be NullableVectors, Vectors, or scalars.
+# Trailing arguments (currently) may also be vectors or scalars.
 
 # hcat! is defined in datatables/datatables.jl
 # Its first argument (currently) must be a DataTable.
@@ -643,13 +668,13 @@ Base.hcat(dt1::AbstractDataTable, dt2::AbstractDataTable, dtn::AbstractDataTable
         T = T.parameters[1]
     end
     if any(col -> eltype(col) >: Null, cols)
-        if any(col -> col <: Union{AbstractCategoricalArray, AbstractNullableCategoricalArray}, cols)
-            return :(NullableCategoricalVector{$T})
+        if any(col -> col <: AbstractCategoricalArray, cols)
+            return :(CategoricalVector{Union{$T, Null}})
         else
-            return :(Vector{?($T)})
+            return :(Vector{Union{$T, Null}})
         end
     else
-        if any(col -> col <: Union{AbstractCategoricalArray, AbstractNullableCategoricalArray}, cols)
+        if any(col -> col <: AbstractCategoricalArray, cols)
             return :(CategoricalVector{$T})
         else
             return :(Vector{$T})

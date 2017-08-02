@@ -1,10 +1,10 @@
 module TestSort
-    using Base.Test, DataTables, Nulls
+    using Base.Test, DataTables
 
     dv1 = [9, 1, 8, null, 3, 3, 7, null]
     dv2 = [9, 1, 8, null, 3, 3, 7, null]
-    dv3 = Vector{?Int}(1:8)
-    cv1 = NullableCategoricalArray(dv1, ordered=true)
+    dv3 = Vector{Union{Int, Null}}(1:8)
+    cv1 = CategoricalArray(dv1, ordered=true)
 
     d = DataTable(dv1 = dv1, dv2 = dv2, dv3 = dv3, cv1 = cv1)
 
