@@ -4,16 +4,13 @@
 
 # Like similar, but returns a array that can have nulls and is initialized with nulls
 similar_nullable{T}(dv::AbstractArray{T}, dims::Union{Int, Tuple{Vararg{Int}}}) =
-    (v = Vector{?T}(dims); fill!(v, null); return v)
+    (v = Vector{Union{T, Null}}(dims); fill!(v, null); return v)
 
 similar_nullable{T >: Null}(dv::AbstractArray{T}, dims::Union{Int, Tuple{Vararg{Int}}}) =
-    (v = Vector{?Nulls.T(T)}(dims); fill!(v, null); return v)
+    (v = Vector{T}(dims); fill!(v, null); return v)
 
 similar_nullable{T}(dv::CategoricalArray{T}, dims::Union{Int, Tuple{Vararg{Int}}}) =
-    NullableCategoricalArray{T}(dims)
-
-similar_nullable{T}(dv::NullableCategoricalArray{T}, dims::Union{Int, Tuple{Vararg{Int}}}) =
-    NullableCategoricalArray{T}(dims)
+    CategoricalArray{Union{T, Null}}(dims)
 
 # helper structure for DataTables joining
 immutable DataTableJoiner{DT1<:AbstractDataTable, DT2<:AbstractDataTable}

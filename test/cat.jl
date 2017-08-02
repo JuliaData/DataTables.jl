@@ -1,5 +1,5 @@
 module TestCat
-    using Base.Test, DataTables, Nulls
+    using Base.Test, DataTables
 
     #
     # hcat
@@ -11,7 +11,7 @@ module TestCat
     dt2 = DataTable(Any[nvint, nvstr])
     dt3 = DataTable(Any[nvint])
     dt4 = convert(DataTable, [1:4 1:4])
-    dt5 = DataTable(Any[(?Int)[1,2,3,4], nvstr])
+    dt5 = DataTable(Any[Union{Int, Null}[1,2,3,4], nvstr])
 
     dth = hcat(dt3, dt4)
     @test size(dth, 2) == 3
@@ -38,8 +38,8 @@ module TestCat
 
     @testset "hcat ::Vectors" begin
         dt = DataTable()
-        DataTables.hcat!(dt, NullableCategoricalVector(1:10))
-        @test dt[1] == NullableCategoricalVector(1:10)
+        DataTables.hcat!(dt, CategoricalVector{Union{Int, Null}}(1:10))
+        @test dt[1] == collect(1:10)
         DataTables.hcat!(dt, 1:10)
         @test dt[2] == collect(1:10)
     end
@@ -110,19 +110,19 @@ module TestCat
     @test dtr == [dt4; dt4]
 
     @test eltypes(vcat(DataTable(a = [1]), DataTable(a = [2.1]))) == Type[Float64]
-    @test eltypes(vcat(DataTable(a = nulls(?Int, 1)), DataTable(a = (?Float64)[2.1]))) == Type[?Float64]
+    @test eltypes(vcat(DataTable(a = nulls(Int, 1)), DataTable(a = Union{Float64, Null}[2.1]))) == Type[Union{Float64, Null}]
 
     # Minimal container type promotion
-    dta = DataTable(a = NullableCategoricalArray([1, 2, 2]))
-    dtb = DataTable(a = NullableCategoricalArray([2, 3, 4]))
-    dtc = DataTable(a = (?Int)[2, 3, 4])
+    dta = DataTable(a = CategoricalArray{Union{Int, Null}}([1, 2, 2]))
+    dtb = DataTable(a = CategoricalArray{Union{Int, Null}}([2, 3, 4]))
+    dtc = DataTable(a = Union{Int, Null}[2, 3, 4])
     dtd = DataTable(Any[2:4], [:a])
     dtab = vcat(dta, dtb)
     dtac = vcat(dta, dtc)
     @test dtab[:a] == [1, 2, 2, 2, 3, 4]
     @test dtac[:a] == [1, 2, 2, 2, 3, 4]
-    @test isa(dtab[:a], NullableCategoricalVector{Int})
-    @test isa(dtac[:a], NullableCategoricalVector{Int})
+    @test isa(dtab[:a], CategoricalVector{Union{Int, Null}})
+    @test isa(dtac[:a], CategoricalVector{Union{Int, Null}})
     # ^^ container may flip if container promotion happens in Base/DataArrays
     dc = vcat(dtd, dtc)
     @test vcat(dtc, dtd) == dc
@@ -142,7 +142,6 @@ module TestCat
     end
 
     @testset "vcat mixed coltypes" begin
-        drf = CategoricalArrays.DefaultRefType
         dt = vcat(DataTable([[1]], [:x]), DataTable([[1.0]], [:x]))
         @test dt == DataTable([[1.0, 1.0]], [:x])
         @test typeof.(dt.columns) == [Vector{Float64}]
@@ -154,15 +153,15 @@ module TestCat
         @test typeof.(dt.columns) == [Vector{Int}]
         dt = vcat(DataTable([CategoricalArray([1])], [:x]), DataTable([[1]], [:x]))
         @test dt == DataTable([CategoricalArray([1, 1])], [:x])
-        @test typeof.(dt.columns) == [CategoricalVector{Int, drf}]
+        @test typeof(dt[:x]) <: CategoricalVector{Int}
         dt = vcat(DataTable([CategoricalArray([1])], [:x]),
                   DataTable([[1]], [:x]))
         @test dt == DataTable([CategoricalArray([1, 1])], [:x])
-        @test typeof.(dt.columns) == [CategoricalVector{Int, drf}]
+        @test typeof(dt[:x]) <: CategoricalVector{Int}
         dt = vcat(DataTable([CategoricalArray([1])], [:x]),
-                  DataTable([NullableCategoricalArray([1])], [:x]))
-        @test dt == DataTable([NullableCategoricalArray([1, 1])], [:x])
-        @test typeof.(dt.columns) == [NullableCategoricalVector{Int, drf}]
+                  DataTable([CategoricalArray{Union{Int, Null}}([1])], [:x]))
+        @test dt == DataTable([CategoricalArray{Union{Int, Null}}([1, 1])], [:x])
+        @test typeof(dt[:x]) <: CategoricalVector{Union{Int, Null}}
         dt = vcat(DataTable([[1]], [:x]),
                   DataTable([["1"]], [:x]))
         @test dt == DataTable([[1, "1"]], [:x])
@@ -170,7 +169,7 @@ module TestCat
         dt = vcat(DataTable([CategoricalArray([1])], [:x]),
                   DataTable([CategoricalArray(["1"])], [:x]))
         @test dt == DataTable([CategoricalArray([1, "1"])], [:x])
-        @test typeof.(dt.columns) == [CategoricalVector{Any, drf}]
+        @test typeof(dt[:x]) <: CategoricalVector{Any}
         dt = vcat(DataTable([trues(1)], [:x]), DataTable([[false]], [:x]))
         @test dt == DataTable([[true, false]], [:x])
         @test typeof.(dt.columns) == [Vector{Bool}]

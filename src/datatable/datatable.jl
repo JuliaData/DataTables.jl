@@ -2,7 +2,7 @@
 An AbstractDataTable that stores a set of named columns
 
 The columns are normally AbstractVectors stored in memory,
-particularly a Vector, NullableVector, or CategoricalVector.
+particularly a Vector or CategoricalVector.
 
 **Constructors**
 
@@ -30,10 +30,6 @@ Each column in `columns` should be the same length.
 
 **Notes**
 
-Most of the default constructors convert columns to `NullableArray`.  The
-base constructor, `DataTable(columns::Vector{Any},
-names::Vector{Symbol})` does not convert to `NullableArray`.
-
 A `DataTable` is a lightweight object. As long as columns are not
 manipulated, creation of a DataTable from existing AbstractVectors is
 inexpensive. For example, indexing on columns is inexpensive, but
@@ -48,8 +44,8 @@ loops.
 ```julia
 dt = DataTable()
 v = ["x","y","z"][rand(1:3, 10)]
-dt1 = DataTable(Any[collect(1:10), v, rand(10)], [:A, :B, :C])  # columns are Arrays
-dt2 = DataTable(A = 1:10, B = v, C = rand(10))           # columns are NullableArrays
+dt1 = DataTable(Any[collect(1:10), v, rand(10)], [:A, :B, :C])
+dt2 = DataTable(A = 1:10, B = v, C = rand(10))
 dump(dt1)
 dump(dt2)
 describe(dt2)
@@ -128,7 +124,7 @@ function DataTable{T<:Type}(column_eltypes::AbstractVector{T}, cnames::AbstractV
         elty = column_eltypes[j]
         if elty >: Null
             if elty <: CategoricalValue
-                columns[j] = NullableCategoricalArray{Nulls.T(elty)}(nrows)
+                columns[j] = CategoricalArray{elty}(nrows)
             else
                 columns[j] = nulls(elty, nrows)
             end
@@ -215,7 +211,7 @@ end
 
 # dt[MultiColumnIndex] => DataTable
 function Base.getindex(dt::DataTable,
-                       col_inds::AbstractVector{<:?ColumnIndex})
+                       col_inds::AbstractVector{<:Union{ColumnIndex, Null}})
     selected_columns = index(dt)[col_inds]
     new_columns = dt.columns[selected_columns]
     return DataTable(new_columns, Index(_names(dt)[selected_columns]))
@@ -233,7 +229,7 @@ end
 # dt[SingleRowIndex, MultiColumnIndex] => DataTable
 function Base.getindex(dt::DataTable,
                        row_ind::Real,
-                       col_inds::AbstractVector{<:?ColumnIndex})
+                       col_inds::AbstractVector{<:Union{ColumnIndex, Null}})
     selected_columns = index(dt)[col_inds]
     new_columns = Any[dv[[row_ind]] for dv in dt.columns[selected_columns]]
     return DataTable(new_columns, Index(_names(dt)[selected_columns]))
@@ -241,7 +237,7 @@ end
 
 # dt[MultiRowIndex, SingleColumnIndex] => AbstractVector
 function Base.getindex(dt::DataTable,
-                       row_inds::AbstractVector{<:?Real},
+                       row_inds::AbstractVector{<:Union{Real, Null}},
                        col_ind::ColumnIndex)
     selected_column = index(dt)[col_ind]
     return dt.columns[selected_column][row_inds]
@@ -249,8 +245,8 @@ end
 
 # dt[MultiRowIndex, MultiColumnIndex] => DataTable
 function Base.getindex(dt::DataTable,
-                       row_inds::AbstractVector{<:?Real},
-                       col_inds::AbstractVector{<:?ColumnIndex})
+                       row_inds::AbstractVector{<:Union{Real, Null}},
+                       col_inds::AbstractVector{<:Union{ColumnIndex, Null}})
     selected_columns = index(dt)[col_inds]
     new_columns = Any[dv[row_inds] for dv in dt.columns[selected_columns]]
     return DataTable(new_columns, Index(_names(dt)[selected_columns]))
@@ -258,7 +254,7 @@ end
 
 # dt[:, SingleColumnIndex] => AbstractVector
 # dt[:, MultiColumnIndex] => DataTable
-Base.getindex{T <: ?ColumnIndex}(dt::DataTable,
+Base.getindex{T <: Union{ColumnIndex, Null}}(dt::DataTable,
                                  ::Colon,
                                  col_inds::Union{T, AbstractVector{T}}) =
     dt[col_inds]
@@ -268,7 +264,7 @@ Base.getindex(dt::DataTable, row_ind::Real, col_inds::Colon) = dt[[row_ind], col
 
 # dt[MultiRowIndex, :] => DataTable
 function Base.getindex(dt::DataTable,
-                       row_inds::AbstractVector{<:?Real},
+                       row_inds::AbstractVector{<:Union{Real, Null}},
                        col_inds::Colon)
     new_columns = Any[dv[row_inds] for dv in dt.columns]
     return DataTable(new_columns, copy(index(dt)))
@@ -733,7 +729,7 @@ Base.hcat(dt1::DataTable, dt2::AbstractDataTable, dtn::AbstractDataTable...) = h
 ##############################################################################
 
 function nullable!(dt::DataTable, col::ColumnIndex)
-    dt[col] = Vector{?eltype(dt[col])}(dt[col])
+    dt[col] = Vector{Union{eltype(dt[col]), Null}}(dt[col])
     dt
 end
 function nullable!{T <: ColumnIndex}(dt::DataTable, cols::Vector{T})

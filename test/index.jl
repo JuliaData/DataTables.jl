@@ -1,5 +1,5 @@
 module TestIndex
-using Base.Test, DataTables, Nulls, DataTables.Index
+using Base.Test, DataTables, DataTables.Index
 
 i = Index()
 push!(i, :A)
@@ -15,10 +15,10 @@ inds = Any[1,
            1:1,
            1.0:1.0,
            [:A],
-           (?Bool)[true],
-           (?Int)[1],
-           (?Float64)[1.0],
-           (?Symbol)[:A]]
+           Union{Bool, Null}[true],
+           Union{Int, Null}[1],
+           Union{Float64, Null}[1.0],
+           Union{Symbol, Null}[:A]]
 
 for ind in inds
     if ind == :A || ndims(ind) == 0

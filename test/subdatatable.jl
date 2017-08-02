@@ -1,5 +1,5 @@
 module TestSubDataTable
-    using Base.Test, DataTables, Nulls
+    using Base.Test, DataTables
 
     @testset "view -- DataTable" begin
         dt = DataTable(x = 1:10, y = 1.0:10.0)
@@ -32,10 +32,10 @@ module TestSubDataTable
         @test view(dt, Integer[1, 2]) == head(dt, 2)
         @test view(dt, UInt[1, 2]) == head(dt, 2)
         @test view(dt, BigInt[1, 2]) == head(dt, 2)
-        @test view(dt, (?Int)[1, 2]) == head(dt, 2)
-        @test view(dt, (?Integer)[1, 2]) == head(dt, 2)
-        @test view(dt, (?UInt)[1, 2]) == head(dt, 2)
-        @test view(dt, (?BigInt)[1, 2]) == head(dt, 2)
+        @test view(dt, Union{Int, Null}[1, 2]) == head(dt, 2)
+        @test view(dt, Union{Integer, Null}[1, 2]) == head(dt, 2)
+        @test view(dt, Union{UInt, Null}[1, 2]) == head(dt, 2)
+        @test view(dt, Union{BigInt, Null}[1, 2]) == head(dt, 2)
         @test_throws NullException view(dt, [null, 1])
     end
 
@@ -70,10 +70,10 @@ module TestSubDataTable
         @test view(dt, Integer[1, 2]) == head(dt, 2)
         @test view(dt, UInt[1, 2]) == head(dt, 2)
         @test view(dt, BigInt[1, 2]) == head(dt, 2)
-        @test view(dt, (?Int)[1, 2]) == head(dt, 2)
-        @test view(dt, (?Integer)[1, 2]) == head(dt, 2)
-        @test view(dt, (?UInt)[1, 2]) == head(dt, 2)
-        @test view(dt, (?BigInt)[1, 2]) == head(dt, 2)
+        @test view(dt, Union{Int, Null}[1, 2]) == head(dt, 2)
+        @test view(dt, Union{Integer, Null}[1, 2]) == head(dt, 2)
+        @test view(dt, Union{UInt, Null}[1, 2]) == head(dt, 2)
+        @test view(dt, Union{BigInt, Null}[1, 2]) == head(dt, 2)
         @test_throws NullException view(dt, [null, 1])
     end
 end

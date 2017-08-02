@@ -1,5 +1,5 @@
 module TestUtils
-    using Base.Test, DataTables, Nulls, StatsBase
+    using Base.Test, DataTables, StatsBase
     import DataTables: identifier
 
     @test identifier("%_B*_\tC*") == :_B_C_
@@ -38,14 +38,14 @@ module TestUtils
 
     @test DataTables.countnull([1:3;]) == 0
 
-    data = Vector{?Float64}(rand(20))
+    data = Vector{Union{Float64, Null}}(rand(20))
     @test DataTables.countnull(data) == 0
     data[sample(1:20, 11, replace=false)] = null
     @test DataTables.countnull(data) == 11
     data[1:end] = null
     @test DataTables.countnull(data) == 20
 
-    pdata = Vector{?Int}(sample(1:5, 20))
+    pdata = Vector{Union{Int, Null}}(sample(1:5, 20))
     @test DataTables.countnull(pdata) == 0
     pdata[sample(1:20, 11, replace=false)] = null
     @test DataTables.countnull(pdata) == 11
@@ -61,11 +61,12 @@ module TestUtils
 
     @testset "describe" begin
         io = IOBuffer()
-        dt = DataTable(Any[collect(1:4), Vector{?Int}(2:5),
+        dt = DataTable(Any[collect(1:4), Vector{Union{Int, Null}}(2:5),
                            CategoricalArray(3:6),
-                           NullableCategoricalArray(4:7)],
+                           CategoricalArray{Union{Int, Null}}(4:7)],
                        [:arr, :nullarr, :cat, :nullcat])
         describe(io, dt)
+        DRT = CategoricalArrays.DefaultRefType
         @test String(take!(io)) ==
             """
             arr
@@ -81,9 +82,16 @@ module TestUtils
 
             nullarr
             Summary Stats:
+            Mean:           3.500000
+            Minimum:        2.000000
+            1st Quartile:   2.750000
+            Median:         3.500000
+            3rd Quartile:   4.250000
+            Maximum:        5.000000
             Length:         4
-            Type:           Union{Int64, Nulls.Null}
-            Number Unique:  4
+            Type:           Union{Nulls.Null, Int64}
+            Number Missing: 0
+            % Missing:      0.000000
 
             cat
             Summary Stats:
@@ -94,8 +102,10 @@ module TestUtils
             nullcat
             Summary Stats:
             Length:         4
-            Type:           Union{CategoricalArrays.CategoricalValue{Int64,UInt32}, Nulls.Null}
+            Type:           Union{Nulls.Null, CategoricalArrays.CategoricalValue{Int64,UInt32}}
             Number Unique:  4
+            Number Missing: 0
+            % Missing:      0.000000
 
             """
     end

@@ -1,5 +1,5 @@
 module TestDataTable
-    using Base.Test, DataTables, Nulls
+    using Base.Test, DataTables
 
     #
     # Equality
@@ -73,12 +73,12 @@ module TestDataTable
     @test x0[:d] == Int[]
 
     # similar / nulls
-    dt = DataTable(a = (?Int)[1],
-                   b = (?String)["b"],
-                   c = NullableCategoricalArray([3.3]))
+    dt = DataTable(a = Union{Int, Null}[1],
+                   b = Union{String, Null}["b"],
+                   c = CategoricalArray{Union{Float64, Null}}([3.3]))
     nulldt = DataTable(a = nulls(Int, 2),
                        b = nulls(String, 2),
-                       c = NullableCategoricalArray{Float64}(2))
+                       c = CategoricalArray{Union{Float64, Null}}(2))
     @test nulldt == similar(dt, 2)
 
     # Associative methods
@@ -94,7 +94,7 @@ module TestDataTable
     @test isempty(dt.columns)
     @test isempty(dt)
 
-    dt = DataTable(a=(?Int)[1, 2], b=(?Float64)[3.0, 4.0])
+    dt = DataTable(a=Union{Int, Null}[1, 2], b=Union{Float64, Null}[3.0, 4.0])
     @test_throws BoundsError insert!(dt, 5, ["a", "b"], :newcol)
     @test_throws ErrorException insert!(dt, 1, ["a"], :newcol)
     @test insert!(dt, 1, ["a", "b"], :newcol) == dt
@@ -109,46 +109,46 @@ module TestDataTable
     @test dt == DataTable(a=[1, 2], b=["a", "b"], c=[:c, :d])
 
     #test_group("Empty DataTable constructors")
-    dt = DataTable(?Int, 10, 3)
+    dt = DataTable(Union{Int, Null}, 10, 3)
     @test size(dt, 1) == 10
     @test size(dt, 2) == 3
-    @test typeof(dt[:, 1]) == Vector{?Int}
-    @test typeof(dt[:, 2]) == Vector{?Int}
-    @test typeof(dt[:, 3]) == Vector{?Int}
+    @test typeof(dt[:, 1]) == Vector{Union{Int, Null}}
+    @test typeof(dt[:, 2]) == Vector{Union{Int, Null}}
+    @test typeof(dt[:, 3]) == Vector{Union{Int, Null}}
     @test all(isnull, dt[:, 1])
     @test all(isnull, dt[:, 2])
     @test all(isnull, dt[:, 3])
 
-    dt = DataTable([?Int, ?Float64, ?String], 100)
+    dt = DataTable([Union{Int, Null}, Union{Float64, Null}, Union{String, Null}], 100)
     @test size(dt, 1) == 100
     @test size(dt, 2) == 3
-    @test typeof(dt[:, 1]) == Vector{?Int}
-    @test typeof(dt[:, 2]) == Vector{?Float64}
-    @test typeof(dt[:, 3]) == Vector{?String}
+    @test typeof(dt[:, 1]) == Vector{Union{Int, Null}}
+    @test typeof(dt[:, 2]) == Vector{Union{Float64, Null}}
+    @test typeof(dt[:, 3]) == Vector{Union{String, Null}}
     @test all(isnull, dt[:, 1])
     @test all(isnull, dt[:, 2])
     @test all(isnull, dt[:, 3])
 
-    dt = DataTable([?Int, ?Float64, ?String],
+    dt = DataTable([Union{Int, Null}, Union{Float64, Null}, Union{String, Null}],
                    [:A, :B, :C], 100)
     @test size(dt, 1) == 100
     @test size(dt, 2) == 3
-    @test typeof(dt[:, 1]) == Vector{?Int}
-    @test typeof(dt[:, 2]) == Vector{?Float64}
-    @test typeof(dt[:, 3]) == Vector{?String}
+    @test typeof(dt[:, 1]) == Vector{Union{Int, Null}}
+    @test typeof(dt[:, 2]) == Vector{Union{Float64, Null}}
+    @test typeof(dt[:, 3]) == Vector{Union{String, Null}}
     @test all(isnull, dt[:, 1])
     @test all(isnull, dt[:, 2])
     @test all(isnull, dt[:, 3])
 
 
     #FIXME: something in CategoricalArrays
-    # dt = DataTable([?Int, ?Float64, ?String],
+    # dt = DataTable([Union{Int, Null}, Union{Float64, Null}, Union{String, Null}],
     #                [:A, :B, :C], [false, false, true],100)
     # @test size(dt, 1) == 100
     # @test size(dt, 2) == 3
-    # @test typeof(dt[:, 1]) == Vector{?Int}
-    # @test typeof(dt[:, 2]) == Vector{?Float64}
-    # @test typeof(dt[:, 3]) == NullableCategoricalVector{String,UInt32}
+    # @test typeof(dt[:, 1]) == Vector{Union{Int, Null}}
+    # @test typeof(dt[:, 2]) == Vector{Union{Float64, Null}}
+    # @test typeof(dt[:, 3]) <: CategoricalVector{Union{String, Null}}
     # @test all(isnull, dt[:, 1])
     # @test all(isnull, dt[:, 2])
     # @test all(isnull, dt[:, 3])
@@ -283,19 +283,19 @@ module TestDataTable
                                     b=["3", null]))
         @test nothing ==
               describe(f, DataTable(a=CategoricalArray([1, 2]),
-                                    b=NullableCategoricalArray(["3", null])))
+                                    b=CategoricalArray(["3", null])))
         @test nothing == describe(f, [1, 2, 3])
         @test nothing == describe(f, [1, 2, 3])
         @test nothing == describe(f, CategoricalArray([1, 2, 3]))
         @test nothing == describe(f, Any["1", "2", null])
         @test nothing == describe(f, ["1", "2", null])
-        @test nothing == describe(f, NullableCategoricalArray(["1", "2", null]))
+        @test nothing == describe(f, CategoricalArray(["1", "2", null]))
     end
 
     #Check the output of unstack
-    dt = DataTable(Fish = NullableCategoricalArray(["Bob", "Bob", "Batman", "Batman"]),
-                   Key = (?String)["Mass", "Color", "Mass", "Color"],
-                   Value = (?String)["12 g", "Red", "18 g", "Grey"])
+    dt = DataTable(Fish = CategoricalArray{Union{String, Null}}(["Bob", "Bob", "Batman", "Batman"]),
+                   Key = Union{String, Null}["Mass", "Color", "Mass", "Color"],
+                   Value = Union{String, Null}["12 g", "Red", "18 g", "Grey"])
     # Check that reordering levels does not confuse unstack
     levels!(dt[1], ["XXX", "Bob", "Batman"])
     #Unstack specifying a row column
@@ -304,11 +304,11 @@ module TestDataTable
     #FIXME: categoricalarrays
     # dt3 = unstack(dt, :Key, :Value)
     #The expected output
-    dt4 = DataTable(Fish = (?String)["XXX", "Bob", "Batman"],
-                    Color = (?String)[null, "Red", "Grey"],
-                    Mass = (?String)[null, "12 g", "18 g"])
+    dt4 = DataTable(Fish = Union{String, Null}["XXX", "Bob", "Batman"],
+                    Color = Union{String, Null}[null, "Red", "Grey"],
+                    Mass = Union{String, Null}[null, "12 g", "18 g"])
     @test dt2 == dt4
-    @test typeof(dt2[:Fish]) <: NullableCategoricalArray{String,1,UInt32}
+    @test typeof(dt2[:Fish]) <: CategoricalVector{Union{String, Null}}
     # first column stays as CategoricalArray in dt3
     # @test dt3[:, 2:3] == dt4[2:3, 2:3]
     #Make sure unstack works with NULLs at the start of the value column
@@ -338,7 +338,7 @@ module TestDataTable
         @test udt == unstack(dt, :variable, :value) == unstack(dt, :id, :variable, :value)
         @test udt == DataTable(Any[[1, 2], [1, 5], [2, 6],
                                    [3, 7], [4, 8]], [:id, :a, :b, :c, :d])
-        @test all(typeof.(udt.columns) .== Vector{?Int})
+        @test all(isa.(udt.columns, Vector{Union{Int, Null}}))
         dt = DataTable(Any[categorical(repeat(1:2, inner=4)),
                            categorical(repeat('a':'d', outer=2)), categorical(1:8)],
                        [:id, :variable, :value])
@@ -346,11 +346,11 @@ module TestDataTable
         # @test udt == unstack(dt, :variable, :value) == unstack(dt, :id, :variable, :value)
         @test udt == DataTable(Any[[1, 2], [1, 5], [2, 6],
                                    [3, 7], [4, 8]], [:id, :a, :b, :c, :d])
-        @test all(typeof.(udt.columns) .== NullableCategoricalVector{Int, UInt32})
+        @test all(isa.(udt.columns, CategoricalVector{Union{Int, Null}}))
     end
 
     @testset "duplicate entries in unstack warnings" begin
-        dt = DataTable(id=(?Int)[1, 2, 1, 2], variable=["a", "b", "a", "b"], value=[3, 4, 5, 6])
+        dt = DataTable(id=Union{Int, Null}[1, 2, 1, 2], variable=["a", "b", "a", "b"], value=[3, 4, 5, 6])
         @static if VERSION >= v"0.6.0-dev.1980"
             @test_warn "Duplicate entries in unstack." unstack(dt, :id, :variable, :value)
             @test_warn "Duplicate entries in unstack at row 3." unstack(dt, :variable, :value)
@@ -407,11 +407,11 @@ module TestDataTable
 
     @testset "column conversions" begin
         dt = DataTable(Any[collect(1:10), collect(1:10)])
-        @test !isa(dt[1], Vector{?Int})
+        @test !isa(dt[1], Vector{Union{Int, Null}})
         nullable!(dt, 1)
-        @test isa(dt[1], Vector{?Int})
-        @test !isa(dt[2], Vector{?Int})
+        @test isa(dt[1], Vector{Union{Int, Null}})
+        @test !isa(dt[2], Vector{Union{Int, Null}})
         nullable!(dt, [1,2])
-        @test isa(dt[1], Vector{?Int}) && isa(dt[2], Vector{?Int})
+        @test isa(dt[1], Vector{Union{Int, Null}}) && isa(dt[2], Vector{Union{Int, Null}})
     end
 end

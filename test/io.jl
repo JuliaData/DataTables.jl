@@ -1,5 +1,5 @@
 module TestIO
-    using Base.Test, DataTables, Nulls, CategoricalArrays
+    using Base.Test, DataTables, CategoricalArrays
     using LaTeXStrings
 
     # Test LaTeX export
@@ -41,11 +41,22 @@ module TestIO
                    B = 'a':'c',
                    C = ["A", "B", "C"],
                    D = CategoricalArray('a':'c'),
-                   E = NullableCategoricalArray(["A", "B", "C"]),
-                   E = Vector{?Int}(1:3),
-                   F = nulls(3),
-                   G = fill(null, 3))
+                   E = CategoricalArray(["A", "B", null]),
+                   F = Vector{Union{Int, Null}}(1:3),
+                   G = nulls(3),
+                   H = fill(null, 3))
 
+<<<<<<< HEAD
+=======
+    DRT = CategoricalArrays.DefaultRefType
+    @test sprint(printtable, dt) ==
+        """
+        "A","B","C","D","E","F","G","H"
+        1,"a","A","CategoricalArrays.CategoricalValue{Char,$DRT} 'a'","CategoricalArrays.CategoricalValue{String,$DRT} "A"","1",null,null
+        2,"b","B","CategoricalArrays.CategoricalValue{Char,$DRT} 'b'","CategoricalArrays.CategoricalValue{String,$DRT} "B"","2",null,null
+        3,"c","C","CategoricalArrays.CategoricalValue{Char,$DRT} 'c'",null,"3",null,null
+        """
+>>>>>>> Get PR 66 passing tests on Julia 0.7
 
     # DataStreams
     # using CSV

@@ -17,7 +17,7 @@ function printtable(io::IO,
                     header::Bool = true,
                     separator::Char = ',',
                     quotemark::Char = '"',
-                    nastring::AbstractString = "NULL")
+                    nastring::AbstractString = "null")
     n, p = size(dt)
     etypes = eltypes(dt)
     if header
@@ -62,7 +62,7 @@ function printtable(dt::AbstractDataTable;
                     header::Bool = true,
                     separator::Char = ',',
                     quotemark::Char = '"',
-                    nastring::AbstractString = "NULL")
+                    nastring::AbstractString = "null")
     printtable(STDOUT,
                dt,
                header = header,
@@ -199,7 +199,7 @@ importall DataStreams
 using WeakRefStrings
 
 # DataTables DataStreams implementation
-function Data.schema(df::DataTable, ::Type{Data.Batch})
+function Data.schema(df::DataTable, ::Type{Data.Column})
     return Data.Schema(map(string, names(df)),
                        Type[typeof(A) for A in df.columns], size(df, 1))
 end
@@ -210,14 +210,14 @@ function Data.isdone(source::DataTable, row, col)
     return row > rows || col > cols
 end
 
-Data.streamtype(::Type{DataTable}, ::Type{Data.Batch}) = true
-Data.streamtype(::Type{DataTable}, ::Type{Data.Row}) = true
+Data.streamtype(::Type{DataTable}, ::Type{Data.Column}) = true
+Data.streamtype(::Type{DataTable}, ::Type{Data.Field}) = true
 
-# Data.streamfrom{T <: AbstractVector}(source::DataTable, ::Type{Data.Batch}, ::Type{T}, col) =
+# Data.streamfrom{T <: AbstractVector}(source::DataTable, ::Type{Data.Column}, ::Type{T}, col) =
 #     (A = source.columns[col]::T; return A)
-Data.streamfrom{T}(source::DataTable, ::Type{Data.Batch}, ::Type{T}, col) =
+Data.streamfrom{T}(source::DataTable, ::Type{Data.Column}, ::Type{T}, col) =
     (A = source.columns[col]::AbstractVector{T}; return A)
-Data.streamfrom{T}(source::DataTable, ::Type{Data.Row}, ::Type{T}, row, col) =
+Data.streamfrom{T}(source::DataTable, ::Type{Data.Field}, ::Type{T}, row, col) =
     (A = source.columns[col]::AbstractVector{T}; return A[row]::T)
 
 # DataTable as a Data.Sink
@@ -225,10 +225,10 @@ allocate{T}(::Type{T}, rows) = Vector{T}(rows)
 allocate{T}(::Type{Vector{T}}, rows) = Vector{T}(rows)
 
 function DataTable{T <: Data.StreamType}(sch::Data.Schema,
-                                         ::Type{T}=Data.Row,
+                                         ::Type{T}=Data.Field,
                                          append::Bool=false)
     rows, cols = size(sch)
-    rows = max(0, T <: Data.Batch ? 0 : rows) # don't pre-allocate for Column streaming
+    rows = max(0, T <: Data.Column ? 0 : rows) # don't pre-allocate for Column streaming
     columns = Vector{Any}(cols)
     types = Data.types(sch)
     for i = 1:cols
@@ -239,27 +239,27 @@ end
 
 # given an existing DataTable (`sink`), make any necessary changes for streaming source
 # with Data.Schema `sch` to it, given we know if we'll be `appending` or not
-function DataTable(sink, sch::Data.Schema, ::Type{Data.Row}, append::Bool)
+function DataTable(sink, sch::Data.Schema, ::Type{Data.Field}, append::Bool)
     rows, cols = size(sch)
     newsize = max(0, rows) + (append ? size(sink, 1) : 0)
     newsize != size(sink, 1) && foreach(x->resize!(x, newsize), sink.columns)
     sch.rows = newsize
     return sink
 end
-function DataTable(sink, sch::Data.Schema, ::Type{Data.Batch}, append::Bool)
+function DataTable(sink, sch::Data.Schema, ::Type{Data.Column}, append::Bool)
     rows, cols = size(sch)
     append ? (sch.rows += size(sink, 1)) : foreach(empty!, sink.columns)
     return sink
 end
 
-Data.streamtypes(::Type{DataTable}) = [Data.Batch, Data.Row]
+Data.streamtypes(::Type{DataTable}) = [Data.Column, Data.Field]
 
-Data.streamto!{T}(sink::DataTable, ::Type{Data.Row}, val::T, row, col, sch::Data.Schema{false}) =
+Data.streamto!{T}(sink::DataTable, ::Type{Data.Field}, val::T, row, col, sch::Data.Schema{false}) =
     push!(sink.columns[col], val)
-Data.streamto!{T}(sink::DataTable, ::Type{Data.Row}, val::T, row, col, sch::Data.Schema{true}) =
+Data.streamto!{T}(sink::DataTable, ::Type{Data.Field}, val::T, row, col, sch::Data.Schema{true}) =
     (sink.columns[col])[row] = val
 
-function Data.streamto!{T}(sink::DataTable, ::Type{Data.Batch}, column::T, row, col, sch::Data.Schema)
+function Data.streamto!{T}(sink::DataTable, ::Type{Data.Column}, column::T, row, col, sch::Data.Schema)
     if row == 0
         sink.columns[col] = column
     else

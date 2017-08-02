@@ -1,5 +1,5 @@
 module TestJoin
-    using Base.Test, DataTables, Nulls
+    using Base.Test, DataTables
 
     name = DataTable(ID = [1, 2, 3],
                      Name = ["John Doe", "Jane Doe", "Joe Blogs"])
@@ -102,8 +102,8 @@ module TestJoin
     categorical!(dt1, :B)
     join(dt1, dt1, on = [:A, :B], kind = :inner)
 
-    # Test that Array{Nullable} works when combined with NullableArray (#1088)
-    dt = DataTable(Name = (?String)["A", "B", "C"],
+    # Test that join works when mixing Array{Union{T, Null}} with Array{T} (issue #1088)
+    dt = DataTable(Name = Union{String, Null}["A", "B", "C"],
                    Mass = [1.5, 2.2, 1.1])
     dt2 = DataTable(Name = ["A", "B", "C", "A"],
                     Quantity = [3, 3, 2, 4])
@@ -111,13 +111,13 @@ module TestJoin
                                                            Quantity = [3, 3, 2, 4],
                                                            Mass = [1.5, 2.2, 1.1, 1.5])
 
-    # Test that join works when mixing Array and NullableArray (#1151)
+    # Test that join works when mixing Array{Union{T, Null}} with Array{T} (issue #1151)
     dt = DataTable([collect(1:10), collect(2:11)], [:x, :y])
-    dtnull = DataTable(x = Vector{?Int}(1:10), z = Vector{?Int}(3:12))
+    dtnull = DataTable(x = Vector{Union{Int, Null}}(1:10), z = Vector{Union{Int, Null}}(3:12))
     @test join(dt, dtnull, on = :x) ==
         DataTable([collect(1:10), collect(2:11), collect(3:12)], [:x, :y, :z])
     @test join(dtnull, dt, on = :x) ==
-        DataTable([Vector{?Int}(1:10), Vector{?Int}(3:12), collect(2:11)], [:x, :z, :y])
+        DataTable([Vector{Union{Int, Null}}(1:10), Vector{Union{Int, Null}}(3:12), collect(2:11)], [:x, :z, :y])
 
     @testset "all joins" begin
         dt1 = DataTable(Any[[1, 3, 5], [1.0, 3.0, 5.0]], [:id, :fid])
@@ -159,21 +159,18 @@ module TestJoin
         @test l(on) == DataTable(id = [1, 3, 5],
                                  fid = [1, 3, 5],
                                  fid_1 = [1, 3, N])
-        @test typeof.(l(on).columns) == [Vector{?Int},
-                                         Vector{?Float64},
-                                         Vector{?Float64}]
+        @test typeof.(l(on).columns) ==
+            [Vector{Union{T, Null}} for T in (Int, Float64, Float64)]
         @test r(on) == DataTable(id = [1, 3, 0, 2, 4],
                                  fid = [1, 3, N, N, N],
                                  fid_1 = [1, 3, 0, 2, 4])
-        @test typeof.(r(on).columns) == [Vector{?Int},
-                                         Vector{?Float64},
-                                         Vector{?Float64}]
+        @test typeof.(r(on).columns) ==
+            [Vector{Union{T, Null}} for T in (Int, Float64, Float64)]
         @test o(on) == DataTable(id = [1, 3, 5, 0, 2, 4],
                                  fid = [1, 3, 5, N, N, N],
                                  fid_1 = [1, 3, N, 0, 2, 4])
-        @test typeof.(o(on).columns) == [Vector{?Int},
-                                         Vector{?Float64},
-                                         Vector{?Float64}]
+        @test typeof.(o(on).columns) ==
+            [Vector{Union{T, Null}} for T in (Int, Float64, Float64)]
 
         on = :fid
         @test i(on) == DataTable(Any[[1, 3], [1.0, 3.0], [1, 3]], [:id, :fid, :id_1])
@@ -181,46 +178,36 @@ module TestJoin
         @test l(on) == DataTable(id = [1, 3, 5],
                                  fid = [1, 3, 5],
                                  id_1 = [1, 3, N])
-        @test typeof.(l(on).columns) == [Vector{?Int},
-                                         Vector{?Float64},
-                                         Vector{?Int}]
+        @test typeof.(l(on).columns) == [Vector{Union{T, Null}} for T in (Int,Float64,Int)]
         @test r(on) == DataTable(id = [1, 3, N, N, N],
                                  fid = [1, 3, 0, 2, 4],
                                  id_1 = [1, 3, 0, 2, 4])
-        @test typeof.(r(on).columns) == [Vector{?Int},
-                                         Vector{?Float64},
-                                         Vector{?Int}]
+        @test typeof.(r(on).columns) == [Vector{Union{T, Null}} for T in (Int,Float64,Int)]
         @test o(on) == DataTable(id = [1, 3, 5, N, N, N],
                                  fid = [1, 3, 5, 0, 2, 4],
                                  id_1 = [1, 3, N, 0, 2, 4])
-        @test typeof.(o(on).columns) == [Vector{?Int},
-                                         Vector{?Float64},
-                                         Vector{?Int}]
+        @test typeof.(o(on).columns) == [Vector{Union{T, Null}} for T in (Int,Float64,Int)]
 
         on = [:id, :fid]
         @test i(on) == DataTable(Any[[1, 3], [1, 3]], [:id, :fid])
         @test typeof.(i(on).columns) == [Vector{Int}, Vector{Float64}]
-        @test l(on) == DataTable(id = [1, 3, 5],
-                                 fid = [1, 3, 5])
-        @test typeof.(l(on).columns) == [Vector{?Int},
-                                         Vector{?Float64}]
-        @test r(on) == DataTable(id = [1, 3, 0, 2, 4],
-                                 fid = [1, 3, 0, 2, 4])
-        @test typeof.(r(on).columns) == [Vector{?Int},
-                                         Vector{?Float64}]
-        @test o(on) == DataTable(id = [1, 3, 5, 0, 2, 4],
-                                 fid = [1, 3, 5, 0, 2, 4])
-        @test typeof.(o(on).columns) == [Vector{?Int},
-                                         Vector{?Float64}]
+        @test l(on) == DataTable(id = [1, 3, 5], fid = [1, 3, 5])
+        @test typeof.(l(on).columns) == [Vector{Union{Int, Null}},
+                                         Vector{Union{Float64, Null}}]
+        @test r(on) == DataTable(id = [1, 3, 0, 2, 4], fid = [1, 3, 0, 2, 4])
+        @test typeof.(r(on).columns) == [Vector{Union{Int, Null}},
+                                         Vector{Union{Float64, Null}}]
+        @test o(on) == DataTable(id = [1, 3, 5, 0, 2, 4], fid = [1, 3, 5, 0, 2, 4])
+        @test typeof.(o(on).columns) == [Vector{Union{Int, Null}},
+                                         Vector{Union{Float64, Null}}]
     end
 
     @testset "all joins with CategoricalArrays" begin
         dt1 = DataTable(Any[CategoricalArray([1, 3, 5]),
-                              CategoricalArray([1.0, 3.0, 5.0])], [:id, :fid])
+                            CategoricalArray([1.0, 3.0, 5.0])], [:id, :fid])
         dt2 = DataTable(Any[CategoricalArray([0, 1, 2, 3, 4]),
-                              CategoricalArray([0.0, 1.0, 2.0, 3.0, 4.0])], [:id, :fid])
+                            CategoricalArray([0.0, 1.0, 2.0, 3.0, 4.0])], [:id, :fid])
         N = null
-        DRT = CategoricalArrays.DefaultRefType
 
         @test join(dt1, dt2, kind=:cross) ==
             DataTable(Any[repeat([1, 3, 5], inner = 5),
@@ -228,8 +215,8 @@ module TestJoin
                           repeat([0, 1, 2, 3, 4], outer = 3),
                           repeat([0, 1, 2, 3, 4], outer = 3)],
                       [:id, :fid, :id_1, :fid_1])
-        @test typeof.(join(dt1, dt2, kind=:cross).columns) ==
-            [CategoricalVector{i, DRT} for i in [Int, Float64, Int, Float64]]
+        @test all(isa.(join(dt1, dt2, kind=:cross).columns,
+                       [CategoricalVector{T} for T in (Int, Float64, Int, Float64)]))
 
         i(on) = join(dt1, dt2, on = on, kind = :inner)
         l(on) = join(dt1, dt2, on = on, kind = :left)
@@ -243,79 +230,74 @@ module TestJoin
               s([:id, :fid]) == DataTable(Any[[1, 3], [1, 3]], [:id, :fid])
         @test typeof.(s(:id).columns) ==
               typeof.(s(:fid).columns) ==
-              typeof.(s([:id, :fid]).columns) == [CategoricalVector{Int, DRT},
-                                                  CategoricalVector{Float64, DRT}]
+              typeof.(s([:id, :fid]).columns)
+        @test all(isa.(s(:id).columns,
+                       [CategoricalVector{T} for T in (Int, Float64)]))
+
         @test a(:id) ==
               a(:fid) ==
               a([:id, :fid]) == DataTable(Any[[5], [5]], [:id, :fid])
         @test typeof.(a(:id).columns) ==
               typeof.(a(:fid).columns) ==
-              typeof.(a([:id, :fid]).columns) == [CategoricalVector{Int, DRT},
-                                                  CategoricalVector{Float64, DRT}]
+              typeof.(a([:id, :fid]).columns)
+        @test all(isa.(a(:id).columns,
+                       [CategoricalVector{T} for T in (Int, Float64)]))
 
         on = :id
         @test i(on) == DataTable(Any[[1, 3], [1, 3], [1, 3]], [:id, :fid, :fid_1])
-        @test typeof.(i(on).columns) == [CategoricalVector{Int, DRT},
-                                         CategoricalVector{Float64, DRT},
-                                         CategoricalVector{Float64, DRT}]
+        @test all(isa.(i(on).columns,
+                       [CategoricalVector{T} for T in (Int, Float64, Float64)]))
         @test l(on) == DataTable(id = [1, 3, 5],
                                  fid = [1, 3, 5],
                                  fid_1 = [1, 3, N])
-        @test typeof.(l(on).columns) == [NullableCategoricalVector{Int, DRT},
-                                         NullableCategoricalVector{Float64, DRT},
-                                         NullableCategoricalVector{Float64, DRT}]
+        @test all(isa.(l(on).columns,
+                       [CategoricalVector{Union{T, Null}} for T in (Int,Float64,Float64)]))
         @test r(on) == DataTable(id = [1, 3, 0, 2, 4],
                                  fid = [1, 3, N, N, N],
                                  fid_1 = [1, 3, 0, 2, 4])
-        @test typeof.(r(on).columns) == [NullableCategoricalVector{Int, DRT},
-                                         NullableCategoricalVector{Float64, DRT},
-                                         NullableCategoricalVector{Float64, DRT}]
+        @test all(isa.(r(on).columns,
+                       [CategoricalVector{Union{T, Null}} for T in (Int,Float64,Float64)]))
         @test o(on) == DataTable(id = [1, 3, 5, 0, 2, 4],
                                  fid = [1, 3, 5, N, N, N],
                                  fid_1 = [1, 3, N, 0, 2, 4])
-        @test typeof.(o(on).columns) == [NullableCategoricalVector{Int, DRT},
-                                         NullableCategoricalVector{Float64, DRT},
-                                         NullableCategoricalVector{Float64, DRT}]
+        @test all(isa.(o(on).columns,
+                       [CategoricalVector{Union{T, Null}} for T in (Int,Float64,Float64)]))
 
         on = :fid
         @test i(on) == DataTable(Any[[1, 3], [1.0, 3.0], [1, 3]], [:id, :fid, :id_1])
-        @test typeof.(i(on).columns) == [CategoricalVector{Int, DRT},
-                                         CategoricalVector{Float64, DRT},
-                                         CategoricalVector{Int, DRT}]
+        @test all(isa.(i(on).columns,
+                       [CategoricalVector{T} for T in (Int, Float64, Int)]))
         @test l(on) == DataTable(id = [1, 3, 5],
                                  fid = [1, 3, 5],
                                  id_1 = [1, 3, N])
-        @test typeof.(l(on).columns) == [NullableCategoricalVector{Int, DRT},
-                                         NullableCategoricalVector{Float64, DRT},
-                                         NullableCategoricalVector{Int, DRT}]
+        @test all(isa.(l(on).columns,
+                       [CategoricalVector{Union{T, Null}} for T in (Int, Float64, Int)]))
         @test r(on) == DataTable(id = [1, 3, N, N, N],
                                  fid = [1, 3, 0, 2, 4],
                                  id_1 = [1, 3, 0, 2, 4])
-        @test typeof.(r(on).columns) == [NullableCategoricalVector{Int, DRT},
-                                         NullableCategoricalVector{Float64, DRT},
-                                         NullableCategoricalVector{Int, DRT}]
+        @test all(isa.(r(on).columns,
+                       [CategoricalVector{Union{T, Null}} for T in (Int, Float64, Int)]))
         @test o(on) == DataTable(id = [1, 3, 5, N, N, N],
                                  fid = [1, 3, 5, 0, 2, 4],
                                  id_1 = [1, 3, N, 0, 2, 4])
-        @test typeof.(o(on).columns) == [NullableCategoricalVector{Int, DRT},
-                                         NullableCategoricalVector{Float64, DRT},
-                                         NullableCategoricalVector{Int, DRT}]
+        @test all(isa.(o(on).columns,
+                       [CategoricalVector{Union{T, Null}} for T in (Int, Float64, Int)]))
 
         on = [:id, :fid]
         @test i(on) == DataTable(Any[[1, 3], [1, 3]], [:id, :fid])
-        @test typeof.(i(on).columns) == [CategoricalVector{Int, DRT},
-                                         CategoricalVector{Float64, DRT}]
+        @test all(isa.(i(on).columns,
+                       [CategoricalVector{T} for T in (Int, Float64)]))
         @test l(on) == DataTable(id = [1, 3, 5],
                                  fid = [1, 3, 5])
-        @test typeof.(l(on).columns) == [NullableCategoricalVector{Int, DRT},
-                                         NullableCategoricalVector{Float64, DRT}]
+        @test all(isa.(l(on).columns,
+                       [CategoricalVector{Union{T, Null}} for T in (Int, Float64)]))
         @test r(on) == DataTable(id = [1, 3, 0, 2, 4],
                                  fid = [1, 3, 0, 2, 4])
-        @test typeof.(r(on).columns) == [NullableCategoricalVector{Int, DRT},
-                                         NullableCategoricalVector{Float64, DRT}]
+        @test all(isa.(r(on).columns,
+                       [CategoricalVector{Union{T, Null}} for T in (Int, Float64)]))
         @test o(on) == DataTable(id = [1, 3, 5, 0, 2, 4],
                                  fid = [1, 3, 5, 0, 2, 4])
-        @test typeof.(o(on).columns) == [NullableCategoricalVector{Int, DRT},
-                                         NullableCategoricalVector{Float64, DRT}]
+        @test all(isa.(o(on).columns,
+                       [CategoricalVector{Union{T, Null}} for T in (Int, Float64)]))
     end
 end

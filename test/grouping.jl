@@ -1,12 +1,12 @@
 module TestGrouping
-    using Base.Test, DataTables, Nulls
+    using Base.Test, DataTables
 
     srand(1)
     dt = DataTable(a = repeat([1, 2, 3, 4], outer=[2]),
                    b = repeat([2, 1], outer=[4]),
                    c = randn(8))
-    #dt[6, :a] = Nullable()
-    #dt[7, :b] = Nullable()
+    #dt[6, :a] = null
+    #dt[7, :b] = null
 
     nullfree = DataTable(Any[collect(1:10)], [:x1])
     @testset "colwise" begin
@@ -42,9 +42,9 @@ module TestGrouping
             @test size(cw) == (length([sum, minimum]), ncol(nullfree))
             @test cw == answer
 
-            cw = colwise([Vector{?Int}], nullfree)
-            answer = reshape([Vector{?Int}(1:10)], (1,1))
-            @test isa(cw, Array{Vector{?Int},2})
+            cw = colwise([Vector{Union{Int, Null}}], nullfree)
+            answer = reshape([Vector{Union{Int, Null}}(1:10)], (1,1))
+            @test isa(cw, Array{Vector{Union{Int, Null}},2})
             @test size(cw) == (1, ncol(nullfree))
             @test cw == answer
 
@@ -69,8 +69,8 @@ module TestGrouping
             @test size(cw) == (length((sum, length)), ncol(nullfree))
             @test cw == answer
 
-            cw = colwise((CategoricalArray, Vector{?Int}), nullfree)
-            answer = reshape([CategoricalArray(1:10), Vector{?Int}(1:10)],
+            cw = colwise((CategoricalArray, Vector{Union{Int, Null}}), nullfree)
+            answer = reshape([CategoricalArray(1:10), Vector{Union{Int, Null}}(1:10)],
                              (2, ncol(nullfree)))
             @test typeof(cw) == Array{AbstractVector,2}
             @test size(cw) == (2, ncol(nullfree))

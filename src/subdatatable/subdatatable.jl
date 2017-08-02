@@ -93,7 +93,7 @@ function SubDataTable(parent::DataTable, row::Integer)
     return SubDataTable(parent, [Int(row)])
 end
 
-function SubDataTable(parent::DataTable, rows::AbstractVector{<:?Integer})
+function SubDataTable(parent::DataTable, rows::AbstractVector{<:Union{Integer, Null}})
     return SubDataTable(parent, convert(Vector{Int}, rows))
 end
 
@@ -101,7 +101,7 @@ function SubDataTable(parent::DataTable, rows::AbstractVector{Bool})
     return SubDataTable(parent, find(rows))
 end
 
-function SubDataTable{T<:?Integer}(sdt::SubDataTable, rowinds::Union{T, AbstractVector{T}})
+function SubDataTable{T<:Union{Integer, Null}}(sdt::SubDataTable, rowinds::Union{T, AbstractVector{T}})
     return SubDataTable(sdt.parent, sdt.rows[rowinds])
 end
 
