@@ -140,6 +140,12 @@ module TestGrouping
     # grouping single row
     @test groupby(DataTable(A=Int[1]), :A).starts == Int[1]
 
+    # grouping table with non-sortable column:
+    # check that order of appearance is respected when sort=true
+    gd = groupby(DataTable(A = ["A", 1, 1, "A"], B = 1:4), :A)
+    @test isequal(gd[1], DataTable(A = ["A", "A"], B = [1, 4]))
+    @test isequal(gd[2], DataTable(A = [1, 1], B = [2, 3]))
+
     # issue #960
     x = CategoricalArray(collect(1:20))
     dt = DataTable(v1=x, v2=x)
@@ -165,11 +171,44 @@ module TestGrouping
     levels!(dt[:Key1], ["Z", "B", "A"])
     levels!(dt[:Key2], ["Z", "B", "A"])
     gd = groupby(dt, :Key1)
-    @test isequal(gd[1], DataTable(Key1=["A", "A"], Key2=["A", "B"], Value=1:2))
-    @test isequal(gd[2], DataTable(Key1=["B", "B"], Key2=["A", "B"], Value=3:4))
+    @test isequal(gd[1], DataTable(Key1=["B", "B"], Key2=["A", "B"], Value=3:4))
+    @test isequal(gd[2], DataTable(Key1=["A", "A"], Key2=["A", "B"], Value=1:2))
     gd = groupby(dt, [:Key1, :Key2])
-    @test isequal(gd[1], DataTable(Key1="A", Key2="A", Value=1))
-    @test isequal(gd[2], DataTable(Key1="A", Key2="B", Value=2))
-    @test isequal(gd[3], DataTable(Key1="B", Key2="A", Value=3))
-    @test isequal(gd[4], DataTable(Key1="B", Key2="B", Value=4))
+    @test isequal(gd[1], DataTable(Key1="B", Key2="B", Value=4))
+    @test isequal(gd[2], DataTable(Key1="B", Key2="A", Value=3))
+    @test isequal(gd[3], DataTable(Key1="A", Key2="B", Value=2))
+    @test isequal(gd[4], DataTable(Key1="A", Key2="A", Value=1))
+
+    # test NullableArray and NullableCategoricalArray with nulls
+    for (S, T) in ((NullableArray, NullableArray),
+                   (NullableCategoricalArray, NullableCategoricalArray),
+                   (NullableArray, NullableCategoricalArray),
+                   (NullableCategoricalArray, NullableArray))
+        dt = DataTable(Key1 = S(["A", "A", "B", Nullable(), Nullable()]),
+                       Key2 = T(["A", "B", "A", Nullable(), "A"]),
+                       Value = 1:5)
+        gd = groupby(dt, :Key1)
+        @test isequal(gd[1], DataTable(Key1=Nullable{String}["A", "A"],
+                                       Key2=Nullable{String}["A", "B"], Value=1:2))
+        @test isequal(gd[2], DataTable(Key1=Nullable{String}["B"],
+                                       Key2=Nullable{String}["A"], Value=3))
+        @test isequal(gd[3], DataTable(Key1=[Nullable(), Nullable()],
+                                       Key2=Nullable{String}[Nullable(), "A"], Value=4:5))
+        gd = groupby(dt, [:Key1, :Key2])
+        @test isequal(gd[1], DataTable(Key1=Nullable("A"), Key2=Nullable("A"), Value=1))
+        @test isequal(gd[2], DataTable(Key1=Nullable("A"), Key2=Nullable("B"), Value=2))
+        @test isequal(gd[3], DataTable(Key1=Nullable("B"), Key2=Nullable("A"), Value=3))
+        @test isequal(gd[4], DataTable(Key1=Nullable(), Key2=Nullable("A"), Value=5))
+        @test isequal(gd[5], DataTable(Key1=Nullable(), Key2=Nullable(), Value=4))
+    end
+
+    # check that group indices are compressed when cartesian product would overflow
+    x = CategoricalArray([1, 2, 2, 1])
+    levels!(x, collect(1:10_000))
+    dt = DataTable(A = x, B = x, C = x, D = x, E = x, Value = 1:4)
+    gd = groupby(dt, [:A, :B, :C, :D, :E])
+    @test isequal(gd[1], DataTable(A = [1, 1], B = [1, 1], C = [1, 1],
+                                   D = [1, 1], E = [1, 1], Value = [1, 4]))
+    @test isequal(gd[2], DataTable(A = [2, 2], B = [2, 2], C = [2, 2],
+                                   D = [2, 2], E = [2, 2], Value = [2, 3]))
 end
