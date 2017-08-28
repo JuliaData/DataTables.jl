@@ -13,7 +13,8 @@ The following are normally implemented for AbstractDataTables:
 
 * [`describe`](@ref) : summarize columns
 * [`dump`](@ref) : show structure
-* `hcat` : horizontal concatenation
+* `merge` : horizontal concatenation
+* `merge!` : horizontal concatenation, modifies first argument in-place
 * `vcat` : vertical concatenation
 * `names` : columns names
 * [`names!`](@ref) : set columns names
@@ -653,22 +654,29 @@ without(dt::AbstractDataTable, c::Any) = without(dt, index(dt)[c])
 
 ##############################################################################
 ##
-## Hcat / vcat
+## merge/merge!/append/append!/vcat
 ##
 ##############################################################################
 
-# hcat's first argument must be an AbstractDataTable
-# Trailing arguments (currently) may also be NullableVectors, Vectors, or scalars.
-
-# hcat! is defined in datatables/datatables.jl
-# Its first argument (currently) must be a DataTable.
+function Base.merge!(dt::AbstractDataTable, others::AbstractDataTable...)
+    for other in others
+        for (i, c) in enumerate(add_names(names(dt), names(other)))
+            dt[c] = other[i]
+        end
+    end
+    return dt
+end
 
 # catch-all to cover cases where indexing returns a DataTable and copy doesn't
-Base.hcat(dt::AbstractDataTable, x) = hcat!(dt[:, :], x)
-Base.hcat(dt1::AbstractDataTable, dt2::AbstractDataTable) = hcat!(dt1[:, :], dt2)
+Base.merge(dt::AbstractDataTable, dtn::AbstractDataTable...) = merge!(dt[:, :], dtn...)
 
-Base.hcat(dt::AbstractDataTable, x, y...) = hcat!(hcat(dt, x), y...)
-Base.hcat(dt1::AbstractDataTable, dt2::AbstractDataTable, dtn::AbstractDataTable...) = hcat!(hcat(dt1, dt2), dtn...)
+function Base.append!(dt1::AbstractDataTable, x::AbstractVector)
+    merge!(dt1, DataTable(Any[x]))
+end
+
+function append(dt1::AbstractDataTable, x::AbstractVector)
+    merge(dt1, DataTable(Any[x]))
+end
 
 @generated function promote_col_type(cols::AbstractVector...)
     elty = Base.promote_eltype(cols...)

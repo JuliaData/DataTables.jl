@@ -201,7 +201,11 @@ function combine(ga::GroupApplied)
         idx[j + (1:n)] = gd.idx[start]
         j += n
     end
-    hcat!(gd.parent[idx, gd.cols], valscat)
+    if isa(valscat, DataTable)
+        return merge!(gd.parent[idx, gd.cols], valscat)
+    else
+        return append!(gd.parent[idx, gd.cols], valscat)
+    end
 end
 
 

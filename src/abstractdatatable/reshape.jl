@@ -248,7 +248,7 @@ function unstack(dt::AbstractDataTable, colkey::Int, value::Int)
             dt2[j][i]  = valuecol[k]
         end
     end
-    hcat(dt1, dt2)
+    merge!(dt1, dt2)
 end
 
 unstack(dt::AbstractDataTable) = unstack(dt, :id, :variable, :value)

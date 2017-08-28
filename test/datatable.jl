@@ -109,7 +109,7 @@ module TestDataTable
     dt = DataTable(a=[1, 2], b=[3., 4.])
     dt2 = DataTable(b=["a", "b"], c=[:c, :d])
     @test isequal(merge!(dt, dt2), dt)
-    @test isequal(dt, DataTable(a=[1, 2], b=["a", "b"], c=[:c, :d]))
+    @test isequal(dt, DataTable(a=[1, 2], b=[3., 4.], b_1=["a", "b"], c=[:c, :d]))
 
     #test_group("Empty DataTable constructors")
     dt = DataTable(Nullable{Int}, 10, 3)
@@ -322,7 +322,7 @@ module TestDataTable
     dt = DataTable(A = 1:10, B = 'A':'J')
     @test !(dt[:,:] === dt)
 
-    @test append!(DataTable(A = 1:2, B = 1:2), DataTable(A = 3:4, B = 3:4)) == DataTable(A=1:4, B = 1:4)
+    @test vcat(DataTable(A = 1:2, B = 1:2), DataTable(A = 3:4, B = 3:4)) == DataTable(A=1:4, B = 1:4)
     dt = DataTable(A = NullableArray(1:3), B = NullableArray(4:6))
     @test all(c -> isa(c, NullableArray), categorical!(deepcopy(dt)).columns)
     @test all(c -> isa(c, NullableCategoricalArray), categorical!(deepcopy(dt), [1,2]).columns)
