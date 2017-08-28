@@ -3,6 +3,8 @@
 ##
 
 # Like similar, but returns a nullable array
+similar_nullable(dv::AbstractArray) = similar_nullable(dv, size(dv))
+
 similar_nullable{T}(dv::AbstractArray{T}, dims::Union{Int, Tuple{Vararg{Int}}}) =
     NullableArray{T}(dims)
 

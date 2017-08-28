@@ -407,12 +407,28 @@ module TestDataTable
     end
 
     @testset "column conversions" begin
-        dt = DataTable(Any[collect(1:10), collect(1:10)])
-        @test !isa(dt[1], NullableArray)
-        nullable!(dt, 1)
-        @test isa(dt[1], NullableArray)
-        @test !isa(dt[2], NullableArray)
-        nullable!(dt, [1,2])
-        @test isa(dt[1], NullableArray) && isa(dt[2], NullableArray)
+        dt = DataTable(Any[collect(1:3), CategoricalArray('a':'c')])
+        @test isa(dt[1], Vector{Int})
+        @test isa(dt[2], CategoricalVector{Char, CategoricalArrays.DefaultRefType})
+        @test nullable(dt) == DataTable(Any[NullableArray(1:3), NullableCategoricalArray('a':'c')])
+
+        @test dt == DataTable(Any[collect(1:3), CategoricalArray('a':'c')])
+        @test nullable!(dt) == DataTable(Any[NullableArray(1:3), NullableCategoricalArray('a':'c')])
+        @test dt == DataTable(Any[NullableArray(1:3), NullableCategoricalArray('a':'c')])
+
+        dt = DataTable(Any[collect(1:3), CategoricalArray('a':'c')])
+        @test isequal(nullable(dt, 1)[1], NullableArray(1:3))
+        @test isequal(nullable(dt, :x1)[1], NullableArray(1:3))
+        @test isequal(nullable(dt, 2)[2], NullableCategoricalArray('a':'c'))
+        @test isequal(nullable(dt, :x2)[2], NullableCategoricalArray('a':'c'))
+        @test nullable(dt, [1, 2]) == DataTable(Any[NullableArray(1:3),
+                                                    NullableCategoricalArray('a':'c')])
+        @test dt == DataTable(Any[collect(1:3), CategoricalArray('a':'c')])
+        @test isequal(nullable!(dt, 1)[1], NullableArray(1:3))
+        @test isequal(nullable!(dt, 2)[2], NullableCategoricalArray('a':'c'))
+        @test dt == DataTable(Any[NullableArray(1:3), NullableCategoricalArray('a':'c')])
+        dt = DataTable(Any[collect(1:3), CategoricalArray('a':'c')])
+        @test nullable!(dt, [1, 2]) == DataTable(Any[NullableArray(1:3),
+                                                     NullableCategoricalArray('a':'c')])
     end
 end
