@@ -2,8 +2,8 @@ module TestIteration
     using Base.Test, DataTables
 
     dv = [1, 2, null]
-    dm = [1 2; 3 4]
-    dt = zeros(2, 2, 2)
+    dm = Union{Int, Null}[1 2; 3 4]
+    dt = Array{Union{Int, Null}}(zeros(2, 2, 2))
 
     dt = DataTable(A = 1:2, B = 2:3)
 
@@ -30,7 +30,7 @@ module TestIteration
     row[1] = 101
     @test dt[1, :A] == 101
 
-    dt = DataTable(A = 1:4, B = ["M", "F", "F", "M"])
+    dt = DataTable(A = Vector{Union{Int, Null}}(1:4), B = Union{String, Null}["M", "F", "F", "M"])
 
     s1 = view(dt, 1:3)
     s1[2,:A] = 4

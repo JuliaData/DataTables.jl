@@ -213,8 +213,6 @@ end
 Data.streamtype(::Type{DataTable}, ::Type{Data.Column}) = true
 Data.streamtype(::Type{DataTable}, ::Type{Data.Field}) = true
 
-# Data.streamfrom{T <: AbstractVector}(source::DataTable, ::Type{Data.Column}, ::Type{T}, col) =
-#     (A = source.columns[col]::T; return A)
 Data.streamfrom{T}(source::DataTable, ::Type{Data.Column}, ::Type{T}, col) =
     (A = source.columns[col]::AbstractVector{T}; return A)
 Data.streamfrom{T}(source::DataTable, ::Type{Data.Field}, ::Type{T}, row, col) =

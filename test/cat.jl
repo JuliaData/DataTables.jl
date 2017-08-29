@@ -148,27 +148,27 @@ module TestCat
         dt = vcat(DataTable([[1]], [:x]), DataTable([["1"]], [:x]))
         @test dt == DataTable([[1, "1"]], [:x])
         @test typeof.(dt.columns) == [Vector{Any}]
-        dt = vcat(DataTable([[1]], [:x]), DataTable([[1]], [:x]))
+        dt = vcat(DataTable([Union{Null, Int}[1]], [:x]), DataTable([[1]], [:x]))
         @test dt == DataTable([[1, 1]], [:x])
-        @test typeof.(dt.columns) == [Vector{Int}]
+        @test typeof.(dt.columns) == [Vector{Union{Null, Int}}]
         dt = vcat(DataTable([CategoricalArray([1])], [:x]), DataTable([[1]], [:x]))
-        @test dt == DataTable([CategoricalArray([1, 1])], [:x])
+        @test dt == DataTable([[1, 1]], [:x])
         @test typeof(dt[:x]) <: CategoricalVector{Int}
         dt = vcat(DataTable([CategoricalArray([1])], [:x]),
-                  DataTable([[1]], [:x]))
-        @test dt == DataTable([CategoricalArray([1, 1])], [:x])
-        @test typeof(dt[:x]) <: CategoricalVector{Int}
+                  DataTable([Union{Null, Int}[1]], [:x]))
+        @test dt == DataTable([[1, 1]], [:x])
+        @test typeof(dt[:x]) <: CategoricalVector{Union{Int, Null}}
         dt = vcat(DataTable([CategoricalArray([1])], [:x]),
                   DataTable([CategoricalArray{Union{Int, Null}}([1])], [:x]))
-        @test dt == DataTable([CategoricalArray{Union{Int, Null}}([1, 1])], [:x])
+        @test dt == DataTable([[1, 1]], [:x])
         @test typeof(dt[:x]) <: CategoricalVector{Union{Int, Null}}
-        dt = vcat(DataTable([[1]], [:x]),
+        dt = vcat(DataTable([Union{Int, Null}[1]], [:x]),
                   DataTable([["1"]], [:x]))
         @test dt == DataTable([[1, "1"]], [:x])
         @test typeof.(dt.columns) == [Vector{Any}]
         dt = vcat(DataTable([CategoricalArray([1])], [:x]),
                   DataTable([CategoricalArray(["1"])], [:x]))
-        @test dt == DataTable([CategoricalArray([1, "1"])], [:x])
+        @test dt == DataTable([[1, "1"]], [:x])
         @test typeof(dt[:x]) <: CategoricalVector{Any}
         dt = vcat(DataTable([trues(1)], [:x]), DataTable([[false]], [:x]))
         @test dt == DataTable([[true, false]], [:x])
@@ -247,7 +247,7 @@ module TestCat
         err = @test_throws ArgumentError vcat(dt1, dt2, dt3, dt4, dt1, dt2, dt3, dt4, dt1, dt2, dt3, dt4)
         @test err.value.msg == "column(s) E and F are missing from argument(s) 1, 5 and 9, column(s) B are missing from argument(s) 2, 6 and 10, and column(s) F are missing from argument(s) 3, 7 and 11"
     end
-    x = view(DataTable(A = 1:3), 2)
+    x = view(DataTable(A = Vector{Union{Null, Int}}(1:3)), 2)
     y = DataTable(A = 4:5)
     @test vcat(x, y) == DataTable(A = [2, 4, 5])
 end

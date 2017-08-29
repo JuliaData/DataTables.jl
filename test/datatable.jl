@@ -31,8 +31,8 @@ module TestDataTable
     # Copying
     #
 
-    dt = DataTable(a = [2, 3],
-                   b = [DataTable(c = 1), DataTable(d = 2)])
+    dt = DataTable(a = Union{Int, Null}[2, 3],
+                   b = Union{DataTable, Null}[DataTable(c = 1), DataTable(d = 2)])
     dtc = copy(dt)
     dtdc = deepcopy(dt)
 
@@ -140,18 +140,16 @@ module TestDataTable
     @test all(isnull, dt[:, 2])
     @test all(isnull, dt[:, 3])
 
-
-    #FIXME: something in CategoricalArrays
-    # dt = DataTable([Union{Int, Null}, Union{Float64, Null}, Union{String, Null}],
-    #                [:A, :B, :C], [false, false, true],100)
-    # @test size(dt, 1) == 100
-    # @test size(dt, 2) == 3
-    # @test typeof(dt[:, 1]) == Vector{Union{Int, Null}}
-    # @test typeof(dt[:, 2]) == Vector{Union{Float64, Null}}
-    # @test typeof(dt[:, 3]) <: CategoricalVector{Union{String, Null}}
-    # @test all(isnull, dt[:, 1])
-    # @test all(isnull, dt[:, 2])
-    # @test all(isnull, dt[:, 3])
+    dt = DataTable([Union{Int, Null}, Union{Float64, Null}, Union{String, Null}],
+                   [:A, :B, :C], [false, false, true], 100)
+    @test size(dt, 1) == 100
+    @test size(dt, 2) == 3
+    @test typeof(dt[:, 1]) == Vector{Union{Int, Null}}
+    @test typeof(dt[:, 2]) == Vector{Union{Float64, Null}}
+    @test typeof(dt[:, 3]) <: CategoricalVector{Union{String, Null}}
+    @test all(isnull, dt[:, 1])
+    @test all(isnull, dt[:, 2])
+    @test all(isnull, dt[:, 3])
 
     dt = convert(DataTable, zeros(10, 5))
     @test size(dt, 1) == 10
@@ -168,8 +166,9 @@ module TestDataTable
     @test size(dt, 2) == 5
     @test typeof(dt[:, 1]) == Vector{Float64}
 
-    @test DataTable([[1,2,3],[2.5,4.5,6.5]], [:A, :B]) ==
-        DataTable(A = [1,2,3], B = [2.5,4.5,6.5])
+    @test DataTable([Union{Int, Null}[1, 2, 3], Union{Float64, Null}[2.5, 4.5, 6.5]],
+                    [:A, :B]) ==
+        DataTable(A = Union{Int, Null}[1, 2, 3], B = Union{Float64, Null}[2.5, 4.5, 6.5])
 
     # This assignment was missing before
     dt = DataTable(Column = [:A])
@@ -257,19 +256,19 @@ module TestDataTable
     @test deleterows!(dt, [2, 3]) === dt
     @test dt == DataTable(a=[1], b=[3.0])
 
-    dt = DataTable(a=[1, 2], b=[3.0, 4.0])
+    dt = DataTable(a=Union{Int, Null}[1, 2], b=Union{Float64, Null}[3.0, 4.0])
     @test deleterows!(dt, 1) === dt
     @test dt == DataTable(a=[2], b=[4.0])
 
-    dt = DataTable(a=[1, 2], b=[3.0, 4.0])
+    dt = DataTable(a=Union{Int, Null}[1, 2], b=Union{Float64, Null}[3.0, 4.0])
     @test deleterows!(dt, 2) === dt
     @test dt == DataTable(a=[1], b=[3.0])
 
-    dt = DataTable(a=[1, 2, 3], b=[3.0, 4.0, 5.0])
+    dt = DataTable(a=Union{Int, Null}[1, 2, 3], b=Union{Float64, Null}[3.0, 4.0, 5.0])
     @test deleterows!(dt, 2:3) === dt
     @test dt == DataTable(a=[1], b=[3.0])
 
-    dt = DataTable(a=[1, 2, 3], b=[3.0, 4.0, 5.0])
+    dt = DataTable(a=Union{Int, Null}[1, 2, 3], b=Union{Float64, Null}[3.0, 4.0, 5.0])
     @test deleterows!(dt, [2, 3]) === dt
     @test dt == DataTable(a=[1], b=[3.0])
 
@@ -279,7 +278,7 @@ module TestDataTable
     open(devnull, "w") do f
         @test nothing == describe(f, DataTable(a=[1, 2], b=Any["3", null]))
         @test nothing ==
-              describe(f, DataTable(a=[1, 2],
+              describe(f, DataTable(a=Union{Int, Null}[1, 2],
                                     b=["3", null]))
         @test nothing ==
               describe(f, DataTable(a=CategoricalArray([1, 2]),
@@ -322,30 +321,39 @@ module TestDataTable
     @test !(dt[:,:] === dt)
 
     @test append!(DataTable(A = 1:2, B = 1:2), DataTable(A = 3:4, B = 3:4)) == DataTable(A=1:4, B = 1:4)
-    dt = DataTable(A = 1:3, B = 4:6)
-    @test all(c -> isa(c, Vector), categorical!(deepcopy(dt)).columns)
-    @test all(c -> isa(c, CategoricalArray), categorical!(deepcopy(dt), [1,2]).columns)
-    @test all(c -> isa(c, CategoricalArray), categorical!(deepcopy(dt), [:A,:B]).columns)
-    @test find(c -> isa(c, CategoricalArray), categorical!(deepcopy(dt), [:A]).columns) == [1]
-    @test find(c -> isa(c, CategoricalArray), categorical!(deepcopy(dt), :A).columns) == [1]
-    @test find(c -> isa(c, CategoricalArray), categorical!(deepcopy(dt), [1]).columns) == [1]
-    @test find(c -> isa(c, CategoricalArray), categorical!(deepcopy(dt), 1).columns) == [1]
+    dt = DataTable(A = Vector{Union{Int, Null}}(1:3), B = Vector{Union{Int, Null}}(4:6))
+    DRT = CategoricalArrays.DefaultRefType
+    @test all(c -> isa(c, Vector{Union{Int, Null}}), categorical!(deepcopy(dt)).columns)
+    @test all(c -> typeof(c) <: CategoricalVector{Union{Int, Null}},
+              categorical!(deepcopy(dt), [1,2]).columns)
+    @test all(c -> typeof(c) <: CategoricalVector{Union{Int, Null}},
+              categorical!(deepcopy(dt), [:A,:B]).columns)
+    @test findfirst(c -> typeof(c) <: CategoricalVector{Union{Int, Null}},
+                    categorical!(deepcopy(dt), [:A]).columns) == 1
+    @test findfirst(c -> typeof(c) <: CategoricalVector{Union{Int, Null}},
+                    categorical!(deepcopy(dt), :A).columns) == 1
+    @test findfirst(c -> typeof(c) <: CategoricalVector{Union{Int, Null}},
+                    categorical!(deepcopy(dt), [1]).columns) == 1
+    @test findfirst(c -> typeof(c) <: CategoricalVector{Union{Int, Null}},
+                    categorical!(deepcopy(dt), 1).columns) == 1
 
     @testset "unstack nullable promotion" begin
         dt = DataTable(Any[repeat(1:2, inner=4), repeat('a':'d', outer=2), collect(1:8)],
                        [:id, :variable, :value])
         udt = unstack(dt)
         @test udt == unstack(dt, :variable, :value) == unstack(dt, :id, :variable, :value)
-        @test udt == DataTable(Any[[1, 2], [1, 5], [2, 6],
-                                   [3, 7], [4, 8]], [:id, :a, :b, :c, :d])
+        @test udt == DataTable(Any[Union{Int, Null}[1, 2], Union{Int, Null}[1, 5],
+                                   Union{Int, Null}[2, 6], Union{Int, Null}[3, 7],
+                                   Union{Int, Null}[4, 8]], [:id, :a, :b, :c, :d])
         @test all(isa.(udt.columns, Vector{Union{Int, Null}}))
         dt = DataTable(Any[categorical(repeat(1:2, inner=4)),
                            categorical(repeat('a':'d', outer=2)), categorical(1:8)],
                        [:id, :variable, :value])
         udt = unstack(dt)
-        # @test udt == unstack(dt, :variable, :value) == unstack(dt, :id, :variable, :value)
-        @test udt == DataTable(Any[[1, 2], [1, 5], [2, 6],
-                                   [3, 7], [4, 8]], [:id, :a, :b, :c, :d])
+        @test udt == unstack(dt, :variable, :value) == unstack(dt, :id, :variable, :value)
+        @test udt == DataTable(Any[Union{Int, Null}[1, 2], Union{Int, Null}[1, 5],
+                                   Union{Int, Null}[2, 6], Union{Int, Null}[3, 7],
+                                   Union{Int, Null}[4, 8]], [:id, :a, :b, :c, :d])
         @test all(isa.(udt.columns, CategoricalVector{Union{Int, Null}}))
     end
 

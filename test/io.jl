@@ -59,6 +59,7 @@ module TestIO
 >>>>>>> Get PR 66 passing tests on Julia 0.7
 
     # DataStreams
+    # FIXME Update CSV to work with new DataStreams API
     # using CSV
     #
     # dt = CSV.read(joinpath(dirname(@__FILE__), "data/iris.csv"), DataTable)

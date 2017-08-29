@@ -316,7 +316,8 @@ Base.size(v::StackedVector) = (length(v),)
 Base.length(v::StackedVector) = sum(map(length, v.components))
 Base.ndims(v::StackedVector) = 1
 Base.eltype(v::StackedVector) = promote_type(map(eltype, v.components)...)
-Base.similar(v::StackedVector, T, dims::Dims) = similar(v.components[1], T, dims)
+Base.similar(v::StackedVector, T::Type, dims::Union{Integer, AbstractUnitRange}...) =
+    similar(v.components[1], T, dims...)
 
 CategoricalArrays.CategoricalArray(v::StackedVector) = CategoricalArray(v[:]) # could be more efficient
 

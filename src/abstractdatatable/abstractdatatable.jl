@@ -401,7 +401,7 @@ end
 ##############################################################################
 
 function _nonnull!(res, col)
-    for (i, el) in enumerate(col)
+    @inbounds for (i, el) in enumerate(col)
         res[i] &= !isnull(el)
     end
 end
@@ -663,7 +663,7 @@ Base.hcat(dt::AbstractDataTable, x, y...) = hcat!(hcat(dt, x), y...)
 Base.hcat(dt1::AbstractDataTable, dt2::AbstractDataTable, dtn::AbstractDataTable...) = hcat!(hcat(dt1, dt2), dtn...)
 
 @generated function promote_col_type(cols::AbstractVector...)
-    T = promote_type(map(x-> eltype(x) >: Null ? Nulls.T(eltype(x)) : eltype(x), cols)...)
+    T = promote_type(map(x -> Nulls.T(eltype(x)), cols)...)
     if T <: CategoricalValue
         T = T.parameters[1]
     end

@@ -1,10 +1,10 @@
 module TestJoin
     using Base.Test, DataTables
 
-    name = DataTable(ID = [1, 2, 3],
-                     Name = ["John Doe", "Jane Doe", "Joe Blogs"])
-    job = DataTable(ID = [1, 2, 2, 4],
-                    Job = ["Lawyer", "Doctor", "Florist", "Farmer"])
+    name = DataTable(ID = Union{Int, Null}[1, 2, 3],
+                     Name = Union{String, Null}["John Doe", "Jane Doe", "Joe Blogs"])
+    job = DataTable(ID = Union{Int, Null}[1, 2, 2, 4],
+                    Job = Union{String, Null}["Lawyer", "Doctor", "Florist", "Farmer"])
 
     # Join on symbols or vectors of symbols
     join(name, job, on = :ID)
@@ -71,7 +71,9 @@ module TestJoin
     @test_throws ArgumentError join(dt1, dt2, on = :A, kind = :cross)
 
     # test empty inputs
-    simple_dt(len::Int, col=:A) = (dt = DataTable(); dt[col]=collect(1:len); dt)
+    simple_dt(len::Int, col=:A) = (dt = DataTable();
+                                   dt[col]=Vector{Union{Int, Null}}(1:len);
+                                   dt)
     @test join(simple_dt(0), simple_dt(0), on = :A, kind = :left) == simple_dt(0)
     @test join(simple_dt(2), simple_dt(0), on = :A, kind = :left) == simple_dt(2)
     @test join(simple_dt(0), simple_dt(2), on = :A, kind = :left) == simple_dt(0)

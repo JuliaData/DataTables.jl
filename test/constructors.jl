@@ -17,12 +17,12 @@ module TestConstructors
 
     @test dt == DataTable(Any[CategoricalVector{Union{Float64, Null}}(zeros(3)),
                               CategoricalVector{Union{Float64, Null}}(ones(3))])
-    @test dt == DataTable(x1 = [0.0, 0.0, 0.0],
-                          x2 = [1.0, 1.0, 1.0])
+    @test dt == DataTable(x1 = Union{Int, Null}[0.0, 0.0, 0.0],
+                          x2 = Union{Int, Null}[1.0, 1.0, 1.0])
 
-    dt2 = convert(DataTable, Matrix([0.0 1.0;
-                                     0.0 1.0;
-                                     0.0 1.0]))
+    dt2 = convert(DataTable, Union{Float64, Null}[0.0 1.0;
+                                                  0.0 1.0;
+                                                  0.0 1.0])
     names!(dt2, [:x1, :x2])
     @test dt[:x1] == dt2[:x1]
     @test dt[:x2] == dt2[:x2]

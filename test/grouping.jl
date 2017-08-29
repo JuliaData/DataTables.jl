@@ -2,9 +2,9 @@ module TestGrouping
     using Base.Test, DataTables
 
     srand(1)
-    dt = DataTable(a = repeat([1, 2, 3, 4], outer=[2]),
-                   b = repeat([2, 1], outer=[4]),
-                   c = randn(8))
+    dt = DataTable(a = repeat(Union{Int, Null}[1, 2, 3, 4], outer=[2]),
+                   b = repeat(Union{Int, Null}[2, 1], outer=[4]),
+                   c = Vector{Union{Float64, Null}}(randn(8)))
     #dt[6, :a] = null
     #dt[7, :b] = null
 

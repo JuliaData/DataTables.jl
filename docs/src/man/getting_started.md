@@ -31,10 +31,10 @@ julia> x = [1, 2, null]
 julia> eltype(x)
 Union{Nulls.Null, Int64}
 
-julia> Union{Int, Null}
+julia> Union{Null, Int}
 Union{Nulls.Null, Int64}
 
-julia> eltype(x) == Union{Int, Null}
+julia> eltype(x) == Union{Null, Int}
 true
 
 ```

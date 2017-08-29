@@ -1,10 +1,10 @@
 module TestDataTableRow
     using Base.Test, DataTables
 
-    dt = DataTable(a=[1,   2,   3,   1,   2,   2 ],
+    dt = DataTable(a=Union{Int, Null}[1, 2, 3, 1, 2, 2],
                    b=[2.0, null, 1.2, 2.0, null, null],
                    c=["A", "B", "C", "A", "B", null],
-                   d=CategoricalArray([:A,  null,  :C,  :A, null,  :C]))
+                   d=CategoricalArray([:A, null, :C, :A, null, :C]))
     dt2 = DataTable(a = [1, 2, 3])
 
     #
@@ -19,21 +19,21 @@ module TestDataTableRow
 
     # isless()
     dt4 = DataTable(a=[1, 1, 2, 2, 2, 2, null, null],
-                    b=[2.0, 3.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0],
+                    b=Union{Float64, Null}[2.0, 3.0, 1.0, 2.0, 2.0, 2.0, 2.0, 3.0],
                     c=[:B, null, :A, :C, :D, :D, :A, :A])
     @test DataTableRow(dt4, 1) < DataTableRow(dt4, 2)
-    @test !(DataTableRow(dt4, 2) < DataTableRow(dt4, 1))
-    @test !(DataTableRow(dt4, 1) < DataTableRow(dt4, 1))
+    @test DataTableRow(dt4, 2) > DataTableRow(dt4, 1)
+    @test DataTableRow(dt4, 1) == DataTableRow(dt4, 1)
     @test DataTableRow(dt4, 1) < DataTableRow(dt4, 3)
-    @test !(DataTableRow(dt4, 3) < DataTableRow(dt4, 1))
+    @test DataTableRow(dt4, 3) > DataTableRow(dt4, 1)
     @test DataTableRow(dt4, 3) < DataTableRow(dt4, 4)
-    @test !(DataTableRow(dt4, 4) < DataTableRow(dt4, 3))
+    @test DataTableRow(dt4, 4) > DataTableRow(dt4, 3)
     @test DataTableRow(dt4, 4) < DataTableRow(dt4, 5)
-    @test !(DataTableRow(dt4, 5) < DataTableRow(dt4, 4))
-    @test !(DataTableRow(dt4, 6) < DataTableRow(dt4, 5))
-    @test !(DataTableRow(dt4, 5) < DataTableRow(dt4, 6))
+    @test DataTableRow(dt4, 5) > DataTableRow(dt4, 4)
+    @test DataTableRow(dt4, 6) == DataTableRow(dt4, 5)
+    @test DataTableRow(dt4, 5) == DataTableRow(dt4, 6)
     @test DataTableRow(dt4, 7) < DataTableRow(dt4, 8)
-    @test !(DataTableRow(dt4, 8) < DataTableRow(dt4, 7))
+    @test DataTableRow(dt4, 8) > DataTableRow(dt4, 7)
 
     # hashing
     @test hash(DataTableRow(dt, 1)) != hash(DataTableRow(dt, 2))
