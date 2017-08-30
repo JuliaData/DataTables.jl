@@ -195,73 +195,90 @@ end
 #
 ##############################################################################
 
-importall DataStreams
-using WeakRefStrings
+using DataStreams, WeakRefStrings
 
-# DataTables DataStreams implementation
-function Data.schema(df::DataTable, ::Type{Data.Column})
-    return Data.Schema(map(string, names(df)),
-                       Type[typeof(A) for A in df.columns], size(df, 1))
+struct DataTableStream{T}
+    columns::T
+    header::Vector{String}
+end
+DataTableStream(dt::DataTable) = DataTableStream(Tuple(dt.columns), map(String, names(dt)))
+
+# DataTable Data.Source implementation
+function Data.schema(dt::DataTable)
+    return Data.Schema(Type[eltype(A) for A in dt.columns],
+                        map(string, names(dt)), length(dt) == 0 ? 0 : length(dt.columns[1]))
 end
 
-# DataTable as a Data.Source
+Data.isdone(source::DataTable, row, col, rows, cols) = row > rows || col > cols
 function Data.isdone(source::DataTable, row, col)
-    rows, cols = size(source)
-    return row > rows || col > cols
+    cols = length(source)
+    return Data.isdone(source, row, col, cols == 0 ? 0 : length(dt.columns[1]), cols)
 end
 
 Data.streamtype(::Type{DataTable}, ::Type{Data.Column}) = true
 Data.streamtype(::Type{DataTable}, ::Type{Data.Field}) = true
 
-Data.streamfrom{T}(source::DataTable, ::Type{Data.Column}, ::Type{T}, col) =
-    (A = source.columns[col]::AbstractVector{T}; return A)
-Data.streamfrom{T}(source::DataTable, ::Type{Data.Field}, ::Type{T}, row, col) =
-    (A = source.columns[col]::AbstractVector{T}; return A[row]::T)
+@inline Data.streamfrom(source::DataTable, ::Type{Data.Column}, ::Type{T}, row, col) where {T} = source[col]
+@inline Data.streamfrom(source::DataTable, ::Type{Data.Field}, ::Type{T}, row, col) where {T} = source[col][row]
 
-# DataTable as a Data.Sink
-allocate{T}(::Type{T}, rows) = Vector{T}(rows)
-allocate{T}(::Type{Vector{T}}, rows) = Vector{T}(rows)
-
-function DataTable{T <: Data.StreamType}(sch::Data.Schema,
-                                         ::Type{T}=Data.Field,
-                                         append::Bool=false)
-    rows, cols = size(sch)
-    rows = max(0, T <: Data.Column ? 0 : rows) # don't pre-allocate for Column streaming
-    columns = Vector{Any}(cols)
-    types = Data.types(sch)
-    for i = 1:cols
-        columns[i] = allocate(types[i], rows)
-    end
-    return DataTable(columns, map(Symbol, Data.header(sch)))
-end
-
-# given an existing DataTable (`sink`), make any necessary changes for streaming source
-# with Data.Schema `sch` to it, given we know if we'll be `appending` or not
-function DataTable(sink, sch::Data.Schema, ::Type{Data.Field}, append::Bool)
-    rows, cols = size(sch)
-    newsize = max(0, rows) + (append ? size(sink, 1) : 0)
-    newsize != size(sink, 1) && foreach(x->resize!(x, newsize), sink.columns)
-    sch.rows = newsize
-    return sink
-end
-function DataTable(sink, sch::Data.Schema, ::Type{Data.Column}, append::Bool)
-    rows, cols = size(sch)
-    append ? (sch.rows += size(sink, 1)) : foreach(empty!, sink.columns)
-    return sink
-end
-
+# DataTable Data.Sink implementation
 Data.streamtypes(::Type{DataTable}) = [Data.Column, Data.Field]
+Data.weakrefstrings(::Type{DataTable}) = true
 
-Data.streamto!{T}(sink::DataTable, ::Type{Data.Field}, val::T, row, col, sch::Data.Schema{false}) =
-    push!(sink.columns[col], val)
-Data.streamto!{T}(sink::DataTable, ::Type{Data.Field}, val::T, row, col, sch::Data.Schema{true}) =
-    (sink.columns[col])[row] = val
+allocate(::Type{T}, rows, ref) where {T} = Vector{T}(rows)
+allocate(::Type{T}, rows, ref) where {T <: Union{WeakRefString, Null}} = WeakRefStringArray(ref, T, rows)
 
-function Data.streamto!{T}(sink::DataTable, ::Type{Data.Column}, column::T, row, col, sch::Data.Schema)
-    if row == 0
-        sink.columns[col] = column
+# Construct or modify a DataTable to be ready to stream data from a source with a schema of `sch`
+function DataTable(sch::Data.Schema{R}, ::Type{S}=Data.Field,
+                    append::Bool=false, args...; reference::Vector{UInt8}=UInt8[]) where {R, S <: Data.StreamType}
+    types = Data.types(sch)
+    if !isempty(args) && args[1] isa DataTable && types == Data.types(Data.schema(args[1]))
+        # passing in an existing DataTable Sink w/ same types as source (as indicated by `sch`)
+        sink = args[1]
+        sinkrows = size(Data.schema(sink), 1)
+        if append && (S == Data.Column || !R) # are we appending and either column-streaming or there are an unknown # of rows
+            sch.rows = sinkrows
+            # dont' need to do anything because:
+              # for Data.Column, we just append columns anyway (see Data.streamto! below)
+              # for Data.Field, the # of rows in the source are unknown (isnull(rows)), so we'll just push! in streamto!
+        else
+            # need to adjust the existing sink
+            # similar to above, for Data.Column or unknown # of rows for Data.Field, we'll append!/push!, so we empty! the columns
+            # if appending, we want to grow our columns to be able to include every row in source (sinkrows + sch.rows)
+            # if not appending, we're just "re-using" a sink, so we just resize it to the # of rows in the source
+            newsize = ifelse(S == Data.Column || !R, 0, ifelse(append, sinkrows + sch.rows, sch.rows))
+            foreach(col->resize!(col, newsize), sink.columns)
+            sch.rows = newsize
+        end
+        # take care of a possible reference from source by letting WeakRefStringArrays hold on to them
+        if !isempty(reference)
+            foreach(col-> col isa WeakRefStringArray && push!(col.data, reference), sink.columns)
+        end
+        sink = DataTableStream(sink)
     else
-        append!(sink.columns[col]::T, column)
+        # allocating a fresh DataTable Sink; append is irrelevant
+        # for Data.Column or unknown # of rows in Data.Field, we only ever append!, so just allocate empty columns
+        rows = ifelse(S == Data.Column, 0, ifelse(!R, 0, sch.rows))
+        names = Data.header(sch)
+        sink = DataTableStream(Tuple(allocate(types[i], rows, reference) for i = 1:length(types)), names)
+        sch.rows = rows
     end
-    return length(column)
+    return sink
+end
+
+function DataTable(sink, sch::Data.Schema, ::Type{S}, append::Bool; reference::Vector{UInt8}=UInt8[]) where {S}
+    return DataTable(sch, S, append, sink; reference=reference)
+end
+
+@inline Data.streamto!(sink::DataTableStream, ::Type{Data.Field}, val, row, col::Int) =
+    (A = sink.columns[col]; row > length(A) ? push!(A, val) : setindex!(A, val, row))
+@inline Data.streamto!(sink::DataTableStream, ::Type{Data.Field}, val, row, col::Int, ::Type{Val{false}}) =
+    push!(sink.columns[col], val)
+@inline Data.streamto!(sink::DataTableStream, ::Type{Data.Field}, val, row, col::Int, ::Type{Val{true}}) =
+    sink.columns[col][row] = val
+@inline Data.streamto!(sink::DataTableStream, ::Type{Data.Column}, column, row, col::Int, knownrows) =
+    append!(sink.columns[col], column)
+
+function Data.close!(df::DataTableStream)
+    return DataTable(collect(Any, df.columns), map(Symbol, df.header))
 end
