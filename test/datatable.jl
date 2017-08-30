@@ -300,8 +300,7 @@ module TestDataTable
     #Unstack specifying a row column
     dt2 = unstack(dt, :Fish, :Key, :Value)
     #Unstack without specifying a row column
-    #FIXME: categoricalarrays
-    # dt3 = unstack(dt, :Key, :Value)
+    dt3 = unstack(dt, :Key, :Value)
     #The expected output
     dt4 = DataTable(Fish = Union{String, Null}["XXX", "Bob", "Batman"],
                     Color = Union{String, Null}[null, "Red", "Grey"],
@@ -309,7 +308,7 @@ module TestDataTable
     @test dt2 == dt4
     @test typeof(dt2[:Fish]) <: CategoricalVector{Union{String, Null}}
     # first column stays as CategoricalArray in dt3
-    # @test dt3[:, 2:3] == dt4[2:3, 2:3]
+    @test dt3[:, 2:3] == dt4[2:3, 2:3]
     #Make sure unstack works with NULLs at the start of the value column
     dt[1,:Value] = null
     dt2 = unstack(dt, :Fish, :Key, :Value)

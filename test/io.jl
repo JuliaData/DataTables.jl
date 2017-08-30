@@ -6,7 +6,8 @@ module TestIO
     dt = DataTable(A = 1:4,
                    B = ["\$10.0", "M&F", "A~B", "\\alpha"],
                    C = [L"\alpha", L"\beta", L"\gamma", L"\sum_{i=1}^n \delta_i"],
-                   D = [1.0, 2.0, null, 3.0]
+                   D = [1.0, 2.0, null, 3.0],
+                   E = CategoricalArray(["a", null, "c", "d"])
                    )
     str = """
         \\begin{tabular}{r|ccccc}
@@ -46,17 +47,13 @@ module TestIO
                    G = nulls(3),
                    H = fill(null, 3))
 
-<<<<<<< HEAD
-=======
-    DRT = CategoricalArrays.DefaultRefType
     @test sprint(printtable, dt) ==
         """
         "A","B","C","D","E","F","G","H"
-        1,"a","A","CategoricalArrays.CategoricalValue{Char,$DRT} 'a'","CategoricalArrays.CategoricalValue{String,$DRT} "A"","1",null,null
-        2,"b","B","CategoricalArrays.CategoricalValue{Char,$DRT} 'b'","CategoricalArrays.CategoricalValue{String,$DRT} "B"","2",null,null
-        3,"c","C","CategoricalArrays.CategoricalValue{Char,$DRT} 'c'",null,"3",null,null
+        1,"'a'","A","'a'","A","1",null,null
+        2,"'b'","B","'b'","B","2",null,null
+        3,"'c'","C","'c'",null,"3",null,null
         """
->>>>>>> Get PR 66 passing tests on Julia 0.7
 
     # DataStreams
     # FIXME Update CSV to work with new DataStreams API

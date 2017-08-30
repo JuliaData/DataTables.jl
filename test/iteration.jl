@@ -5,7 +5,7 @@ module TestIteration
     dm = Union{Int, Null}[1 2; 3 4]
     dt = Array{Union{Int, Null}}(zeros(2, 2, 2))
 
-    dt = DataTable(A = 1:2, B = 2:3)
+    dt = DataTable(A = Vector{Union{Int, Null}}(1:2), B = Vector{Union{Int, Null}}(2:3))
 
     for row in eachrow(dt)
         @test isa(row, DataTableRow)

@@ -64,6 +64,8 @@ end
 ourshowcompact(io::IO, x::Any) = showcompact(io, x) # -> Void
 ourshowcompact(io::IO, x::AbstractString) = print(io, x) # -> Void
 ourshowcompact(io::IO, x::Symbol) = print(io, x) # -> Void
+ourshowcompact(io::IO, x::CategoricalValue{<:AbstractString}) =
+    print(io, String(x)) # -> Void
 
 #' @description
 #'

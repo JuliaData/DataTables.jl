@@ -73,6 +73,19 @@ end
 isequal_colel(col::AbstractArray, r1::Int, r2::Int) =
     (r1 == r2) || isequal(Base.unsafe_getindex(col, r1), Base.unsafe_getindex(col, r2))
 
+# table columns are passed as a tuple of vectors to ensure type specialization
+isequal_row(cols::Tuple{AbstractVector}, r1::Int, r2::Int) =
+    isequal(cols[1][r1], cols[1][r2])
+isequal_row(cols::Tuple{Vararg{AbstractVector}}, r1::Int, r2::Int) =
+    isequal(cols[1][r1], cols[1][r2]) && isequal_row(Base.tail(cols), r1, r2)
+
+isequal_row(cols1::Tuple{AbstractVector}, r1::Int, cols2::Tuple{AbstractVector}, r2::Int) =
+    isequal(cols1[1][r1], cols2[1][r2])
+isequal_row(cols1::Tuple{Vararg{AbstractVector}}, r1::Int,
+            cols2::Tuple{Vararg{AbstractVector}}, r2::Int) =
+    isequal(cols1[1][r1], cols2[1][r2]) &&
+        isequal_row(Base.tail(cols1), r1, Base.tail(cols2), r2)
+
 function isequal_row(dt1::AbstractDataTable, r1::Int, dt2::AbstractDataTable, r2::Int)
     if dt1 === dt2
         if r1 == r2
