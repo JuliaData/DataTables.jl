@@ -409,11 +409,13 @@ Indexes of complete cases (rows without null values)
 
 ```julia
 completecases(dt::AbstractDataTable)
+completecases(dt::AbstractDataTable, cols)
 ```
 
 **Arguments**
 
 * `dt` : the AbstractDataTable
+* `cols` : a column indicator (Symbol, Int, Vector{Symbol}, etc.) specifying the column(s) to check for Nulls
 
 **Result**
 
@@ -428,6 +430,7 @@ dt = DataTable(i = 1:10, x = rand(10), y = rand(["a", "b", "c"], 10))
 dt[[1,4,5], :x] = Nullable()
 dt[[9,10], :y] = Nullable()
 completecases(dt)
+completecases(dt, :x)
 ```
 
 """
@@ -438,6 +441,9 @@ function completecases(dt::AbstractDataTable)
     end
     res
 end
+
+completecases(dt::AbstractDataTable, cols) = completecases(dt[cols])
+completecases(dt::AbstractDataTable, cols::Union{Real, Symbol}) = completecases(dt[[cols]])
 
 """
 Remove rows with null values.
