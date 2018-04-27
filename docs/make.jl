@@ -38,6 +38,7 @@ makedocs(
 
 deploydocs(
     # options
+    julia = "nightly",
     repo = "github.com/JuliaData/DataTables.jl.git",
     target = "build",
     deps = nothing,
